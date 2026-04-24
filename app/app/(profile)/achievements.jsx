@@ -32,7 +32,7 @@ export default function AchievementScreen() {
       unlocked: (streak || 0) >= 7
     },
     { 
-      id: '6', title: 'Night Owl', desc: 'Take a quiz after 10PM', icon: 'moon', color: '#EB4D4B',
+      id: '6', title: 'Night Owl', desc: 'Take a quiz after 10PM', icon: 'weather-moonset', color: '#EB4D4B',
       unlocked: allTimeHistory?.some(quiz => {
         const hour = new Date(quiz.timestamp).getHours();
         return hour >= 22 || hour <= 4;

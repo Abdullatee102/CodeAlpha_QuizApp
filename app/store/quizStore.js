@@ -9,7 +9,7 @@ const notifyAchievement = async (title, desc) => {
     content: {
       title: "Achievement Unlocked! 🏆",
       body: `You've earned the "${title}" badge!`,
-      data: { url: '/(main)/achievements' },
+      data: { url: '/(profile)/achievements' },
     },
     trigger: null,
   });
@@ -36,7 +36,6 @@ export const useQuizStore = create(
       checkAchievements: () => {
         const { allTimeHistory, totalScore, streak, unlockedAchievements } = get();
         
-        // Define conditions based on your AchievementScreen logic
         const achievementsList = [
           { id: '1', title: 'Fast Learner', desc: 'Complete 5 quizzes', condition: allTimeHistory.length >= 5 },
           { id: '2', title: 'Perfect Score', desc: 'Get 100% in any quiz', condition: allTimeHistory.some(q => q.score === 100) },
