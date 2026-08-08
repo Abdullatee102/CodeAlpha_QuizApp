@@ -5,8 +5,9 @@ import { useFonts } from 'expo-font';
 import { StatusBar } from 'expo-status-bar';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { useAuthStore } from '../store/authStore';
+import { useThemeStore } from '../store/themeStore'; 
 import { Colors } from '../constants/colors';
-import { View, ActivityIndicator, Text, Platform } from "react-native";
+import { View, ActivityIndicator, Text } from "react-native";
 import * as Notifications from 'expo-notifications';
 
 SplashScreen.preventAutoHideAsync();
@@ -20,11 +21,11 @@ Notifications.setNotificationHandler({
 });
 
 export default function RootLayout() {
-  const { user, loading, initialize, hasFinishedOnboarding, _hasHydrated } = useAuthStore();
+  const { user, isInitializing, initialize, hasFinishedOnboarding, _hasHydrated } = useAuthStore();
+  const { theme, isDarkMode } = useThemeStore(); 
   const segments = useSegments();
   const router = useRouter();
   
-  const isNavigating = useRef(false);
   const notificationListener = useRef();
   const responseListener = useRef();
 
@@ -67,7 +68,8 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
-    if (!fontsLoaded || loading || !_hasHydrated) return;
+    // Only check navigation routes when fonts are ready, app state hydration is complete, and auth initialization is finished
+    if (!fontsLoaded || isInitializing || !_hasHydrated) return;
 
     const inAuthGroup = segments[0] === '(auth)';
     const inOnboarding = segments[0] === 'onboarding';
@@ -91,13 +93,13 @@ export default function RootLayout() {
     };
     hideSplash();
 
-  }, [user, loading, fontsLoaded, _hasHydrated]); 
+  }, [user, isInitializing, fontsLoaded, _hasHydrated]); 
 
-  if (!fontsLoaded || loading || !_hasHydrated) {
+  if (!fontsLoaded || isInitializing || !_hasHydrated) {
     return (
       <View style={{ 
         flex: 1, 
-        backgroundColor: Colors.primary, 
+        backgroundColor: Colors.tertiary, 
         justifyContent: 'center', 
         alignItems: 'center' 
       }}>
@@ -111,8 +113,8 @@ export default function RootLayout() {
 
   return (
     <>
-      <StatusBar style="light" backgroundColor={Colors.primary} />
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: Colors.white } }}>
+      <StatusBar style={isDarkMode ? "light" : "dark"} backgroundColor={theme.background} />
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.background } }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
         <Stack.Screen name="(auth)" options={{ animation: 'fade' }} />

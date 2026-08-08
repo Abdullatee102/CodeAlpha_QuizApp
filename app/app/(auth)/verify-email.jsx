@@ -1,45 +1,55 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Linking } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Linking, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useThemeStore } from '../../store/themeStore'; 
 import { Colors } from '../../constants/colors';
 import { GlobalStyles } from '../../constants/styles';
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function VerifyEmail() {
   const router = useRouter();
+  const { theme, isDarkMode } = useThemeStore(); 
 
   const openEmailApp = () => {
     Linking.openURL('mailto:');
   };
 
   return (
-    <SafeAreaView style={[GlobalStyles.safeArea, styles.container]}>
-      <View style={styles.iconCircle}>
-        <MaterialCommunityIcons name="email-check-outline" size={60} color={Colors.primary} />
-      </View>
+    <SafeAreaView style={[GlobalStyles.safeArea, { backgroundColor: theme.background }]}>
+      <ScrollView 
+        contentContainerStyle={styles.container} 
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={[
+          styles.iconCircle, 
+          { backgroundColor: isDarkMode ? '#1E293B' : theme.primary + '15' }
+        ]}>
+          <MaterialCommunityIcons name="email-check-outline" size={60} color={theme.primary} />
+        </View>
 
-      <Text style={[GlobalStyles.headerTitle, { textAlign: 'center' }]}>Check Your Email</Text>
-      <Text style={[GlobalStyles.subtitle, { textAlign: 'center', marginTop: 10 }]}>
-        We've sent a verification link to your email address. Please click the link to secure your account.
-      </Text>
+        <Text style={[GlobalStyles.headerTitle, { textAlign: 'center', color: theme.primary }]}>Check Your Email</Text>
+        <Text style={[GlobalStyles.subtitle, { textAlign: 'center', marginTop: 10, color: theme.textSecondary }]}>
+          We've sent a verification link to your email address. Please click the link to secure your account.
+        </Text>
 
-      <View style={styles.buttonGroup}>
-        <TouchableOpacity style={GlobalStyles.primaryBtn} onPress={openEmailApp}>
-          <Text style={GlobalStyles.btnText}>Open Email App</Text>
-        </TouchableOpacity>
+        <View style={styles.buttonGroup}>
+          <TouchableOpacity style={[GlobalStyles.primaryBtn, { backgroundColor: theme.primary }]} onPress={openEmailApp}>
+            <Text style={GlobalStyles.btnText}>Open Email App</Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity 
-          style={styles.secondaryBtn} 
-          onPress={() => router.replace('/(auth)/sign-in')}
-        >
-          <Text style={styles.secondaryBtnText}>Back to Sign In</Text>
-        </TouchableOpacity>
-      </View>
+          <TouchableOpacity 
+            style={[styles.secondaryBtn, { borderColor: theme.border, backgroundColor: theme.card }]} 
+            onPress={() => router.replace('/(auth)/sign-in')}
+          >
+            <Text style={[styles.secondaryBtnText, { color: theme.primary }]}>Back to Sign In</Text>
+          </TouchableOpacity>
+        </View>
 
-      <Text style={styles.footerText}>
-        Didn't receive an email? <Text style={styles.resendLink}>Resend</Text>
-      </Text>
+        <Text style={[styles.footerText, { color: theme.textSecondary }]}>
+          Didn't receive an email? <Text style={[styles.resendLink, { color: theme.primary }]}>Resend</Text>
+        </Text>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -49,12 +59,12 @@ const styles = StyleSheet.create({
     padding: 25,
     justifyContent: 'center',
     alignItems: 'center',
+    flexGrow: 1,
   },
   iconCircle: {
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: Colors.secondary + '40',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 30,
@@ -69,20 +79,16 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: Colors.secondary,
   },
   secondaryBtnText: {
     fontFamily: 'Ubuntu-Bold',
-    color: Colors.primary,
     fontSize: 18,
   },
   footerText: {
-    marginTop: 30,
+    marginTop: 40,
     fontFamily: 'Ubuntu-Regular',
-    color: '#666',
   },
   resendLink: {
-    color: Colors.primary,
     fontFamily: 'Ubuntu-Bold',
   }
 });

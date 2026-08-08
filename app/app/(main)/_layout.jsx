@@ -1,17 +1,19 @@
 import { Tabs } from "expo-router";
 import { FontAwesome5, MaterialCommunityIcons, FontAwesome } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useThemeStore } from "../../store/themeStore"; 
 import { Colors } from "../../constants/colors";
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
+  const { theme } = useThemeStore(); 
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: Colors.primary, 
-        tabBarInactiveTintColor: "#8E8E93",
+        tabBarActiveTintColor: theme.primary, 
+        tabBarInactiveTintColor: theme.textSecondary,
         tabBarShowLabel: true,
         tabBarLabelStyle: {
           fontSize: 12,
@@ -19,9 +21,9 @@ export default function TabsLayout() {
           marginBottom: 5,
         },
         tabBarStyle: {
-          backgroundColor: "#FFFFFF",
+          backgroundColor: theme.card, 
           borderTopWidth: 1,
-          borderTopColor: Colors.secondary,
+          borderTopColor: theme.border, 
           height: 60 + insets.bottom,
           paddingTop: 8,
           paddingBottom: insets.bottom > 0 ? insets.bottom : 5,
@@ -32,7 +34,7 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: "Home",
-          tabBarIcon: ({ focused, color }) => (
+          tabBarIcon: ({ color }) => (
             <FontAwesome5 name="home" size={20} color={color} />
           ),
         }}

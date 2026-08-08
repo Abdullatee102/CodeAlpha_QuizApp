@@ -6,4 +6,5 @@ export const Colors = {
   error: '#FF3B30',
   text: '#1C1C1E',
   white: '#FFFFFF',
+  tertiary: '#005D4B',
 };

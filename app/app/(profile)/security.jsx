@@ -6,9 +6,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors } from '../../constants/colors';
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from 'expo-router';
+import { useThemeStore } from '../../store/themeStore';
 
 export default function SecurityScreen() {
   const router = useRouter();
+  const { theme, isDarkMode } = useThemeStore();
   const [isBiometricSupported, setIsBiometricSupported] = useState(false);
   const [isBiometricEnabled, setIsBiometricEnabled] = useState(false);
 
@@ -54,12 +56,12 @@ export default function SecurityScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+      <View style={[styles.header, { borderBottomColor: theme.border }]}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color={Colors.text} />
+          <Ionicons name="arrow-back" size={24} color={theme.text} />
         </TouchableOpacity>
-        <Text style={styles.title}>Security</Text>
+        <Text style={[styles.title, { color: theme.text }]}>Security</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
@@ -67,31 +69,32 @@ export default function SecurityScreen() {
         
         <View style={styles.settingRow}>
           <View style={styles.rowLeft}>
-            <View style={[styles.iconCircle, { backgroundColor: Colors.primary + '15' }]}>
-              <Ionicons name="finger-print" size={22} color={Colors.primary} />
+            <View style={[styles.iconCircle, { backgroundColor: theme.primary + '15' }]}>
+              <Ionicons name="finger-print" size={22} color={theme.primary} />
             </View>
             <View style={{ marginLeft: 15 }}>
-              <Text style={styles.rowText}>Biometric Login</Text>
+              <Text style={[styles.rowText, { color: theme.text }]}>Biometric Login</Text>
               <Text style={styles.rowSubText}>TouchID or FaceID</Text>
             </View>
           </View>
           <Switch 
             value={isBiometricEnabled} 
             onValueChange={toggleBiometric}
-            trackColor={{ false: "#eee", true: Colors.primary }}
+            trackColor={{ false: isDarkMode ? "#333" : "#eee", true: theme.primary }}
+            thumbColor={Platform.OS === 'android' ? (isBiometricEnabled ? theme.primary : '#ccc') : undefined}
           />
         </View>
 
         <Text style={[styles.sectionLabel, { marginTop: 30 }]}>Account Security</Text>
 
-        <TouchableOpacity style={styles.actionRow} onPress={() => router.push('/forgot-password')}>
+        <TouchableOpacity style={styles.actionRow} onPress={() => router.push('/(auth)/forgot-password')}>
           <View style={styles.rowLeft}>
-            <View style={[styles.iconCircle, { backgroundColor: '#F0F0F0' }]}>
-              <Ionicons name="lock-closed-outline" size={22} color="#555" />
+            <View style={[styles.iconCircle, { backgroundColor: isDarkMode ? '#1E1E1E' : '#F0F0F0' }]}>
+              <Ionicons name="lock-closed-outline" size={22} color={theme.textSecondary} />
             </View>
-            <Text style={styles.actionText}>Reset Password</Text>
+            <Text style={[styles.actionText, { color: theme.text }]}>Reset Password</Text>
           </View>
-          <Ionicons name="chevron-forward" size={20} color="#ccc" />
+          <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -99,9 +102,9 @@ export default function SecurityScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
+  container: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', padding: 20, gap: 15 },
-  title: { fontFamily: 'Archivo-Black', fontSize: 22, color: Colors.text },
+  title: { fontFamily: 'Archivo-Black', fontSize: 22 },
   content: { padding: 25 },
   sectionLabel: { fontFamily: 'Ubuntu-Bold', fontSize: 13, color: '#999', textTransform: 'uppercase', marginBottom: 15 },
   settingRow: { 
@@ -118,7 +121,7 @@ const styles = StyleSheet.create({
   },
   rowLeft: { flexDirection: 'row', alignItems: 'center' },
   iconCircle: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
-  rowText: { fontFamily: 'Ubuntu-Bold', fontSize: 16, color: Colors.text },
+  rowText: { fontFamily: 'Ubuntu-Bold', fontSize: 16 },
   rowSubText: { fontFamily: 'Ubuntu-Regular', fontSize: 12, color: '#999' },
-  actionText: { fontFamily: 'Ubuntu-Medium', fontSize: 16, marginLeft: 15, color: Colors.text }
+  actionText: { fontFamily: 'Ubuntu-Medium', fontSize: 16, marginLeft: 15 }
 });

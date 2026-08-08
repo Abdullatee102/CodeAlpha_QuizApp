@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView, Switch, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, Switch } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../store/authStore';
+import { useThemeStore } from '../store/themeStore'; 
+import { useQuizStore } from '../store/quizStore'; // Imported Store Fix
 import { useRouter } from 'expo-router';
 import { Colors } from '../constants/colors';
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -10,6 +12,8 @@ import * as Device from 'expo-device';
 
 export default function SettingsScreen() {
   const { logout } = useAuthStore();
+  const { isDarkMode, toggleTheme, theme } = useThemeStore(); 
+  const { clearUserSession } = useQuizStore(); // Grabbed active cleaner
   const router = useRouter();
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
 
@@ -49,45 +53,70 @@ export default function SettingsScreen() {
   const handleLogout = () => {
     Alert.alert("Logout", "Are you sure you want to sign out?", [
       { text: "Cancel", style: "cancel" },
-      { text: "Logout", style: "destructive", onPress: async () => {
+      { 
+        text: "Logout", 
+        style: "destructive", 
+        onPress: async () => {
+          clearUserSession(); // Clean store workspace instantly 
           await logout();
           router.replace('/(auth)/sign-in');
-      }}
+        }
+      }
     ]);
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <Text style={styles.sectionTitle}>Account & Security</Text>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+      <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>Account & Security</Text>
       
-      <TouchableOpacity style={styles.settingRow} onPress={() => router.push('/privacy')}>
+      <TouchableOpacity 
+        style={[styles.settingRow, { borderBottomColor: theme.border }]} 
+        onPress={() => router.push('/privacy')}
+      >
         <View style={styles.rowLeft}>
-          <Ionicons name="shield-checkmark-outline" size={24} color="#555" />
-          <Text style={styles.rowText}>Privacy Policy</Text>
+          <Ionicons name="shield-checkmark-outline" size={24} color={theme.textSecondary} />
+          <Text style={[styles.rowText, { color: theme.text }]}>Privacy Policy</Text>
         </View>
-        <Ionicons name="chevron-forward" size={20} color="#ccc" />
+        <Ionicons name="chevron-forward" size={20} color={theme.border} />
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.settingRow} onPress={() => router.push('/terms')}>
+      <TouchableOpacity 
+        style={[styles.settingRow, { borderBottomColor: theme.border }]} 
+        onPress={() => router.push('/terms')}
+      >
         <View style={styles.rowLeft}>
-          <Ionicons name="document-text-outline" size={24} color="#555" />
-          <Text style={styles.rowText}>Terms of Service</Text>
+          <Ionicons name="document-text-outline" size={24} color={theme.textSecondary} />
+          <Text style={[styles.rowText, { color: theme.text }]}>Terms of Service</Text>
         </View>
-        <Ionicons name="chevron-forward" size={20} color="#ccc" />
+        <Ionicons name="chevron-forward" size={20} color={theme.border} />
       </TouchableOpacity>
 
-      <Text style={[styles.sectionTitle, { marginTop: 30 }]}>Preferences</Text>
+      <Text style={[styles.sectionTitle, { marginTop: 30, color: theme.textSecondary }]}>Preferences</Text>
 
-      <View style={styles.settingRow}>
+      {/* Dynamic Global Theme Toggle Row */}
+      <View style={[styles.settingRow, { borderBottomColor: theme.border }]}>
         <View style={styles.rowLeft}>
-          <Ionicons name="notifications-outline" size={24} color="#555" />
-          <Text style={styles.rowText}>Push Notifications</Text>
+          <Ionicons name="moon-outline" size={24} color={theme.textSecondary} />
+          <Text style={[styles.rowText, { color: theme.text }]}>Dark Mode</Text>
+        </View>
+        <Switch 
+          value={isDarkMode} 
+          onValueChange={toggleTheme}
+          trackColor={{ false: "#767577", true: theme.primary + '80' }}
+          thumbColor={isDarkMode ? theme.primary : "#f4f3f4"}
+        />
+      </View>
+
+      <View style={[styles.settingRow, { borderBottomColor: theme.border }]}>
+        <View style={styles.rowLeft}>
+          <Ionicons name="notifications-outline" size={24} color={theme.textSecondary} />
+          <Text style={[styles.rowText, { color: theme.text }]}>Push Notifications</Text>
         </View>
         <Switch 
           value={notificationsEnabled} 
           onValueChange={toggleNotifications}
-          trackColor={{ false: "#767577", true: Colors.primary + '80' }}
-          thumbColor={notificationsEnabled ? Colors.primary : "#f4f3f4"}
+          trackColor={{ false: "#767577", true: theme.primary + '80' }}
+          thumbColor={notificationsEnabled ? theme.primary : "#f4f3f4"}
         />
       </View>
 
@@ -99,27 +128,26 @@ export default function SettingsScreen() {
       </TouchableOpacity>
       
       <View style={styles.footer}>
-        <Text style={styles.version}>Version 1.0.0 (Brain Buzz Beta)</Text>
-        <Text style={styles.copyright}>© 2026 Popoola Abdullateef</Text>
+        <Text style={[styles.version, { color: theme.textSecondary, opacity: 0.5 }]}>Version 1.0.0 (Brain Buzz Beta)</Text>
+        <Text style={[styles.copyright, { color: theme.textSecondary, opacity: 0.3 }]}>© 2026 Popoola Abdullateef</Text>
       </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff', padding: 20 },
-  sectionTitle: { fontFamily: 'Ubuntu-Bold', fontSize: 13, color: '#999', marginBottom: 10, textTransform: 'uppercase' },
+  container: { flex: 1, padding: 20 },
+  sectionTitle: { fontFamily: 'Ubuntu-Bold', fontSize: 13, marginBottom: 10, textTransform: 'uppercase' },
   settingRow: { 
     flexDirection: 'row', 
     alignItems: 'center', 
     justifyContent: 'space-between', 
     paddingVertical: 18, 
     borderBottomWidth: 1, 
-    borderBottomColor: '#f5f5f5' 
   },
   rowLeft: { flexDirection: 'row', alignItems: 'center', gap: 15 },
-  rowText: { fontFamily: 'Ubuntu-Medium', fontSize: 16, color: '#333' },
+  rowText: { fontFamily: 'Ubuntu-Medium', fontSize: 16 },
   footer: { marginTop: 60, alignItems: 'center', paddingBottom: 40 },
-  version: { color: '#ccc', fontSize: 12, fontFamily: 'Ubuntu-Regular' },
-  copyright: { color: '#ddd', fontSize: 10, marginTop: 5, fontFamily: 'Ubuntu-Regular' }
+  version: { fontSize: 12, fontFamily: 'Ubuntu-Regular' },
+  copyright: { fontSize: 10, marginTop: 5, fontFamily: 'Ubuntu-Regular' }
 });

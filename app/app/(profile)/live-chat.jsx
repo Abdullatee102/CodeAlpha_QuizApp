@@ -4,20 +4,21 @@ import { WebView } from 'react-native-webview';
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { Colors } from '../../constants/colors';
+import { useThemeStore } from '../../store/themeStore';
 
 export default function LiveChatScreen() {
   const router = useRouter();
+  const { theme } = useThemeStore();
   
   const TAWK_TO_URL = 'https://tawk.to/chat/69e402356936c61c3874666d/1jmhah8ud';
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+      <View style={[styles.header, { borderBottomColor: theme.border }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="close" size={28} color={Colors.text} />
+          <Ionicons name="close" size={28} color={theme.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Live Support</Text>
+        <Text style={[styles.headerTitle, { color: theme.text }]}>Live Support</Text>
         <View style={{ width: 28 }} />
       </View>
 
@@ -25,7 +26,7 @@ export default function LiveChatScreen() {
         source={{ uri: TAWK_TO_URL }}
         startInLoadingState={true}
         renderLoading={() => (
-          <ActivityIndicator size="large" color={Colors.primary} style={styles.loading} />
+          <ActivityIndicator size="large" color={theme.primary} style={styles.loading} />
         )}
       />
     </SafeAreaView>
@@ -33,15 +34,14 @@ export default function LiveChatScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFF' },
+  container: { flex: 1 },
   header: { 
     flexDirection: 'row', 
     justifyContent: 'space-between', 
     alignItems: 'center', 
     padding: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#EEE'
   },
-  headerTitle: { fontFamily: 'Ubuntu-Bold', fontSize: 18, color: Colors.text },
+  headerTitle: { fontFamily: 'Ubuntu-Bold', fontSize: 18 },
   loading: { position: 'absolute', top: '50%', left: '50%', marginLeft: -20 }
 });

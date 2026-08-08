@@ -11,9 +11,9 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { Colors } from '../constants/colors';
 import { onboardingPages } from '../data/onboard';
 import { useAuthStore } from '../store/authStore';
+import { useThemeStore } from '../store/themeStore'; 
 
 const { width, height } = Dimensions.get('window');
 
@@ -22,8 +22,8 @@ export default function OnboardingScreen() {
   const scrollClick = useRef(null);
   const router = useRouter();
   const setHasFinishedOnboarding = useAuthStore((state) => state.setHasFinishedOnboarding);
+  const { theme } = useThemeStore(); 
 
-  // Handle page change
   const onViewableItemsChanged = useRef(({ viewableItems }) => {
     if (viewableItems.length > 0) {
       setCurrentIndex(viewableItems[0].index);
@@ -46,14 +46,14 @@ export default function OnboardingScreen() {
     <View style={styles.page}>
       <Image source={item.image} style={styles.image} resizeMode="contain" />
       <View style={styles.textContainer}>
-        <Text style={styles.title}>{item.title}</Text>
-        <Text style={styles.subtitle}>{item.subtitle}</Text>
+        <Text style={[styles.title, { color: theme.primary }]}>{item.title}</Text>
+        <Text style={[styles.subtitle, { color: theme.text }]}>{item.subtitle}</Text>
       </View>
     </View>
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       <FlatList
         data={onboardingPages}
         renderItem={renderItem}
@@ -74,14 +74,15 @@ export default function OnboardingScreen() {
               key={index} 
               style={[
                 styles.indicator, 
-                currentIndex === index && styles.activeIndicator
+                { backgroundColor: theme.border },
+                currentIndex === index && [styles.activeIndicator, { backgroundColor: theme.primary }]
               ]} 
             />
           ))}
         </View>
 
         <TouchableOpacity 
-          style={styles.button} 
+          style={[styles.button, { backgroundColor: theme.primary, shadowColor: theme.primary }]} 
           onPress={handleNext}
           activeOpacity={0.8}
         >
@@ -97,7 +98,6 @@ export default function OnboardingScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.white,
   },
   page: {
     width: width,
@@ -116,7 +116,6 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: 'Archivo-Black',
     fontSize: 26,
-    color: Colors.primary,
     textAlign: 'center',
     marginBottom: 15,
     textTransform: 'uppercase',
@@ -124,7 +123,6 @@ const styles = StyleSheet.create({
   subtitle: {
     fontFamily: 'Ubuntu-Regular',
     fontSize: 16,
-    color: Colors.text,
     textAlign: 'center',
     paddingHorizontal: 20,
     lineHeight: 24,
@@ -142,19 +140,15 @@ const styles = StyleSheet.create({
     height: 8,
     width: 8,
     borderRadius: 4,
-    backgroundColor: Colors.secondary,
     marginHorizontal: 5,
   },
   activeIndicator: {
-    backgroundColor: Colors.primary,
-    width: 25, // Expanded pill shape for active index
+    width: 25, 
   },
   button: {
-    backgroundColor: Colors.primary,
     paddingVertical: 18,
     borderRadius: 15,
     alignItems: 'center',
-    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 5,
@@ -162,7 +156,7 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     fontFamily: 'Ubuntu-Bold',
-    color: Colors.white,
+    color: '#fff',
     fontSize: 18,
   },
 });

@@ -13,14 +13,15 @@ import {
   signInWithCredential,
 } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { useQuizStore } from './quizStore'; // Import to hydrate user data on load
 
 export const useAuthStore = create(
   persist(
     (set, get) => ({
-      // --- STATE ---
       user: null,
       profile: null,
-      loading: true,
+      loading: false,         // Default to false so submit buttons don't spin on load
+      isInitializing: true,   // Dedicated state to check Firebase session status on app start
       error: null,
       hasFinishedOnboarding: false,
       biometricEnabled: false,
@@ -43,7 +44,8 @@ export const useAuthStore = create(
           } else {
             set({ user: null, profile: null, profileImage: null });
           }
-          set({ loading: false });
+          // Turn off initialization loading once the initial session check concludes
+          set({ isInitializing: false, loading: false });
         });
         return unsubscribe;
       },
@@ -59,7 +61,11 @@ export const useAuthStore = create(
           const docRef = doc(db, "users", uid);
           const docSnap = await getDoc(docRef);
           if (docSnap.exists()) {
-            set({ profile: docSnap.data() });
+            const profileData = docSnap.data();
+            set({ profile: profileData });
+            
+            // Hydrate the quiz store immediately with the user's authentic permanent values
+            useQuizStore.getState().hydrateUserStats(profileData);
           }
         } catch (err) {
           console.error("Profile fetch error:", err.message);
@@ -82,18 +88,28 @@ export const useAuthStore = create(
         }
       },
 
-      // Sign Up (Email/Pass)
+      // Sign Up (Using setDoc to safely initialize structured properties)
       signUp: async (email, password, fullName) => {
         set({ loading: true, error: null });
         try {
           const res = await createUserWithEmailAndPassword(auth, email, password);
-          await setDoc(doc(db, "users", res.user.uid), {
+          
+          // Using setDoc to cleanly initialize everything safely
+          const userPayload = {
             uid: res.user.uid,
             fullName,
             email,
             createdAt: new Date().toISOString(),
-            authType: 'email'
-          });
+            authType: 'email',
+            totalScore: 0,
+            streak: 0,
+            lastPlayedDate: null
+          };
+
+          await setDoc(doc(db, "users", res.user.uid), userPayload);
+          
+          // Update local profile state as well
+          set({ profile: userPayload, loading: false });
           return { success: true };
         } catch (err) {
           set({ error: err.message, loading: false });
@@ -105,6 +121,7 @@ export const useAuthStore = create(
         set({ loading: true, error: null });
         try {
           await signInWithEmailAndPassword(auth, email, password);
+          set({ loading: false });
           return { success: true };
         } catch (err) {
           set({ error: err.message, loading: false });
