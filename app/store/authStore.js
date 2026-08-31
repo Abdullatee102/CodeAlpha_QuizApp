@@ -3,57 +3,45 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { auth, db } from '../firebaseConfig';
 import { 
-  onAuthStateChanged, 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword, 
-  signOut, 
-  sendPasswordResetEmail,
-  sendEmailVerification,
   GoogleAuthProvider,
   signInWithCredential,
+  signOut as firebaseSignOut
 } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { useQuizStore } from './quizStore'; // Import to hydrate user data on load
+import { doc, getDoc } from 'firebase/firestore';
+import { useQuizStore } from './quizStore';
+import api from '../data/api';
+import formatAxiosError from '../data/formatError';
 
 export const useAuthStore = create(
   persist(
     (set, get) => ({
       user: null,
       profile: null,
-      loading: false,         // Default to false so submit buttons don't spin on load
-      isInitializing: true,   // Dedicated state to check Firebase session status on app start
+      isLoading: false,       
+      isInitializing: false,   
       error: null,
       hasFinishedOnboarding: false,
       biometricEnabled: false,
       profileImage: null,
-      _hasHydrated: false, 
+      token: null,              
+      _hasHydrated: false,      
 
-      // --- ACTIONS ---
       setHasHydrated: (state) => set({ _hasHydrated: state }),
       setBiometricEnabled: (value) => set({ biometricEnabled: value }),
-
-      // Initialize Auth Listener
-      initialize: () => {
-        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-          if (firebaseUser) {
-            set({ 
-              user: firebaseUser, 
-              profileImage: firebaseUser.photoURL 
-            });
-            await get().fetchProfile(firebaseUser.uid);
-          } else {
-            set({ user: null, profile: null, profileImage: null });
-          }
-          // Turn off initialization loading once the initial session check concludes
-          set({ isInitializing: false, loading: false });
-        });
-        return unsubscribe;
-      },
-
       setHasFinishedOnboarding: (value) => set({ hasFinishedOnboarding: value }),
 
-      saveUserIdentity: async (email) => {
-        await AsyncStorage.setItem('lastUserEmail', email);
+      initialize: async () => {
+        set({ isInitializing: true });
+        try {
+          const storedToken = await AsyncStorage.getItem('userToken');
+          if (storedToken) {
+            set({ token: storedToken });
+          }
+        } catch (err) {
+          console.error("Auth initialization error:", err);
+        } finally {
+          set({ isInitializing: false, isLoading: false });
+        }
       },
 
       fetchProfile: async (uid) => {
@@ -63,8 +51,6 @@ export const useAuthStore = create(
           if (docSnap.exists()) {
             const profileData = docSnap.data();
             set({ profile: profileData });
-            
-            // Hydrate the quiz store immediately with the user's authentic permanent values
             useQuizStore.getState().hydrateUserStats(profileData);
           }
         } catch (err) {
@@ -72,94 +58,167 @@ export const useAuthStore = create(
         }
       },
 
-      // Google Auth Implementation
-      googleLogin: async (idToken) => {
-        const credential = GoogleAuthProvider.credential(idToken);
-        await signInWithCredential(auth, credential);
+      sendOTP: async (identifier) => {
+        set({ isLoading: true, error: null });
+        try {
+          const payload = identifier.includes('@') 
+            ? { email: identifier } 
+            : { phoneNumber: identifier };
+
+          const response = await api.post('/auth/send-otp', payload);
+          set({ isLoading: false });
+          return { success: true, data: response.data };
+        } catch (err) {
+          const newerror = formatAxiosError(err);
+       
+          set({ isLoading: false, error: newerror?.message });
+          return { success: false, error: newerror?.message };
+        }
+      },
+
+      verifyOTP: async (code, identifier) => {
+        set({ isLoading: true, error: null });
+        try {
+          const payload = identifier.includes('@') 
+            ? { email: identifier, code } 
+            : { phoneNumber: identifier, code };
+
+          const response = await api.post('/auth/verify-otp', payload);
+          set({ isLoading: false });
+
+          const authToken = response.data?.token;
+          const userData = response.data?.user;
+
+          if (authToken) {
+            set({ 
+              token: authToken,
+              user: userData || { uid: identifier }
+            });
+            await AsyncStorage.setItem('userToken', authToken);
+          }
+          return { success: true, data: response.data };
+        } catch (err) {
+          const formatted = formatAxiosError(err);
+          set({ isLoading: false, error: formatted.message });
+          return { success: false, error: formatted.message };
+        }
+      },
+
+      signUp: async (email, password, fullName, phoneNumber) => {
+        set({ isLoading: true, error: null });
+        try {
+          const response = await api.post('/auth/signup', {
+            email,
+            password,
+            fullName,
+            phoneNumber: phoneNumber || undefined
+          });
+
+          set({ isLoading: false });
+          return { success: true, data: response.data };
+        } catch (err) {
+          const formatted = formatAxiosError(err);
+          set({ error: formatted.message, isLoading: false });
+          return { success: false, msg: formatted.message };
+        }
+      },
+
+      login: async (identifier, password) => {
+        set({ isLoading: true, error: null });
+        try {
+          const payload = identifier.includes('@')
+            ? { email: identifier, password }
+            : { phoneNumber: identifier, password };
+
+          const response = await api.post('/auth/login', payload);
+          set({ isLoading: false });
+
+          const authToken = response.data?.token;
+          const userData = response.data?.user;
+
+          if (authToken) {
+            set({ 
+              token: authToken,
+              user: userData || { uid: identifier }
+            });
+            await AsyncStorage.setItem('userToken', authToken);
+          }
+
+          return { success: true, data: response.data };
+        } catch (err) {
+          const formatted = formatAxiosError(err);
+          set({ error: formatted.message, isLoading: false });
+          return { success: false, msg: formatted.message };
+        }
+      },
+
+      forgotPassword: async (emailOrPhone) => {
+        set({ isLoading: true, error: null });
+        try {
+          const payload = emailOrPhone.includes('@')
+            ? { email: emailOrPhone }
+            : { phoneNumber: emailOrPhone };
+
+          const response = await api.post('/auth/forgot-password', payload);
+          set({ isLoading: false });
+          return { success: true, data: response.data };
+        } catch (err) {
+          const formatted = formatAxiosError(err);
+          set({ isLoading: false, error: formatted.message });
+          return { success: false, msg: formatted.message };
+        }
+      },
+
+      resetPassword: async (identifier, newPassword) => {
+        set({ isLoading: true, error: null });
+        try {
+          const payload = identifier.includes('@')
+            ? { email: identifier, newPassword }
+            : { phoneNumber: identifier, newPassword };
+
+          const response = await api.post('/auth/reset-password', payload);
+          set({ isLoading: false });
+          return { success: true, data: response.data };
+        } catch (err) {
+          const formatted = formatAxiosError(err);
+          set({ isLoading: false, error: formatted.message });
+          return { success: false, msg: formatted.message };
+        }
       },
 
       googleAuth: async (idToken) => {
+        set({ isLoading: true, error: null });
         try {
           const credential = GoogleAuthProvider.credential(idToken);
           const userCredential = await signInWithCredential(auth, credential);
+
+          const firebaseToken = await userCredential.user.getIdToken();
+          set({ 
+            user: userCredential.user,
+            token: firebaseToken,
+            isLoading: false 
+          });
+          await AsyncStorage.setItem('userToken', firebaseToken);
+
           return userCredential.user;
         } catch (error) {
+          set({ isLoading: false, error: error.message });
           throw error;
-        }
-      },
-
-      // Sign Up (Using setDoc to safely initialize structured properties)
-      signUp: async (email, password, fullName) => {
-        set({ loading: true, error: null });
-        try {
-          const res = await createUserWithEmailAndPassword(auth, email, password);
-          
-          // Using setDoc to cleanly initialize everything safely
-          const userPayload = {
-            uid: res.user.uid,
-            fullName,
-            email,
-            createdAt: new Date().toISOString(),
-            authType: 'email',
-            totalScore: 0,
-            streak: 0,
-            lastPlayedDate: null
-          };
-
-          await setDoc(doc(db, "users", res.user.uid), userPayload);
-          
-          // Update local profile state as well
-          set({ profile: userPayload, loading: false });
-          return { success: true };
-        } catch (err) {
-          set({ error: err.message, loading: false });
-          return { success: false, msg: err.message };
-        }
-      },
-
-      login: async (email, password) => {
-        set({ loading: true, error: null });
-        try {
-          await signInWithEmailAndPassword(auth, email, password);
-          set({ loading: false });
-          return { success: true };
-        } catch (err) {
-          set({ error: err.message, loading: false });
-          return { success: false, msg: err.message };
         }
       },
 
       logout: async () => {
         try {
-          await signOut(auth);
-          set({ user: null, profile: null, profileImage: null });
+          try { await firebaseSignOut(auth); } catch (e) {} 
+          await AsyncStorage.removeItem('userToken');
+          set({ user: null, profile: null, profileImage: null, token: null });
         } catch (err) {
           set({ error: err.message });
         }
       },
 
-      forgotPassword: async (email) => {
-        try {
-          await sendPasswordResetEmail(auth, email);
-          return { success: true };
-        } catch (err) {
-          return { success: false, msg: err.message };
-        }
-      },
-
-      verifyAccount: async () => {
-        try {
-          if (auth.currentUser) {
-            await sendEmailVerification(auth.currentUser);
-            return { success: true };
-          }
-        } catch (err) {
-          return { success: false, msg: err.message };
-        }
-      },
-
       githubLogin: () => {
-        console.log("GitHub login UI pressed - not yet implemented");
+        console.log("GitHub login triggered");
       }
     }),
     {
@@ -167,7 +226,8 @@ export const useAuthStore = create(
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({ 
         hasFinishedOnboarding: state.hasFinishedOnboarding,
-        biometricEnabled: state.biometricEnabled 
+        biometricEnabled: state.biometricEnabled,
+        token: state.token,
       }),
       onRehydrateStorage: () => (state) => {
         if (state) state.setHasHydrated(true);

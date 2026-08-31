@@ -42,6 +42,8 @@ app-example
 /ios
 /android
 
+.vscode/
+
 .env
 
 google-services.json

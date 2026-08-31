@@ -15,7 +15,7 @@ import { Colors } from '../../constants/colors';
 import { GlobalStyles } from '../../constants/styles';
 
 export default function LoginScreen() {
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [socialLoading, setSocialLoading] = useState(false);
@@ -27,18 +27,19 @@ export default function LoginScreen() {
   useEffect(() => {
     (async () => {
       const savedEmail = await AsyncStorage.getItem('lastUserEmail');
-      if (savedEmail) setEmail(savedEmail);
+      if (savedEmail) setIdentifier(savedEmail);
     })();
   }, []);
 
   const handleLogin = async () => {
-    if (!email || !password) {
+    if (!identifier || !password) {
       Alert.alert("Error", "Please fill in all fields");
       return;
     }
-    const res = await login(email, password);
+
+    const res = await login(identifier, password);
     if (res?.success) {
-      await AsyncStorage.setItem('lastUserEmail', email);
+      await AsyncStorage.setItem('lastUserEmail', identifier);
       router.replace('/(main)');
     }
   };
@@ -74,7 +75,7 @@ export default function LoginScreen() {
       const { user, fetchProfile } = useAuthStore.getState();
       if (user) {
         await fetchProfile(user.uid);
-      }      
+      }       
       router.replace('/(main)');
     }
   };
@@ -112,7 +113,7 @@ export default function LoginScreen() {
 
         <View style={styles.form}>
           <TextInput
-            placeholder="Email Address"
+            placeholder="Email Address or Phone Number"
             placeholderTextColor={isDarkMode ? '#888' : '#666'}
             style={[
               GlobalStyles.inputField, 
@@ -122,10 +123,9 @@ export default function LoginScreen() {
                 color: theme.text 
               }
             ]}
-            keyboardType="email-address"
             autoCapitalize="none"
-            value={email}
-            onChangeText={setEmail}
+            value={identifier}
+            onChangeText={setIdentifier}
           />
           
           <View style={[

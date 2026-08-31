@@ -13,22 +13,34 @@ import { GlobalStyles } from '../../constants/styles';
 
 export default function SignUpScreen() {
   const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [socialLoading, setSocialLoading] = useState(false);
-  
-  const { signUp, googleAuth, loading, error, githubLogin } = useAuthStore();
+
+  const { googleAuth, loading, error, githubLogin, signUp } = useAuthStore();
   const { theme, isDarkMode } = useThemeStore(); 
   const router = useRouter();
 
   const handleSignUp = async () => {
-    if (!email || !password || !fullName) {
+    if (!identifier || !password || !fullName) {
       Alert.alert("Missing Fields", "Please fill in all details.");
       return;
     }
-    const res = await signUp(email, password, fullName);
-    if (res?.success) router.replace('/(auth)/verify-email');
+
+    const email = identifier.includes('@') ? identifier : undefined;
+    const phoneNumber = !identifier.includes('@') ? identifier : undefined;
+
+    const res = await signUp(email, password, fullName, phoneNumber);
+    
+    if (res?.success) {
+      router.push({
+        pathname: '/(auth)/verify-email',
+        params: { identifier, fullName }
+      });
+    } else {
+      Alert.alert("Sign Up Failed", res?.msg || "Registration failed");
+    }
   };
 
   const handleGoogleSignUp = async () => {
@@ -45,6 +57,17 @@ export default function SignUpScreen() {
       if (err.code !== 'ASYNC_OP_IN_PROGRESS') {
         Alert.alert("Google Error", err.message);
       }
+    } finally {
+      setSocialLoading(false);
+    }
+  };
+
+  const handleGitHubSignUp = async () => {
+    setSocialLoading(true);
+    try {
+      await githubLogin();
+    } catch (err) {
+      Alert.alert("GitHub Error", err.message);
     } finally {
       setSocialLoading(false);
     }
@@ -78,9 +101,9 @@ export default function SignUpScreen() {
             value={fullName}
             onChangeText={setFullName}
           />
-          
+
           <TextInput
-            placeholder="Email Address"
+            placeholder="Email Address or Phone Number"
             placeholderTextColor={isDarkMode ? '#888' : '#666'}
             style={[
               GlobalStyles.inputField, 
@@ -90,13 +113,12 @@ export default function SignUpScreen() {
                 color: theme.text 
               }
             ]}
-            keyboardType="email-address"
+            keyboardAppearance={isDarkMode ? 'dark' : 'light'}
             autoCapitalize="none"
-            value={email}
-            onChangeText={setEmail}
+            value={identifier}
+            onChangeText={setIdentifier}
           />
-          
-          {/* Password Toggle Wrapper */}
+
           <View style={[
             styles.passwordWrapper, 
             { 
@@ -147,7 +169,6 @@ export default function SignUpScreen() {
           <View style={[styles.line, { backgroundColor: theme.border }]} />
         </View>
 
-        {/* Dynamic, Matching Social Row layout */}
         <View style={styles.socialRow}>
           <TouchableOpacity 
             style={[
@@ -178,7 +199,7 @@ export default function SignUpScreen() {
                 borderColor: theme.border 
               }
             ]} 
-            onPress={githubLogin} 
+            onPress={handleGitHubSignUp} 
             disabled={loading || socialLoading}
           >
             <Ionicons name="logo-github" size={24} color={theme.text} />
