@@ -1,67 +1,79 @@
+// LeaderboardScreen.jsx
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, Image, ActivityIndicator } from 'react-native';
-import { SafeAreaView } from "react-native-safe-area-context";
-import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
-import { db } from '../../firebaseConfig';
-import { Colors } from '../../constants/colors';
+import { 
+  View, Text, FlatList, StyleSheet, ActivityIndicator, RefreshControl, Image 
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useAuthStore } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
 
 export default function LeaderboardScreen() {
-  const [leaders, setLeaders] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { leaderboard, fetchLeaderboard, profile } = useAuthStore();
   const { theme, isDarkMode } = useThemeStore();
+  const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState(leaderboard.length === 0);
 
   useEffect(() => {
-    fetchLeaderboard();
-  }, []);
-
-  const fetchLeaderboard = async () => {
-    try {
-      setLoading(true);
-      const q = query(collection(db, "users"), orderBy("totalScore", "desc"), limit(20));
-      const querySnapshot = await getDocs(q);
-      const leaderboardData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setLeaders(leaderboardData);
-    } catch (error) {
-      console.error("Leaderboard fetch error:", error);
-    } finally {
+    if (leaderboard.length === 0) {
+      loadLeaderboard();
+    } else {
       setLoading(false);
     }
+  }, []);
+
+  const loadLeaderboard = async () => {
+    setLoading(true);
+    await fetchLeaderboard();
+    setLoading(false);
   };
 
-  const renderLeader = ({ item, index }) => {
-    const isTopThree = index < 3;
-    const rankColors = ['#FFD700', '#C0C0C0', '#CD7F32']; 
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchLeaderboard();
+    setRefreshing(false);
+  };
 
-    // Formatting score cleanly to round decimals if any fractional scores exist
+  const renderItem = ({ item, index }) => {
+    const isCurrentUser = profile?.id === item.id || profile?.username === item.username;
+    const isTopThree = index < 3;
+    const rank = index + 1;
+    const rankColors = ['#FFD700', '#C0C0C0', '#CD7F32'];
+
     const displayScore = typeof item.totalScore === 'number' 
       ? Number(item.totalScore.toFixed(1)) 
-      : (item.totalScore || 0);
+      : (item.totalScore || item.score || item.points || 0);
 
     return (
-      <View style={[styles.leaderRow, { backgroundColor: theme.card }]}>
+      <View style={[
+        styles.row, 
+        { backgroundColor: isDarkMode ? '#1E1E1E' : '#F9F9F9', borderColor: theme.border },
+        isCurrentUser && { borderColor: theme.primary, borderWidth: 2 }
+      ]}>
         <View style={styles.rankContainer}>
           {isTopThree ? (
-            <Ionicons name="trophy" size={20} color={rankColors[index]} />
+            <Ionicons name="trophy" size={22} color={rankColors[index]} />
           ) : (
-            <Text style={[styles.rankText, { color: theme.textSecondary }]}>{index + 1}</Text>
+            <Text style={[styles.rankText, { color: theme.textSecondary }]}>{rank}</Text>
           )}
         </View>
-
+        
         <View style={styles.avatarContainer}>
           {item.photoURL ? (
             <Image source={{ uri: item.photoURL }} style={styles.avatar} />
           ) : (
             <View style={[styles.avatar, styles.initialAvatar, { backgroundColor: isDarkMode ? theme.border : '#E0E7FF' }]}>
-              <Text style={[styles.initialText, { color: theme.primary }]}>{item.fullName?.charAt(0) || 'S'}</Text>
+              <Text style={[styles.initialText, { color: theme.primary }]}>
+                {(item.username || item.fullName || 'U').charAt(0).toUpperCase()}
+              </Text>
             </View>
           )}
         </View>
 
-        <View style={styles.infoContainer}>
-          <Text style={[styles.userName, { color: theme.text }]} numberOfLines={1}>{item.fullName || "Anonymous"}</Text>
-          <Text style={[styles.userRole, { color: theme.textSecondary }]}>Scholar</Text>
+        <View style={styles.userInfo}>
+          <Text style={[styles.userName, { color: theme.text }]} numberOfLines={1}>
+            @{item.username || 'user'} {isCurrentUser && '(You)'}
+          </Text>
         </View>
 
         <View style={styles.scoreContainer}>
@@ -72,27 +84,36 @@ export default function LeaderboardScreen() {
     );
   };
 
-  if (loading && leaders.length === 0) return (
-    <View style={{ flex: 1, justifyContent: 'center', backgroundColor: theme.background }}>
-      <ActivityIndicator size="large" color={theme.primary} />
-    </View>
-  );
+  if (loading) {
+    return (
+      <SafeAreaView style={[styles.centered, { flex: 1, backgroundColor: theme.background }]}>
+        <ActivityIndicator size="large" color={theme.primary} />
+      </SafeAreaView>
+    );
+  }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
-      <View style={[styles.header, { backgroundColor: theme.primary }]}>
-        <Text style={styles.headerTitle}>Leaderboard</Text>
-        <Text style={styles.headerSub}>Top Performers of Brain Buzz</Text>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>
+      <View style={styles.headerContainer}>
+        <Text style={[styles.headerTitle, { color: theme.primary }]}>Leaderboard</Text>
+        <Text style={[styles.subtitle, { color: theme.textSecondary }]}>See where you stand among top players.</Text>
       </View>
 
       <FlatList
-        data={leaders}
-        keyExtractor={(item) => item.id}
-        renderItem={renderLeader}
-        contentContainerStyle={styles.listContent}
+        data={leaderboard}
+        keyExtractor={(item, index) => item.id?.toString() || item._id?.toString() || index.toString()}
+        renderItem={renderItem}
+        contentContainerStyle={styles.listContainer}
         showsVerticalScrollIndicator={false}
-        refreshing={loading}
-        onRefresh={fetchLeaderboard}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />
+        }
+        ListEmptyComponent={
+          <View style={styles.centered}>
+            <Ionicons name="trophy-outline" size={48} color={theme.textSecondary} />
+            <Text style={[styles.emptyText, { color: theme.textSecondary }]}>No leaderboard data available.</Text>
+          </View>
+        }
       />
     </SafeAreaView>
   );
@@ -100,37 +121,33 @@ export default function LeaderboardScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { 
-    padding: 25, 
-    borderBottomLeftRadius: 30, 
-    borderBottomRightRadius: 30,
+  headerContainer: { paddingHorizontal: 20, paddingTop: 15, paddingBottom: 10 },
+  headerTitle: { fontFamily: 'Archivo-Black', fontSize: 28, marginBottom: 5 },
+  subtitle: { fontFamily: 'Ubuntu-Regular', fontSize: 14, marginBottom: 10 },
+  listContainer: { paddingHorizontal: 20, paddingBottom: 30, gap: 12 },
+  row: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingBottom: 40
+    padding: 14,
+    borderRadius: 16,
+    borderWidth: 1,
   },
-  headerTitle: { fontFamily: 'Archivo-Black', fontSize: 28, color: '#FFF' },
-  headerSub: { fontFamily: 'Ubuntu-Regular', fontSize: 14, color: 'rgba(255,255,255,0.8)', marginTop: 5 },
-  listContent: { padding: 20, paddingTop: 10 },
-  leaderRow: { 
-    flexDirection: 'row', 
-    padding: 15, 
-    borderRadius: 18, 
-    alignItems: 'center', 
-    marginBottom: 12,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 5
+  rankContainer: {
+    width: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
   },
-  rankContainer: { width: 30, alignItems: 'center' },
-  rankText: { fontFamily: 'Ubuntu-Bold' },
-  avatarContainer: { marginHorizontal: 12 },
-  avatar: { width: 45, height: 45, borderRadius: 22.5 },
+  rankText: { fontFamily: 'Ubuntu-Bold', fontSize: 14 },
+  avatarContainer: { marginRight: 12 },
+  avatar: { width: 40, height: 40, borderRadius: 20 },
   initialAvatar: { justifyContent: 'center', alignItems: 'center' },
-  initialText: { fontFamily: 'Ubuntu-Bold' },
-  infoContainer: { flex: 1 },
-  userName: { fontFamily: 'Ubuntu-Bold', fontSize: 16 },
-  userRole: { fontFamily: 'Ubuntu-Regular', fontSize: 12 },
+  initialText: { fontFamily: 'Ubuntu-Bold', fontSize: 16 },
+  userInfo: { flex: 1, marginRight: 10 },
+  userName: { fontFamily: 'Ubuntu-Bold', fontSize: 15 },
   scoreContainer: { alignItems: 'flex-end' },
   scoreText: { fontFamily: 'Archivo-Black', fontSize: 18 },
-  scoreLabel: { fontFamily: 'Ubuntu-Regular', fontSize: 10 }
+  scoreLabel: { fontFamily: 'Ubuntu-Regular', fontSize: 10 },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: 50 },
+  emptyText: { fontFamily: 'Ubuntu-Medium', fontSize: 14, marginTop: 10 }
 });

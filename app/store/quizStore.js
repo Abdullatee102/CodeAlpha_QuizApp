@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
+import api from '../data/api';
+import formatAxiosError from '../data/formatError';
 
 const notifyAchievement = async (title, desc) => {
   await Notifications.scheduleNotificationAsync({
@@ -17,7 +19,7 @@ const notifyAchievement = async (title, desc) => {
 export const useQuizStore = create(
   persist(
     (set, get) => ({
-      // --- ACTIVE SESSION STATE ---
+      // --- ACTIVE GAMEPLAY STATE ---
       activeSessionId: null,
       questions: [],
       currentCategory: null,
@@ -25,26 +27,141 @@ export const useQuizStore = create(
       score: 0,
       timeLeft: 20,
       isFinished: false,
-      results: { correct: 0, wrong: 0, history: [] },
+      results: { correct: 0, wrong: 0, history: [], totalScore: 0 },
+      isLoading: false,
+      error: null,
 
-      // --- PERSISTENT USER DATA ---
+      // --- PERSISTENT USER STATS & HISTORY ---
+      totalQuizzesTaken: 0,
+      totalCorrectAnswers: 0,
+      badges: [],
+      allTimeHistory: [],        
       unlockedAchievements: [],
-      totalScore: 0,
-      streak: 0,
-      lastPlayedDate: null,
-      allTimeHistory: [],
 
-      // --- START NEW QUIZ SESSION ---
+      hydrateUserStats: (profileData) => {
+        if (!profileData) return;
+        
+        // Normalize incoming history items to ensure both `correct` and `correctAnswers` exist
+        const rawHistory = profileData.allTimeHistory || profileData.history || [];
+        const normalizedHistory = rawHistory.map(item => ({
+          ...item,
+          correct: item.correct ?? item.correctAnswers ?? 0,
+          correctAnswers: item.correctAnswers ?? item.correct ?? 0,
+        }));
+
+        set({
+          totalQuizzesTaken: profileData.totalQuizzesTaken || profileData.quizzesCompleted || 0,
+          totalCorrectAnswers: profileData.totalCorrectAnswers || profileData.totalCorrect || 0,
+          badges: profileData.badges || [],
+          allTimeHistory: normalizedHistory,
+          unlockedAchievements: profileData.unlockedAchievements || [],
+        });
+      },
+
+      // --- STANDARDIZED ADD QUIZ HISTORY ACTION ---
+      addQuizHistory: (quizData) => {
+        const { allTimeHistory } = get();
+        const correctCount = quizData.correct ?? quizData.correctAnswers ?? 0;
+        
+        const standardizedEntry = {
+          id: quizData.id || Math.random().toString(),
+          userId: quizData.userId || (api.defaults?.headers?.common['Authorization'] ? 'synced' : 'local'),
+          score: quizData.score || 0,
+          correct: correctCount,
+          correctAnswers: correctCount,
+          totalQuestions: quizData.totalQuestions || 1,
+          category: (quizData.category || 'General').toLowerCase(),
+          date: quizData.date || new Date().toISOString(),
+          timestamp: quizData.timestamp || Date.now(),
+        };
+
+        set({ allTimeHistory: [standardizedEntry, ...allTimeHistory] });
+      },
+
+      // --- FETCH QUESTIONS FROM BACKEND (DYNAMIC ROUTE MATCHING /api/auth/:categoryId) ---
+      fetchQuestions: async (categoryId) => {
+        set({ isLoading: true, error: null });
+        try {
+          const response = await api.get(`/auth/${categoryId}`);
+          const rawQuestions = response.data?.data || response.data?.questions || response.data || [];
+
+          const fetchedQuestions = JSON.parse(JSON.stringify(rawQuestions));
+          
+          if (fetchedQuestions.length > 0) {
+            set({ 
+              questions: fetchedQuestions, 
+              currentQuestionIndex: 0, 
+              score: 0, 
+              isLoading: false,
+              currentCategory: categoryId.toLowerCase(),
+              activeSessionId: `${categoryId}_${Date.now()}`,
+              isFinished: false,
+              timeLeft: 20,
+              results: { correct: 0, wrong: 0, history: [], totalScore: 0 }
+            });
+            return { success: true, count: fetchedQuestions.length };
+          }
+          
+          set({ isLoading: false });
+          return { success: false, count: 0 };
+        } catch (err) {
+          const formatted = formatAxiosError(err);
+          set({ isLoading: false, error: formatted.message });
+          return { success: false, error: formatted.message };
+        }
+      },
+
+      // Alias for dynamic fetching clarity
+      getDynamicQuestions: async (categoryId) => {
+        return await get().fetchQuestions(categoryId);
+      },
+
+      // --- FETCH ACHIEVEMENTS FROM BACKEND ---
+      fetchAchievements: async () => {
+        set({ isLoading: true, error: null });
+        try {
+          const response = await api.get('/auth/achievements');
+          const serverAchievements = response.data?.data || response.data?.achievements || response.data || [];
+          
+          set({ 
+            unlockedAchievements: serverAchievements,
+            isLoading: false 
+          });
+          return { success: true, data: serverAchievements };
+        } catch (err) {
+          const formatted = formatAxiosError(err);
+          set({ isLoading: false, error: formatted.message });
+          return { success: false, error: formatted.message };
+        }
+      },
+
+      // --- UNLOCK SPECIFIC ACHIEVEMENT VIA BACKEND ---
+      unlockAchievementBackend: async (achievementId) => {
+        const { unlockedAchievements } = get();
+        try {
+          const response = await api.post('/auth/achievements/unlock', { achievementId });
+          const updatedAchievements = response.data?.unlockedAchievements || response.data?.data || [...unlockedAchievements, achievementId];
+          
+          set({ unlockedAchievements: updatedAchievements });
+          return { success: true };
+        } catch (err) {
+          const formatted = formatAxiosError(err);
+          console.error("Failed to unlock achievement on backend:", formatted.message);
+          return { success: false, error: formatted.message };
+        }
+      },
+
+      // --- START NEW QUIZ SESSION (LOCAL FALLBACK) ---
       startQuiz: (categoryId, questionsData) => {
         set({
           activeSessionId: `${categoryId}_${Date.now()}`,
-          currentCategory: categoryId,
+          currentCategory: categoryId.toLowerCase(),
           questions: questionsData,
           currentQuestionIndex: 0,
           score: 0,
           timeLeft: 20,
           isFinished: false,
-          results: { correct: 0, wrong: 0, history: [] },
+          results: { correct: 0, wrong: 0, history: [], totalScore: 0 },
         });
       },
 
@@ -58,99 +175,21 @@ export const useQuizStore = create(
           score: 0,
           timeLeft: 20,
           isFinished: false,
-          results: { correct: 0, wrong: 0, history: [] },
+          results: { correct: 0, wrong: 0, history: [], totalScore: 0 },
+          error: null,
         });
-      },
-
-      // --- ACCOUNT SWITCHING CLEARER ---
-      clearUserSession: () =>
-        set({
-          activeSessionId: null,
-          questions: [],
-          currentCategory: null,
-          currentQuestionIndex: 0,
-          score: 0,
-          totalScore: 0,
-          streak: 0,
-          lastPlayedDate: null,
-          timeLeft: 20,
-          isFinished: false,
-          results: { correct: 0, wrong: 0, history: [] },
-        }),
-
-      // --- HYDRATE USER STATS ON LOGIN ---
-      hydrateUserStats: (profileData) => {
-        if (!profileData) return;
-        set({
-          totalScore: profileData.totalScore || 0,
-          streak: profileData.streak || 0,
-          lastPlayedDate: profileData.lastPlayedDate || null,
-        });
-      },
-
-      // --- ACHIEVEMENT LOGIC ---
-      checkAchievements: (userId) => {
-        if (!userId) return;
-        const { allTimeHistory, totalScore, streak, unlockedAchievements } = get();
-
-        const userHistory = allTimeHistory.filter((q) => q.userId === userId);
-        const userAchievements =
-          unlockedAchievements.find((ua) => ua.userId === userId)?.achievementIds || [];
-
-        const achievementsList = [
-          { id: '1', title: 'Fast Learner', desc: 'Complete 5 quizzes', condition: userHistory.length >= 5 },
-          { id: '2', title: 'Perfect Score', desc: 'Get 100% in any quiz', condition: userHistory.some((q) => q.score === 100) },
-          { id: '3', title: 'Scholar Status', desc: 'Reach 1000 Total Pts', condition: totalScore >= 1000 },
-          { id: '4', title: 'Math Master', desc: '10 Math quizzes', condition: userHistory.filter((q) => q.category === 'maths').length >= 10 },
-          { id: '5', title: 'Consistency', desc: '7-day streak', condition: streak >= 7 },
-          {
-            id: '6',
-            title: 'Night Owl',
-            desc: 'Quiz after 10PM',
-            condition: userHistory.some((q) => {
-              const dateSource = q.date || q.timestamp;
-              if (!dateSource) return false;
-              const hour = new Date(dateSource).getHours();
-              return hour >= 22 || hour <= 4;
-            }),
-          },
-        ];
-
-        let updatedIds = [...userAchievements];
-        let hasNewUnlocks = false;
-
-        achievementsList.forEach((ach) => {
-          if (ach.condition && !updatedIds.includes(ach.id)) {
-            notifyAchievement(ach.title, ach.desc);
-            updatedIds.push(ach.id);
-            hasNewUnlocks = true;
-          }
-        });
-
-        if (hasNewUnlocks) {
-          const otherUsersAchievements = unlockedAchievements.filter((ua) => ua.userId !== userId);
-          set({
-            unlockedAchievements: [
-              ...otherUsersAchievements,
-              { userId, achievementIds: updatedIds },
-            ],
-          });
-        }
       },
 
       // --- ANSWER SUBMISSION ---
-      submitAnswer: (selectedOption, userId) => {
+      submitAnswer: async (selectedOption) => {
         const {
           questions,
           currentQuestionIndex,
           results,
           score,
-          totalScore,
-          allTimeHistory,
           currentCategory,
-          streak,
-          lastPlayedDate,
-          activeSessionId,
+          unlockedAchievements: existingAchievements,
+          addQuizHistory,
         } = get();
 
         const currentQuestion = questions[currentQuestionIndex];
@@ -158,6 +197,7 @@ export const useQuizStore = create(
 
         const isCorrect = selectedOption === currentQuestion.correctAnswer;
         const updatedResults = {
+          ...results,
           correct: isCorrect ? results.correct + 1 : results.correct,
           wrong: !isCorrect ? results.wrong + 1 : results.wrong,
           history: [
@@ -167,56 +207,82 @@ export const useQuizStore = create(
         };
 
         const newScore = isCorrect ? score + 10 : score;
+        updatedResults.totalScore = newScore;
 
         set({
           results: updatedResults,
           score: newScore,
-          totalScore: isCorrect ? totalScore + 10 : totalScore,
         });
 
-        if (currentQuestionIndex + 1 < questions.length) {
-          set({ currentQuestionIndex: currentQuestionIndex + 1, timeLeft: 20 });
-        } else {
-          const today = new Date().toDateString();
-          let newStreak = streak;
-
-          if (lastPlayedDate !== today) {
-            const yesterday = new Date();
-            yesterday.setDate(yesterday.getDate() - 1);
-            newStreak = lastPlayedDate === yesterday.toDateString() ? streak + 1 : 1;
-          }
-
-          const calculatedScore = Number(
-            ((updatedResults.correct / questions.length) * 100).toFixed(2)
-          );
-
-          const sessionSummary = {
-            id: activeSessionId || Date.now().toString(),
-            userId: userId || 'anonymous',
-            date: new Date().toISOString(),
-            score: calculatedScore,
-            category: currentCategory,
-            totalQuestions: questions.length,
+        if (currentQuestionIndex + 1 >= questions.length) {
+          addQuizHistory({
+            score: newScore,
             correct: updatedResults.correct,
-            timestamp: new Date().toISOString(),
-          };
-
-          set({
-            isFinished: true,
-            allTimeHistory: [sessionSummary, ...allTimeHistory],
-            streak: newStreak,
-            lastPlayedDate: today,
+            correctAnswers: updatedResults.correct,
+            totalQuestions: questions.length,
+            category: currentCategory || 'General',
           });
 
-          get().checkAchievements(userId);
+          set({ 
+            isFinished: true,
+            totalQuizzesTaken: get().totalQuizzesTaken + 1,
+            totalCorrectAnswers: get().totalCorrectAnswers + updatedResults.correct,
+          });
+          
+          try {
+            const response = await api.post('/auth/quiz-history', {
+              score: newScore,
+              totalQuestions: questions.length,
+              category: (currentCategory || 'General').toLowerCase(),
+              correctAnswers: updatedResults.correct,
+            });
+
+            if (response.data?.allTimeHistory) {
+              const rawHistory = response.data.allTimeHistory;
+              const normalizedHistory = rawHistory.map(item => ({
+                ...item,
+                correct: item.correct ?? item.correctAnswers ?? 0,
+                correctAnswers: item.correctAnswers ?? item.correct ?? 0,
+              }));
+              set({ allTimeHistory: normalizedHistory });
+            }
+
+            if (response.data?.unlockedAchievements) {
+              const serverAchievements = response.data.unlockedAchievements;
+              const newUnlocks = serverAchievements.filter(
+                (ach) => !existingAchievements.includes(ach)
+              );
+
+              for (const achievement of newUnlocks) {
+                const title = typeof achievement === 'string' ? achievement : achievement.title;
+                const desc = typeof achievement === 'object' ? achievement.description : '';
+                await notifyAchievement(title, desc);
+              }
+
+              set({ unlockedAchievements: serverAchievements });
+            }
+          } catch (err) {
+            console.error("Failed to sync quiz history:", err);
+          }
         }
       },
 
-      tick: (userId) => {
+      // --- NEXT QUESTION ACTION ---
+      nextQuestion: () => {
+        const { currentQuestionIndex, questions } = get();
+        if (currentQuestionIndex + 1 < questions.length) {
+          set({ 
+            currentQuestionIndex: currentQuestionIndex + 1, 
+            timeLeft: 20 
+          });
+        }
+      },
+
+      tick: () => {
         const { timeLeft, isFinished } = get();
         if (isFinished) return;
         if (timeLeft > 0) set({ timeLeft: timeLeft - 1 });
-        else get().submitAnswer(null, userId);
+        else get().submitAnswer(null);
       },
 
       resetQuiz: () =>
@@ -225,18 +291,38 @@ export const useQuizStore = create(
           score: 0,
           timeLeft: 20,
           isFinished: false,
-          results: { correct: 0, wrong: 0, history: [] },
+          results: { correct: 0, wrong: 0, history: [], totalScore: 0 },
+        }),
+
+      // --- CLEAR USER SESSION (LOGOUT CLEANUP) ---
+      clearUserSession: () =>
+        set({
+          activeSessionId: null,
+          questions: [],
+          currentCategory: null,
+          currentQuestionIndex: 0,
+          score: 0,
+          timeLeft: 20,
+          isFinished: false,
+          results: { correct: 0, wrong: 0, history: [], totalScore: 0 },
+          isLoading: false,
+          error: null,
+          totalQuizzesTaken: 0,
+          totalCorrectAnswers: 0,
+          badges: [],
+          allTimeHistory: [],
+          unlockedAchievements: [],
         }),
     }),
     {
-      name: 'quiz-storage',
+      name: 'quiz-storage', 
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({
-        unlockedAchievements: state.unlockedAchievements,
+        totalQuizzesTaken: state.totalQuizzesTaken,
+        totalCorrectAnswers: state.totalCorrectAnswers,
+        badges: state.badges,
         allTimeHistory: state.allTimeHistory,
-        totalScore: state.totalScore,
-        streak: state.streak,
-        lastPlayedDate: state.lastPlayedDate,
+        unlockedAchievements: state.unlockedAchievements,
       }),
     }
   )

@@ -1,40 +1,44 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, ActivityIndicator, Alert, ScrollView } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { useThemeStore } from '../../store/themeStore'; 
+import { useAuthStore } from '../../store/authStore';
 import { GlobalStyles } from '../../constants/styles';
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useAuthStore } from '../../store/authStore';
 
-export default function ResetPasswordScreen() {
+export default function ChangePasswordScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams();
-  const identifier = params?.identifier || '';
-
   const { theme, isDarkMode } = useThemeStore(); 
-  const { resetPassword, isLoading } = useAuthStore();
+  const { changePassword, isLoading } = useAuthStore();
 
+  const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
-  const handleUpdatePassword = async () => {
+  const handleChangePassword = async () => {
+    if (!currentPassword) {
+      return Alert.alert("Error", "Please enter your current password.");
+    }
     if (!newPassword || newPassword.length < 6) {
-      return Alert.alert("Error", "Password must be at least 6 characters.");
+      return Alert.alert("Error", "New password must be at least 6 characters.");
     }
     if (newPassword !== confirmPassword) {
-      return Alert.alert("Error", "Passwords do not match.");
+      return Alert.alert("Error", "New passwords do not match.");
     }
 
-    const res = await resetPassword(identifier, newPassword);
-    if (res?.success) {
-      Alert.alert("Success", "Password updated successfully. You can now sign in.", [
-        { text: "Sign In", onPress: () => router.replace('/(auth)/sign-in') }
+    const result = await changePassword(currentPassword, newPassword);
+
+    if (result.success) {
+      Alert.alert("Success", "Password updated successfully.", [
+        { text: "OK", onPress: () => router.back() }
       ]);
     } else {
-      Alert.alert("Error", res?.error || "Failed to update password.");
+      Alert.alert("Error", result.error || "Failed to update password.");
     }
   };
 
@@ -57,70 +61,66 @@ export default function ResetPasswordScreen() {
         </View>
 
         <Text style={[GlobalStyles.headerTitle, { textAlign: 'center', color: theme.primary }]}>
-          Create New Password
+          Change Password
         </Text>
         <Text style={[GlobalStyles.subtitle, { textAlign: 'center', marginTop: 10, color: theme.textSecondary }]}>
-          Your code has been verified. Enter your new password below for {identifier}.
+          Enter your current password and a secure new password below.
         </Text>
 
         <View style={styles.formSection}>
-          <View style={[
-            styles.passwordContainer, 
-            { backgroundColor: theme.card, borderColor: theme.border }
-          ]}>
+          {/* Current Password */}
+          <View style={[styles.passwordContainer, { backgroundColor: theme.card, borderColor: theme.border }]}>
+            <TextInput
+              placeholder="Current Password"
+              placeholderTextColor={isDarkMode ? '#555' : '#aaa'}
+              secureTextEntry={!showCurrent}
+              style={[styles.passwordInput, { color: theme.text }]}
+              value={currentPassword}
+              onChangeText={setCurrentPassword}
+            />
+            <TouchableOpacity onPress={() => setShowCurrent(!showCurrent)} style={styles.eyeIcon}>
+              <Ionicons name={showCurrent ? "eye-off-outline" : "eye-outline"} size={22} color={theme.textSecondary} />
+            </TouchableOpacity>
+          </View>
+
+          {/* New Password */}
+          <View style={[styles.passwordContainer, { backgroundColor: theme.card, borderColor: theme.border }]}>
             <TextInput
               placeholder="New Password"
               placeholderTextColor={isDarkMode ? '#555' : '#aaa'}
-              secureTextEntry={!showPassword}
+              secureTextEntry={!showNew}
               style={[styles.passwordInput, { color: theme.text }]}
               value={newPassword}
               onChangeText={setNewPassword}
             />
-            <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
-              <Ionicons 
-                name={showPassword ? "eye-off-outline" : "eye-outline"} 
-                size={22} 
-                color={theme.textSecondary} 
-              />
+            <TouchableOpacity onPress={() => setShowNew(!showNew)} style={styles.eyeIcon}>
+              <Ionicons name={showNew ? "eye-off-outline" : "eye-outline"} size={22} color={theme.textSecondary} />
             </TouchableOpacity>
           </View>
 
-          <View style={[
-            styles.passwordContainer, 
-            { backgroundColor: theme.card, borderColor: theme.border }
-          ]}>
+          {/* Confirm New Password */}
+          <View style={[styles.passwordContainer, { backgroundColor: theme.card, borderColor: theme.border }]}>
             <TextInput
               placeholder="Confirm New Password"
               placeholderTextColor={isDarkMode ? '#555' : '#aaa'}
-              secureTextEntry={!showConfirmPassword}
+              secureTextEntry={!showConfirm}
               style={[styles.passwordInput, { color: theme.text }]}
               value={confirmPassword}
               onChangeText={setConfirmPassword}
             />
-            <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} style={styles.eyeIcon}>
-              <Ionicons 
-                name={showConfirmPassword ? "eye-off-outline" : "eye-outline"} 
-                size={22} 
-                color={theme.textSecondary} 
-              />
+            <TouchableOpacity onPress={() => setShowConfirm(!showConfirm)} style={styles.eyeIcon}>
+              <Ionicons name={showConfirm ? "eye-off-outline" : "eye-outline"} size={22} color={theme.textSecondary} />
             </TouchableOpacity>
           </View>
 
           <TouchableOpacity 
-            style={[GlobalStyles.primaryBtn, { backgroundColor: theme.primary, marginTop: 5 }]} 
-            onPress={handleUpdatePassword}
+            style={[GlobalStyles.primaryBtn, { backgroundColor: theme.primary, marginTop: 10 }]} 
+            onPress={handleChangePassword}
             disabled={isLoading}
           >
             {isLoading ? <ActivityIndicator color="#fff" /> : <Text style={GlobalStyles.btnText}>Update Password</Text>}
           </TouchableOpacity>
         </View>
-
-        <TouchableOpacity 
-          style={[styles.secondaryBtn, { borderColor: theme.border, backgroundColor: theme.card, marginTop: 15 }]} 
-          onPress={() => router.replace('/(auth)/sign-in')}
-        >
-          <Text style={[styles.secondaryBtnText, { color: theme.primary }]}>Back to Sign In</Text>
-        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -168,16 +168,5 @@ const styles = StyleSheet.create({
   },
   eyeIcon: {
     padding: 5,
-  },
-  secondaryBtn: {
-    paddingVertical: 18,
-    borderRadius: 15,
-    alignItems: 'center',
-    borderWidth: 1,
-    width: '100%',
-  },
-  secondaryBtnText: {
-    fontFamily: 'Ubuntu-Bold',
-    fontSize: 18,
   },
 });

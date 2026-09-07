@@ -26,19 +26,18 @@ const CATEGORIES = [
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { user, profile, loading } = useAuthStore();
+  const { user, profile, isLoading } = useAuthStore();
   const { results, abandonQuiz } = useQuizStore();
   const { theme, isDarkMode } = useThemeStore();
 
-  const totalQuizzes = profile?.quizzesCompleted || results.history?.length || 0;
-  const totalScore = profile?.totalScore || results.totalScore || 0; 
-  const correctAnswers = profile?.totalCorrect || results.correct || 0;
+  const totalQuizzes = profile?.quizzesCompleted ?? results.history?.length ?? 0;
+  const totalScore = profile?.totalScore ?? results.totalScore ?? 0; 
+  const correctAnswers = profile?.totalCorrect ?? results.correct ?? 0;
   
-  const userInitial = (profile?.fullName || user?.displayName || 'S').charAt(0).toUpperCase();
+  const userInitial = (profile?.fullName || user?.displayName || 'S').split(' ')[0].charAt(0).toUpperCase();
   const profileImage = profile?.photoURL || user?.photoURL;
 
   const handleCategoryPress = (categoryId, title) => {
-    // Purge any lingering session before pushing into the new category
     abandonQuiz();
     router.push({
       pathname: "/(main)/quiz",
@@ -66,8 +65,8 @@ export default function HomeScreen() {
     </TouchableOpacity>
   );
 
-  if (loading) return (
-    <View style={{ flex: 1, justifyContent: 'center', backgroundColor: theme.background }}>
+  if (isLoading) return (
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.background }}>
       <ActivityIndicator size="large" color={theme.primary} />
     </View>
   );
@@ -78,13 +77,18 @@ export default function HomeScreen() {
         
         {/* Header Block */}
         <View style={styles.header}>
-          <View>
+          <View style={styles.welcomeContainer}>
             <Text style={[styles.welcomeText, { color: theme.textSecondary }]}>Hello,</Text>
-            <Text style={[styles.userName, { color: theme.text }]}>
+            <Text 
+              style={[styles.userName, { color: theme.primary }]}
+              numberOfLines={2}
+              adjustsFontSizeToFit
+              minimumFontScale={0.75}
+            >
               {profile?.fullName?.split(' ')[0] || user?.displayName?.split(' ')[0] || 'Scholar'}
             </Text>
           </View>
-          <TouchableOpacity onPress={() => router.push('/(main)/profile')}>
+          <TouchableOpacity onPress={() => router.push('/')} style={styles.avatarWrapper}>
             {profileImage ? (
               <Image source={{ uri: profileImage }} style={styles.avatar} />
             ) : (
@@ -157,6 +161,7 @@ export default function HomeScreen() {
         <TouchableOpacity 
           style={[styles.timerBanner, { backgroundColor: theme.primary }]}
           onPress={() => handleCategoryPress('mixed', 'Timed Challenge')}
+          activeOpacity={0.8}
         >
           <View>
             <Text style={styles.bannerTitle}>Timed Challenge</Text>
@@ -171,9 +176,23 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 25, paddingTop: 20, marginBottom: 20 },
+  header: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    paddingHorizontal: 25, 
+    paddingTop: 20, 
+    marginBottom: 20 
+  },
+  welcomeContainer: {
+    flex: 1,
+    marginRight: 15,
+  },
   welcomeText: { fontFamily: 'Ubuntu-Light', fontSize: 16 },
-  userName: { fontFamily: 'Archivo-Black', fontSize: 28 },
+  userName: { fontFamily: 'Archivo-Black', fontSize: 24, flexWrap: 'wrap' },
+  avatarWrapper: {
+    flexShrink: 0,
+  },
   avatar: { width: 55, height: 55, borderRadius: 27.5, borderWidth: 2, borderColor: '#fff' },
   initialAvatar: { justifyContent: 'center', alignItems: 'center', borderWidth: 0 },
   initialText: { fontFamily: 'Archivo-Black', fontSize: 22 },

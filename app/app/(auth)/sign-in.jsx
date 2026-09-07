@@ -3,6 +3,7 @@ import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, 
   ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator, Alert 
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as LocalAuthentication from 'expo-local-authentication';
@@ -20,7 +21,7 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [socialLoading, setSocialLoading] = useState(false);
 
-  const { login, googleAuth, loading, error } = useAuthStore();
+  const { login, googleAuth, biometricLogin, isLoading, error } = useAuthStore();
   const { theme, isDarkMode } = useThemeStore(); 
   const router = useRouter();
 
@@ -48,8 +49,8 @@ export default function LoginScreen() {
     const hasHardware = await LocalAuthentication.hasHardwareAsync();
     const isEnrolled = await LocalAuthentication.isEnrolledAsync();
     
-    const biometricEnabled = await AsyncStorage.getItem('useBiometrics');
     const savedEmail = await AsyncStorage.getItem('lastUserEmail');
+    const biometricEnabled = savedEmail ? await AsyncStorage.getItem(`useBiometrics_${savedEmail}`) : null;
 
     if (!hasHardware || !isEnrolled) {
       Alert.alert("Not Available", "Biometrics not set up on this device.");
@@ -72,11 +73,12 @@ export default function LoginScreen() {
     if (result.success) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       
-      const { user, fetchProfile } = useAuthStore.getState();
-      if (user) {
-        await fetchProfile(user.uid);
-      }       
-      router.replace('/(main)');
+      const res = await biometricLogin(savedEmail);
+      if (res?.success) {
+        router.replace('/(main)');
+      } else {
+        Alert.alert("Authentication Failed", res?.error || "Could not complete biometric sign-in. Please log in with your password.");
+      }
     }
   };
 
@@ -99,139 +101,143 @@ export default function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={[GlobalStyles.safeArea, { backgroundColor: theme.background }]}
-    >
-      <ScrollView 
-        contentContainerStyle={styles.scrollContainer} 
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardView}
       >
-        <Text style={[styles.headerTitle, { color: theme.primary }]}>Welcome Back</Text>
-        <Text style={[styles.subtitle, { color: theme.textSecondary }]}>Sign in to continue your assessment journey.</Text>
+        <ScrollView 
+          contentContainerStyle={styles.scrollContainer} 
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <Text style={[styles.headerTitle, { color: theme.primary }]}>Welcome Back</Text>
+          <Text style={[styles.subtitle, { color: theme.textSecondary }]}>Sign in to continue your assessment journey.</Text>
 
-        <View style={styles.form}>
-          <TextInput
-            placeholder="Email Address or Phone Number"
-            placeholderTextColor={isDarkMode ? '#888' : '#666'}
-            style={[
-              GlobalStyles.inputField, 
-              { 
-                backgroundColor: theme.card, 
-                borderColor: theme.border, 
-                color: theme.text 
-              }
-            ]}
-            autoCapitalize="none"
-            value={identifier}
-            onChangeText={setIdentifier}
-          />
-          
-          <View style={[
-            styles.passwordWrapper, 
-            { 
-              backgroundColor: theme.card, 
-              borderColor: theme.border 
-            }
-          ]}>
+          <View style={styles.form}>
             <TextInput
-              placeholder="Password"
+              placeholder="Email Address or Phone Number"
               placeholderTextColor={isDarkMode ? '#888' : '#666'}
               style={[
                 GlobalStyles.inputField, 
                 { 
-                  flex: 1, 
-                  marginBottom: 0, 
-                  borderWidth: 0, 
-                  backgroundColor: 'transparent',
+                  backgroundColor: theme.card, 
+                  borderColor: theme.border, 
                   color: theme.text 
                 }
               ]}
-              secureTextEntry={!showPassword}
-              value={password}
-              onChangeText={setPassword}
+              autoCapitalize="none"
+              value={identifier}
+              onChangeText={setIdentifier}
             />
-            <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
-              <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={22} color={theme.textSecondary} />
+            
+            <View style={[
+              styles.passwordWrapper, 
+              { 
+                backgroundColor: theme.card, 
+                borderColor: theme.border 
+              }
+            ]}>
+              <TextInput
+                placeholder="Password"
+                placeholderTextColor={isDarkMode ? '#888' : '#666'}
+                style={[
+                  GlobalStyles.inputField, 
+                  { 
+                    flex: 1, 
+                    marginBottom: 0, 
+                    borderWidth: 0, 
+                    backgroundColor: 'transparent',
+                    color: theme.text 
+                  }
+                ]}
+                secureTextEntry={!showPassword}
+                value={password}
+                onChangeText={setPassword}
+              />
+              <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
+                <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={22} color={theme.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity onPress={() => router.push('/(auth)/forgot-password')}>
+              <Text style={[styles.forgotText, { color: theme.primary }]}>Forgot Password?</Text>
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity onPress={() => router.push('/(auth)/forgot-password')}>
-            <Text style={[styles.forgotText, { color: theme.primary }]}>Forgot Password?</Text>
-          </TouchableOpacity>
-        </View>
-
-        {error && <Text style={styles.errorText}>{error}</Text>}
-
-        <TouchableOpacity 
-          style={[
-            GlobalStyles.primaryBtn, 
-            { backgroundColor: theme.primary },
-            (loading || socialLoading) && { opacity: 0.7 }
-          ]} 
-          onPress={handleLogin} 
-          disabled={loading || socialLoading}
-        >
-          {loading ? <ActivityIndicator color="#fff" /> : <Text style={GlobalStyles.btnText}>Sign In</Text>}
-        </TouchableOpacity>
-
-        <View style={styles.dividerContainer}>
-          <View style={[styles.line, { backgroundColor: theme.border }]} />
-          <Text style={[styles.dividerText, { color: theme.textSecondary }]}>QUICK ACCESS</Text>
-          <View style={[styles.line, { backgroundColor: theme.border }]} />
-        </View>
-
-        <View style={styles.socialRow}>
-          <TouchableOpacity 
-            style={[
-              styles.socialBtn, 
-              { 
-                backgroundColor: isDarkMode ? '#1E1E1E' : '#F5F5F5', 
-                borderColor: theme.border 
-              }
-            ]} 
-            onPress={handleBiometricAuth} 
-            disabled={loading || socialLoading}
-          >
-            <Ionicons name="finger-print" size={24} color={theme.primary} />
-            <Text style={[styles.socialLabel, { color: theme.text }]}>Biometrics</Text>
-          </TouchableOpacity>
+          {error && <Text style={styles.errorText}>{error}</Text>}
 
           <TouchableOpacity 
             style={[
-              styles.socialBtn, 
-              { 
-                backgroundColor: theme.primary + '15', 
-                borderColor: theme.primary 
-              }
+              GlobalStyles.primaryBtn, 
+              { backgroundColor: theme.primary },
+              (isLoading || socialLoading) && { opacity: 0.7 }
             ]} 
-            onPress={handleGoogleSignIn} 
-            disabled={loading || socialLoading}
+            onPress={handleLogin} 
+            disabled={isLoading || socialLoading}
           >
-            {socialLoading ? (
-              <ActivityIndicator size="small" color={theme.primary} />
-            ) : (
-              <>
-                <Ionicons name="logo-google" size={24} color={theme.primary} />
-                <Text style={[styles.socialLabel, { color: theme.text }]}>Google</Text>
-              </>
-            )}
+            {isLoading ? <ActivityIndicator color="#fff" /> : <Text style={GlobalStyles.btnText}>Sign In</Text>}
           </TouchableOpacity>
-        </View>
 
-        <View style={styles.footer}>
-          <Text style={[styles.footerText, { color: theme.textSecondary }]}>Don't have an account? </Text>
-          <TouchableOpacity onPress={() => router.push('/(auth)/sign-up')}>
-            <Text style={[styles.linkText, { color: theme.primary }]}>Sign Up</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+          <View style={styles.dividerContainer}>
+            <View style={[styles.line, { backgroundColor: theme.border }]} />
+            <Text style={[styles.dividerText, { color: theme.textSecondary }]}>QUICK ACCESS</Text>
+            <View style={[styles.line, { backgroundColor: theme.border }]} />
+          </View>
+
+          <View style={styles.socialRow}>
+            <TouchableOpacity 
+              style={[
+                styles.socialBtn, 
+                { 
+                  backgroundColor: isDarkMode ? '#1E1E1E' : '#F5F5F5', 
+                  borderColor: theme.border 
+                }
+              ]} 
+              onPress={handleBiometricAuth} 
+              disabled={isLoading || socialLoading}
+            >
+              <Ionicons name="finger-print" size={24} color={theme.primary} />
+              <Text style={[styles.socialLabel, { color: theme.text }]}>Biometrics</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[
+                styles.socialBtn, 
+                { 
+                  backgroundColor: theme.primary + '15', 
+                  borderColor: theme.primary 
+                }
+              ]} 
+              onPress={handleGoogleSignIn} 
+              disabled={isLoading || socialLoading}
+            >
+              {socialLoading ? (
+                <ActivityIndicator size="small" color={theme.primary} />
+              ) : (
+                <>
+                  <Ionicons name="logo-google" size={24} color={theme.primary} />
+                  <Text style={[styles.socialLabel, { color: theme.text }]}>Google</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.footer}>
+            <Text style={[styles.footerText, { color: theme.textSecondary }]}>Don't have an account? </Text>
+            <TouchableOpacity onPress={() => router.replace('/(auth)/sign-up')}>
+              <Text style={[styles.linkText, { color: theme.primary }]}>Sign Up</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  container: { flex: 1 },
+  keyboardView: { flex: 1 },
   scrollContainer: { padding: 25, justifyContent: 'center', flexGrow: 1 },
   headerTitle: { fontFamily: 'Archivo-Black', fontSize: 32, marginBottom: 10 },
   subtitle: { fontFamily: 'Ubuntu-Regular', fontSize: 16, marginBottom: 30 },

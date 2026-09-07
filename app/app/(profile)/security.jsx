@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Switch, TouchableOpacity, Alert, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Switch, TouchableOpacity, Alert, ScrollView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as LocalAuthentication from 'expo-local-authentication';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -7,17 +7,21 @@ import { Colors } from '../../constants/colors';
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from 'expo-router';
 import { useThemeStore } from '../../store/themeStore';
+import { useAuthStore } from '../../store/authStore';
 
 export default function SecurityScreen() {
   const router = useRouter();
   const { theme, isDarkMode } = useThemeStore();
+  const { user, refreshToken, setBiometricEnabled: setStoreBiometric } = useAuthStore();
   const [isBiometricSupported, setIsBiometricSupported] = useState(false);
   const [isBiometricEnabled, setIsBiometricEnabled] = useState(false);
+
+  const userKey = user?.email || user?.uid || 'default';
 
   useEffect(() => {
     checkDeviceSupport();
     loadBiometricSetting();
-  }, []);
+  }, [userKey]);
 
   const checkDeviceSupport = async () => {
     const compatible = await LocalAuthentication.hasHardwareAsync();
@@ -26,8 +30,12 @@ export default function SecurityScreen() {
   };
 
   const loadBiometricSetting = async () => {
-    const saved = await AsyncStorage.getItem('useBiometrics');
-    setIsBiometricEnabled(saved === 'true');
+    try {
+      const saved = await AsyncStorage.getItem(`useBiometrics_${userKey}`);
+      setIsBiometricEnabled(saved === 'true');
+    } catch (err) {
+      console.error("Failed to load biometric setting:", err);
+    }
   };
 
   const toggleBiometric = async (value) => {
@@ -43,15 +51,37 @@ export default function SecurityScreen() {
       });
 
       if (result.success) {
-        await AsyncStorage.setItem('useBiometrics', 'true');
-        setIsBiometricEnabled(true);
-        Alert.alert("Success", "Biometric login enabled!");
+        try {
+          await AsyncStorage.setItem(`useBiometrics_${userKey}`, 'true');
+          setStoreBiometric(true);
+          
+          const activeRefresh = refreshToken || await AsyncStorage.getItem('refreshToken');
+          if (activeRefresh) {
+            await AsyncStorage.setItem('biometricRefreshToken', activeRefresh);
+          }
+
+          if (user?.email) {
+            await AsyncStorage.setItem('lastUserEmail', user.email);
+          }
+          setIsBiometricEnabled(true);
+          Alert.alert("Success", "Biometric login enabled!");
+        } catch (err) {
+          Alert.alert("Error", "Could not save biometric preference.");
+          setIsBiometricEnabled(false);
+          setStoreBiometric(false);
+        }
       } else {
         setIsBiometricEnabled(false);
       }
     } else {
-      await AsyncStorage.setItem('useBiometrics', 'false');
-      setIsBiometricEnabled(false);
+      try {
+        await AsyncStorage.setItem(`useBiometrics_${userKey}`, 'false');
+        setStoreBiometric(false);
+        await AsyncStorage.removeItem('biometricRefreshToken');
+        setIsBiometricEnabled(false);
+      } catch (err) {
+        console.error("Failed to update biometric setting:", err);
+      }
     }
   };
 
@@ -84,18 +114,6 @@ export default function SecurityScreen() {
             thumbColor={Platform.OS === 'android' ? (isBiometricEnabled ? theme.primary : '#ccc') : undefined}
           />
         </View>
-
-        <Text style={[styles.sectionLabel, { marginTop: 30 }]}>Account Security</Text>
-
-        <TouchableOpacity style={styles.actionRow} onPress={() => router.push('/(auth)/forgot-password')}>
-          <View style={styles.rowLeft}>
-            <View style={[styles.iconCircle, { backgroundColor: isDarkMode ? '#1E1E1E' : '#F0F0F0' }]}>
-              <Ionicons name="lock-closed-outline" size={22} color={theme.textSecondary} />
-            </View>
-            <Text style={[styles.actionText, { color: theme.text }]}>Reset Password</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
-        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -113,15 +131,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 10,
   },
-  actionRow: {
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center',
-    paddingVertical: 10,
-  },
   rowLeft: { flexDirection: 'row', alignItems: 'center' },
   iconCircle: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
   rowText: { fontFamily: 'Ubuntu-Bold', fontSize: 16 },
   rowSubText: { fontFamily: 'Ubuntu-Regular', fontSize: 12, color: '#999' },
-  actionText: { fontFamily: 'Ubuntu-Medium', fontSize: 16, marginLeft: 15 }
 });

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'; 
+import { useEffect, useRef } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useFonts } from 'expo-font';
@@ -26,15 +26,14 @@ export default function RootLayout() {
   const segments = useSegments();
   const router = useRouter();
   
-  const notificationListener = useRef();
-  const responseListener = useRef();
+  const notificationListener = useRef(null);
+  const responseListener = useRef(null);
 
   useEffect(() => {
     GoogleSignin.configure({
       webClientId: '777496097951-jb7mabvi6ajftdvf5gvckp8qpuea543g.apps.googleusercontent.com', 
       offlineAccess: true,
     });
-    const unsubscribe = initialize();
 
     notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
       console.log('Notification Received:', notification);
@@ -48,16 +47,23 @@ export default function RootLayout() {
     });
 
     return () => { 
-      if (unsubscribe) unsubscribe(); 
-    
       if (notificationListener.current) {
         notificationListener.current.remove();
+        notificationListener.current = null;
       }
       if (responseListener.current) {
         responseListener.current.remove();
+        responseListener.current = null;
       }
     };
   }, []);
+
+  // Trigger initialize ONLY after Zustand storage is successfully hydrated
+  useEffect(() => {
+    if (_hasHydrated) {
+      initialize();
+    }
+  }, [_hasHydrated]);
 
   const [fontsLoaded] = useFonts({
     'Archivo-Black': require('../assets/fonts/Archivo_Black/ArchivoBlack-Regular.ttf'), 
@@ -68,7 +74,6 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
-    // Only check navigation routes when fonts are ready, app state hydration is complete, and auth initialization is finished
     if (!fontsLoaded || isInitializing || !_hasHydrated) return;
 
     const inAuthGroup = segments[0] === '(auth)';

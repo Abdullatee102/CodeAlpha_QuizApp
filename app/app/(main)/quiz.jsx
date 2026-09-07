@@ -6,12 +6,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
 import { QUIZ_DATA } from '../../data/questions';
 import { useQuizStore } from '../../store/quizStore';
-import { db } from '../../firebaseConfig';
-import { doc, updateDoc, increment } from 'firebase/firestore';
 import { useAuthStore } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import { quizReportHTML } from '../../components/ui/quizReport';
 
 export default function QuizScreen() {
   const { categoryId, categoryTitle } = useLocalSearchParams();
@@ -19,12 +18,15 @@ export default function QuizScreen() {
   const navigation = useNavigation();
   const user = useAuthStore((state) => state.user);
   const profile = useAuthStore((state) => state.profile);
+  const fetchProfile = useAuthStore((state) => state.fetchProfile);
   const { theme, isDarkMode } = useThemeStore();
 
   const {
     startQuiz,
+    fetchQuestions,
     abandonQuiz,
     submitAnswer,
+    nextQuestion,
     tick,
     isFinished,
     questions,
@@ -41,38 +43,70 @@ export default function QuizScreen() {
   const progressAnim = useRef(new Animated.Value(0)).current;
   const appState = useRef(AppState.currentState);
 
-  // 1. Initialize Fresh Quiz Instance on Navigation
   useEffect(() => {
     let isMounted = true;
-    const rawQuestions = QUIZ_DATA[categoryId] || [];
 
-    if (rawQuestions.length > 0) {
-      startQuiz(categoryId, rawQuestions);
-      if (isMounted) setIsLoading(false);
+    const initializeQuiz = async () => {
+      abandonQuiz();
+      setSelectedOption(null);
+      setIsAnswered(false);
 
-      setTimeout(() => {
-        Alert.alert(
-          "Fair Play Rules 🛡️",
-          `Leaving this screen clears progress.\nSwitching apps or minimizing terminates the quiz.\nScores are only saved on completion.`,
-          [
-            {
-              text: "Go Back",
-              onPress: () => {
-                abandonQuiz();
-                router.back();
-              },
-              style: "cancel",
-            },
-            { text: "I Understand, Start", onPress: () => setIsStarted(true) },
-          ],
-          { cancelable: false }
+      let res = { success: false };
+      try {
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Network timeout')), 10000)
         );
-      }, 300);
-    } else {
-      Alert.alert("Error", "No questions found for this category.", [
-        { text: "OK", onPress: () => router.back() },
-      ]);
-    }
+        res = await Promise.race([fetchQuestions(categoryId), timeoutPromise]);
+      } catch (err) {
+        console.warn("Fetch questions timed out or failed, falling back to local data:", err);
+      }
+      
+      let finalQuestionsCount = 0;
+      if (res && res.success) {
+        const currentQuestions = useQuizStore.getState().questions;
+        finalQuestionsCount = currentQuestions.length;
+      }
+
+      if (finalQuestionsCount === 0) {
+        const rawQuestions = QUIZ_DATA[categoryId] || [];
+        if (rawQuestions.length > 0) {
+          startQuiz(categoryId, rawQuestions);
+          finalQuestionsCount = rawQuestions.length;
+        }
+      }
+
+      if (finalQuestionsCount > 0) {
+        if (isMounted) setIsLoading(false);
+
+        setTimeout(() => {
+          Alert.alert(
+            "Fair Play Rules 🛡️",
+            `1. Leaving this screen clears progress.\n2. Switching apps or minimizing terminates the quiz.\n3. Scores are only saved on completion.`,
+            [
+              {
+                text: "Go Back",
+                onPress: () => {
+                  abandonQuiz();
+                  router.back();
+                },
+                style: "cancel",
+              },
+              { text: "I Understand, Start", onPress: () => setIsStarted(true) },
+            ],
+            { cancelable: false }
+          );
+        }, 300);
+      } else {
+        if (isMounted) {
+          setIsLoading(false);
+          Alert.alert("Error", "No questions found for this category.", [
+            { text: "OK", onPress: () => router.back() },
+          ]);
+        }
+      }
+    };
+
+    initializeQuiz();
 
     return () => {
       isMounted = false;
@@ -80,7 +114,6 @@ export default function QuizScreen() {
     };
   }, [categoryId]);
 
-  // 2. Anti-Cheat Hook
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextAppState) => {
       if (
@@ -103,7 +136,6 @@ export default function QuizScreen() {
     return () => subscription.remove();
   }, [isStarted, isFinished]);
 
-  // 3. Navigation Guard
   useEffect(() => {
     const unsubscribe = navigation.addListener('beforeRemove', (e) => {
       if (isFinished || !isStarted) return;
@@ -131,7 +163,6 @@ export default function QuizScreen() {
     return unsubscribe;
   }, [navigation, isFinished, isStarted]);
 
-  // 4. Timer Logic
   useEffect(() => {
     if (isAnswered || isFinished || !isStarted) return;
 
@@ -141,13 +172,12 @@ export default function QuizScreen() {
     }
 
     const timer = setInterval(() => {
-      tick(user?.uid);
+      tick();
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [timeLeft, isAnswered, isFinished, isStarted, user]);
+  }, [timeLeft, isAnswered, isFinished, isStarted]);
 
-  // 5. Progress Bar Animation
   useEffect(() => {
     if (questions.length > 0) {
       Animated.timing(progressAnim, {
@@ -159,51 +189,41 @@ export default function QuizScreen() {
   }, [currentQuestionIndex, questions.length]);
 
   const handleAutoSkip = () => {
+    if (isAnswered) return;
     setIsAnswered(true);
     setSelectedOption('timeout');
-    submitAnswer(null, user?.uid);
+    submitAnswer(null);
   };
 
   const handleOptionPress = (option) => {
     if (isAnswered) return;
     setSelectedOption(option);
     setIsAnswered(true);
-    submitAnswer(option, user?.uid);
+    submitAnswer(option);
   };
 
   const handleNext = () => {
-    if (currentQuestionIndex < questions.length - 1) {
-      setSelectedOption(null);
-      setIsAnswered(false);
-    } else {
+    setSelectedOption(null);
+    setIsAnswered(false);
+    
+    if (currentQuestionIndex >= questions.length - 1) {
       finishQuiz();
+    } else {
+      nextQuestion();
     }
   };
 
   const handleDownloadReport = async (finalScore) => {
-    const htmlContent = `
-      <html>
-        <head>
-          <style>
-            body { font-family: 'Helvetica', sans-serif; padding: 40px; color: #333; }
-            h1 { color: #4F46E5; text-align: center; }
-            .score-box { text-align: center; font-size: 24px; font-weight: bold; margin: 20px 0; padding: 20px; background: #F3F4F6; borderRadius: 8px; }
-            .details { margin-top: 30px; font-size: 16px; }
-          </style>
-        </head>
-        <body>
-          <h1>BrainBuzz Quiz Report Card</h1>
-          <div class="score-box">
-            Category: ${categoryTitle}<br/>
-            Final Score: ${finalScore} XP 🎉
-          </div>
-          <div class="details">
-            <p><strong>Player Name:</strong> ${profile?.fullName || user?.email || 'Player'}</p>
-            <p><strong>Date Attempted:</strong> ${new Date().toLocaleDateString()}</p>
-          </div>
-        </body>
-      </html>
-    `;
+    const correctCount = Math.floor(finalScore / 10);
+    const htmlContent = quizReportHTML({
+      categoryTitle,
+      finalScore,
+      correctCount,
+      totalQuestions: questions.length,
+      profile,
+      user,
+    });
+
     try {
       const { uri } = await Print.printToFileAsync({ html: htmlContent });
       await Sharing.shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf' });
@@ -217,13 +237,10 @@ export default function QuizScreen() {
     const finalScore = score;
     setIsStarted(false);
 
-    if (user?.uid) {
-      try {
-        const userRef = doc(db, "users", user.uid);
-        await updateDoc(userRef, { totalScore: increment(finalScore) });
-      } catch (error) {
-        console.error("Sync Error:", error);
-      }
+    try {
+      await fetchProfile();
+    } catch (error) {
+      console.error("Profile sync error after quiz finish:", error);
     }
 
     Alert.alert(
@@ -254,6 +271,7 @@ export default function QuizScreen() {
   }
 
   const currentQuestion = questions[currentQuestionIndex];
+  if (!currentQuestion) return null;
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
@@ -374,7 +392,7 @@ const styles = StyleSheet.create({
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: {
     flexDirection: 'row',
-    justify: 'space-between',
+    justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
     marginTop: 10,

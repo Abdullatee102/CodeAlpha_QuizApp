@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Alert, Switch } from 'react-n
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore'; 
-import { useQuizStore } from '../store/quizStore'; // Imported Store Fix
+import { useQuizStore } from '../store/quizStore';
 import { useRouter } from 'expo-router';
 import { Colors } from '../constants/colors';
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -13,7 +13,7 @@ import * as Device from 'expo-device';
 export default function SettingsScreen() {
   const { logout } = useAuthStore();
   const { isDarkMode, toggleTheme, theme } = useThemeStore(); 
-  const { clearUserSession } = useQuizStore(); // Grabbed active cleaner
+  const { clearUserSession } = useQuizStore(); 
   const router = useRouter();
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
 

@@ -3,7 +3,6 @@ import { View, Text, StyleSheet, TouchableOpacity, Linking, ScrollView, Alert, T
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useThemeStore } from '../../store/themeStore'; 
-import { Colors } from '../../constants/colors';
 import { GlobalStyles } from '../../constants/styles';
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuthStore } from '../../store/authStore';
@@ -17,12 +16,9 @@ export default function VerifyEmail() {
 
   const isOTPFlow = true;
   const { theme, isDarkMode } = useThemeStore(); 
-  const { verifyOTP, resetPassword, loading: storeLoading } = useAuthStore();
+  const { verifyOTP, isLoading } = useAuthStore();
 
   const [otpCode, setOtpCode] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [isVerified, setIsVerified] = useState(false);
   const [resending, setResending] = useState(false);
   const [cooldown, setCooldown] = useState(0);
 
@@ -57,25 +53,7 @@ export default function VerifyEmail() {
         ]);
       }
     } else {
-      Alert.alert("Verification Failed", res?.msg || "Invalid code entered.");
-    }
-  };
-
-  const handleUpdatePassword = async () => {
-    if (!newPassword || newPassword.length < 6) {
-      return Alert.alert("Error", "Password must be at least 6 characters.");
-    }
-    if (newPassword !== confirmPassword) {
-      return Alert.alert("Error", "Passwords do not match.");
-    }
-
-    const res = await resetPassword(identifier, newPassword);
-    if (res?.success) {
-      Alert.alert("Success", "Password updated successfully. You can now sign in.", [
-        { text: "Sign In", onPress: () => router.replace('/(auth)/sign-in') }
-      ]);
-    } else {
-      Alert.alert("Error", res?.msg || "Failed to update password.");
+      Alert.alert("Verification Failed", res?.error || "Invalid code entered.");
     }
   };
 
@@ -112,97 +90,59 @@ export default function VerifyEmail() {
           { backgroundColor: isDarkMode ? '#1E293B' : theme.primary + '15' }
         ]}>
           <MaterialCommunityIcons 
-            name={isVerified ? "lock-reset" : (isOTPFlow ? "cellphone-message" : "email-check-outline")} 
+            name={isPasswordResetFlow ? "lock-reset" : (isOTPFlow ? "cellphone-message" : "email-check-outline")} 
             size={60} 
             color={theme.primary} 
           />
         </View>
 
         <Text style={[GlobalStyles.headerTitle, { textAlign: 'center', color: theme.primary }]}>
-          {isVerified ? "Create New Password" : (isOTPFlow ? "Verify Your Account" : "Check Your Email")}
+          {isPasswordResetFlow ? "Verify Reset Code" : (isOTPFlow ? "Verify Your Account" : "Check Your Email")}
         </Text>
         <Text style={[GlobalStyles.subtitle, { textAlign: 'center', marginTop: 10, color: theme.textSecondary }]}>
-          {isVerified 
-            ? "Your code has been verified. Enter your new password below."
-            : (isOTPFlow 
-              ? `We've sent a 6-digit verification code to ${identifier}. Enter it below to proceed.`
-              : `We've sent a verification link to ${identifier || 'your email address'}. Please verify to proceed.`
-            )
+          {isOTPFlow 
+            ? `We've sent a 6-digit verification code to ${identifier}. Enter it below to proceed.`
+            : `We've sent a verification link to ${identifier || 'your email address'}. Please verify to proceed.`
           }
         </Text>
 
-        {isVerified ? (
+        {isOTPFlow ? (
           <View style={styles.otpSection}>
             <TextInput
-              placeholder="New Password"
+              placeholder="------"
               placeholderTextColor={isDarkMode ? '#555' : '#aaa'}
-              secureTextEntry
               style={[
                 GlobalStyles.inputField,
-                { backgroundColor: theme.card, borderColor: theme.border, color: theme.text, marginBottom: 15 }
+                { 
+                  backgroundColor: theme.card, 
+                  borderColor: theme.border, 
+                  color: theme.text,
+                  textAlign: 'center',
+                  fontSize: 24,
+                  letterSpacing: 8,
+                  fontWeight: 'bold'
+                }
               ]}
-              value={newPassword}
-              onChangeText={setNewPassword}
-            />
-            <TextInput
-              placeholder="Confirm New Password"
-              placeholderTextColor={isDarkMode ? '#555' : '#aaa'}
-              secureTextEntry
-              style={[
-                GlobalStyles.inputField,
-                { backgroundColor: theme.card, borderColor: theme.border, color: theme.text, marginBottom: 15 }
-              ]}
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
+              keyboardType="number-pad"
+              maxLength={6}
+              value={otpCode}
+              onChangeText={setOtpCode}
             />
 
             <TouchableOpacity 
               style={[GlobalStyles.primaryBtn, { backgroundColor: theme.primary, marginTop: 10 }]} 
-              onPress={handleUpdatePassword}
-              disabled={storeLoading}
+              onPress={handleVerifyOTPCode}
+              disabled={isLoading}
             >
-              {storeLoading ? <ActivityIndicator color="#fff" /> : <Text style={GlobalStyles.btnText}>Update Password</Text>}
+              {isLoading ? <ActivityIndicator color="#fff" /> : <Text style={GlobalStyles.btnText}>Verify Code</Text>}
             </TouchableOpacity>
           </View>
         ) : (
-          isOTPFlow ? (
-            <View style={styles.otpSection}>
-              <TextInput
-                placeholder="------"
-                placeholderTextColor={isDarkMode ? '#555' : '#aaa'}
-                style={[
-                  GlobalStyles.inputField,
-                  { 
-                    backgroundColor: theme.card, 
-                    borderColor: theme.border, 
-                    color: theme.text,
-                    textAlign: 'center',
-                    fontSize: 24,
-                    letterSpacing: 8,
-                    fontWeight: 'bold'
-                  }
-                ]}
-                keyboardType="number-pad"
-                maxLength={6}
-                value={otpCode}
-                onChangeText={setOtpCode}
-              />
-
-              <TouchableOpacity 
-                style={[GlobalStyles.primaryBtn, { backgroundColor: theme.primary, marginTop: 10 }]} 
-                onPress={handleVerifyOTPCode}
-                disabled={storeLoading}
-              >
-                {storeLoading ? <ActivityIndicator color="#fff" /> : <Text style={GlobalStyles.btnText}>Verify Code</Text>}
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <View style={styles.buttonGroup}>
-              <TouchableOpacity style={[GlobalStyles.primaryBtn, { backgroundColor: theme.primary }]} onPress={openEmailApp}>
-                <Text style={GlobalStyles.btnText}>Open Email App</Text>
-              </TouchableOpacity>
-            </View>
-          )
+          <View style={styles.buttonGroup}>
+            <TouchableOpacity style={[GlobalStyles.primaryBtn, { backgroundColor: theme.primary }]} onPress={openEmailApp}>
+              <Text style={GlobalStyles.btnText}>Open Email App</Text>
+            </TouchableOpacity>
+          </View>
         )}
 
         <TouchableOpacity 
@@ -212,22 +152,19 @@ export default function VerifyEmail() {
           <Text style={[styles.secondaryBtnText, { color: theme.primary }]}>Back to Sign In</Text>
         </TouchableOpacity>
 
-        {!isVerified && (
-          <View style={{ marginTop: 30, alignItems: 'center' }}>
-            <Text style={[styles.footerText, { color: theme.textSecondary }]}>
-              Didn't receive a code?{' '}
-              <TouchableOpacity 
-                onPress={handleResendCode} 
-                disabled={resending || cooldown > 0} 
-                style={[styles.resendLink, { color: cooldown > 0 ? theme.textSecondary : theme.primary, fontWeight: 'bold' }]}
-              >
-                <Text style={{ color: cooldown > 0 ? theme.textSecondary : theme.primary, fontWeight: 'bold' }}>
-                  {resending ? 'Sending...' : cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend'}
-                </Text>
-              </TouchableOpacity>
+        <View style={{ marginTop: 30, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}>
+          <Text style={[styles.footerText, { color: theme.textSecondary }]}>
+            Didn't receive a code?{' '}
+          </Text>
+          <TouchableOpacity 
+            onPress={handleResendCode} 
+            disabled={resending || cooldown > 0}
+          >
+            <Text style={{ color: cooldown > 0 ? theme.textSecondary : theme.primary, fontFamily: 'Ubuntu-Bold' }}>
+              {resending ? 'Sending...' : cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend'}
             </Text>
-          </View>
-        )}
+          </TouchableOpacity>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );

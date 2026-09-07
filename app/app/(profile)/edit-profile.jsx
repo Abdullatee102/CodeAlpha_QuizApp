@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   View, 
   Text, 
@@ -13,50 +13,94 @@ import {
 } from 'react-native';
 import { useAuthStore } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
-import { db } from '../../firebaseConfig';
-import { doc, setDoc } from 'firebase/firestore'; 
-import { Colors } from '../../constants/colors';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 export default function EditProfileScreen() {
-  const { user, profile, fetchProfile } = useAuthStore();
+  const { user, profile, updateProfile } = useAuthStore();
   const { theme, isDarkMode } = useThemeStore();
   const router = useRouter();
 
-  // State fields
-  const [name, setName] = useState(profile?.fullName || '');
-  const [username, setUsername] = useState(profile?.username || '');
-  const [phone, setPhone] = useState(profile?.phone || '');
-  const [bio, setBio] = useState(profile?.bio || '');
+  const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [bio, setBio] = useState('');
   const [updating, setUpdating] = useState(false);
+
+  const source = profile || user || {};
+
+  const initialEmailRef = useRef(source.email || '');
+  const initialPhoneRef = useRef(source.phoneNumber || source.phone || '');
+
+  const isEmailLocked = Boolean(initialEmailRef.current);
+  const isPhoneLocked = Boolean(initialPhoneRef.current);
+
+  useEffect(() => {
+    if (source) {
+      setName(source.fullName || source.name || '');
+      setUsername(source.username || '');
+      setPhone(source.phoneNumber || source.phone || '');
+      setEmail(source.email || '');
+      setBio(source.bio || '');
+    }
+  }, [profile, user]);
 
   const handleUpdate = async () => {
     if (!name.trim()) return Alert.alert("Error", "Full Name cannot be empty");
     if (!username.trim()) return Alert.alert("Error", "Username cannot be empty");
-    
-    setUpdating(true);
-    try {
-      const userRef = doc(db, "users", user.uid);
-      
-      await setDoc(userRef, { 
-        fullName: name.trim(), 
-        username: username.trim().toLowerCase(), 
-        phone: phone.trim(),
-        bio: bio.trim(),
-        updatedAt: new Date().toISOString()
-      }, { merge: true });
 
-      // To refresh the local Zustand store state
-      await fetchProfile(user.uid);
-      
+    // Check if the user is adding or modifying an empty/missing email or phone for the first time
+    const isEmailBeingSet = !initialEmailRef.current && email.trim() !== '';
+    const isPhoneBeingSet = !initialPhoneRef.current && phone.trim() !== '';
+
+    if (isEmailBeingSet || isPhoneBeingSet) {
+      let confirmationMessage = "Please double-check your details carefully. Once you save ";
+      if (isEmailBeingSet && isPhoneBeingSet) {
+        confirmationMessage += "both your email address and phone number, they will be permanently locked and cannot be changed here again.";
+      } else if (isEmailBeingSet) {
+        confirmationMessage += "your email address, it will be permanently locked and cannot be changed here again.";
+      } else {
+        confirmationMessage += "your phone number, it will be permanently locked and cannot be changed here again.";
+      }
+
+      Alert.alert(
+        "Confirm Contact Details",
+        confirmationMessage,
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Proceed & Lock", onPress: () => executeUpdate() }
+        ]
+      );
+    } else {
+      executeUpdate();
+    }
+  };
+
+  const executeUpdate = async () => {
+    setUpdating(true);
+    const updatePayload = {
+      fullName: name.trim(),
+      username: username.trim().toLowerCase(),
+      bio: bio.trim(),
+    };
+
+    if (!isEmailLocked && email.trim()) {
+      updatePayload.email = email.trim().toLowerCase();
+    }
+    if (!isPhoneLocked && phone.trim()) {
+      updatePayload.phoneNumber = phone.trim();
+    }
+
+    const result = await updateProfile(updatePayload);
+    setUpdating(false);
+
+    if (result.success) {
       Alert.alert("Success", "Profile updated successfully!");
       router.back();
-    } catch (error) {
-      Alert.alert("Error", error.message);
-    } finally {
-      setUpdating(false);
+    } else {
+      Alert.alert("Error", result.error || "Failed to update profile.");
     }
   };
 
@@ -66,7 +110,6 @@ export default function EditProfileScreen() {
         behavior={Platform.OS === "ios" ? "padding" : "height"} 
         style={{ flex: 1 }}
       >
-        {/* Custom Header Bar */}
         <View style={[styles.header, { borderBottomColor: theme.border }]}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
             <MaterialCommunityIcons name="arrow-left" size={24} color={theme.text} />
@@ -77,33 +120,44 @@ export default function EditProfileScreen() {
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContainer}>
           
-          {/* Email Address (Read-Only) */}
+          {/* Email Address Field */}
           <View style={styles.formControl}>
-            <Text style={[styles.label, { color: theme.textSecondary }]}>Email Address </Text>
-            <View style={[
-              styles.input, 
-              styles.disabledInput, 
-              { 
-                backgroundColor: isDarkMode ? '#1A1A1A' : '#F1F3F5', 
-                borderColor: theme.border 
-              }
-            ]}>
-              <Text style={[styles.disabledText, { color: theme.textSecondary }]}>{profile?.email || user?.email}</Text>
-              <MaterialCommunityIcons name="lock-outline" size={18} color={theme.textSecondary} />
-            </View>
+            <Text style={[styles.label, { color: theme.textSecondary }]}>Email Address</Text>
+            {isEmailLocked ? (
+              <View style={[
+                styles.input, 
+                styles.disabledInput, 
+                { 
+                  backgroundColor: isDarkMode ? '#1A1A1A' : '#F1F3F5', 
+                  borderColor: theme.border 
+                }
+              ]}>
+                <Text style={[styles.disabledText, { color: theme.textSecondary }]}>{email || 'Not provided'}</Text>
+                <MaterialCommunityIcons name="lock-outline" size={18} color={theme.textSecondary} />
+              </View>
+            ) : (
+              <TextInput 
+                style={[
+                  styles.input, 
+                  { backgroundColor: theme.card, borderColor: theme.border, color: theme.text }
+                ]} 
+                value={email} 
+                onChangeText={setEmail} 
+                placeholder="Enter your email address"
+                placeholderTextColor={isDarkMode ? '#555' : '#999'}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+            )}
           </View>
 
-          {/* Full Name */}
+          {/* Full Name Field */}
           <View style={styles.formControl}>
             <Text style={[styles.label, { color: theme.textSecondary }]}>Full Name</Text>
             <TextInput 
               style={[
                 styles.input, 
-                { 
-                  backgroundColor: theme.card, 
-                  borderColor: theme.border, 
-                  color: theme.text 
-                }
+                { backgroundColor: theme.card, borderColor: theme.border, color: theme.text }
               ]} 
               value={name} 
               onChangeText={setName} 
@@ -112,59 +166,61 @@ export default function EditProfileScreen() {
             />
           </View>
 
-          {/* Username */}
+          {/* Username Field */}
           <View style={styles.formControl}>
             <Text style={[styles.label, { color: theme.textSecondary }]}>Username</Text>
             <TextInput 
               style={[
                 styles.input, 
-                { 
-                  backgroundColor: theme.card, 
-                  borderColor: theme.border, 
-                  color: theme.text 
-                }
+                { backgroundColor: theme.card, borderColor: theme.border, color: theme.text }
               ]} 
               value={username} 
               onChangeText={setUsername} 
-              placeholder="e.g. johnson"
+              placeholder="e.g. opeyemi_12"
               placeholderTextColor={isDarkMode ? '#555' : '#999'}
               autoCapitalize="none"
               autoCorrect={false}
             />
           </View>
 
-          {/* Phone Number */}
+          {/* Phone Number Field */}
           <View style={styles.formControl}>
             <Text style={[styles.label, { color: theme.textSecondary }]}>Phone Number</Text>
-            <TextInput 
-              style={[
+            {isPhoneLocked ? (
+              <View style={[
                 styles.input, 
+                styles.disabledInput, 
                 { 
-                  backgroundColor: theme.card, 
-                  borderColor: theme.border, 
-                  color: theme.text 
+                  backgroundColor: isDarkMode ? '#1A1A1A' : '#F1F3F5', 
+                  borderColor: theme.border 
                 }
-              ]} 
-              value={phone} 
-              onChangeText={setPhone} 
-              placeholder="Enter your phone number"
-              placeholderTextColor={isDarkMode ? '#555' : '#999'}
-              keyboardType="phone-pad"
-            />
+              ]}>
+                <Text style={[styles.disabledText, { color: theme.textSecondary }]}>{phone || 'Not provided'}</Text>
+                <MaterialCommunityIcons name="lock-outline" size={18} color={theme.textSecondary} />
+              </View>
+            ) : (
+              <TextInput 
+                style={[
+                  styles.input, 
+                  { backgroundColor: theme.card, borderColor: theme.border, color: theme.text }
+                ]} 
+                value={phone} 
+                onChangeText={setPhone} 
+                placeholder="Enter your phone number"
+                placeholderTextColor={isDarkMode ? '#555' : '#999'}
+                keyboardType="phone-pad"
+              />
+            )}
           </View>
 
-          {/* Bio / Description */}
+          {/* About Me Field */}
           <View style={styles.formControl}>
             <Text style={[styles.label, { color: theme.textSecondary }]}>About Me</Text>
             <TextInput 
               style={[
                 styles.input, 
                 styles.textArea, 
-                { 
-                  backgroundColor: theme.card, 
-                  borderColor: theme.border, 
-                  color: theme.text 
-                }
+                { backgroundColor: theme.card, borderColor: theme.border, color: theme.text }
               ]} 
               value={bio} 
               onChangeText={setBio} 
@@ -176,7 +232,6 @@ export default function EditProfileScreen() {
             />
           </View>
 
-          {/* Save Button */}
           <TouchableOpacity 
             style={[
               styles.btn, 

@@ -13,7 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function ForgotPassword() {
   const [identifier, setIdentifier] = useState('');
-  const { forgotPassword, sendOTP, loading } = useAuthStore();
+  const { forgotPassword, sendOTP, isLoading } = useAuthStore();
   const { theme, isDarkMode } = useThemeStore(); 
   const router = useRouter();
 
@@ -25,10 +25,20 @@ export default function ForgotPassword() {
     const value = identifier.trim();
     const isEmail = value.includes('@');
 
-    if (isEmail) {
-      const res = await forgotPassword(value);
+    try {
+      let res;
+      if (isEmail) {
+        res = await forgotPassword(value);
+      } else {
+        res = await sendOTP(value);
+      }
+
+      // Check if store action returned success: true
       if (res?.success) {
-        Alert.alert("Success", "Reset code sent to your email.", [
+        // Handy for development: show the generated testOtp in the alert so you can test immediately!
+        const testOtpCode = res.data?.testOtp ? ` (Dev Code: ${res.data.testOtp})` : '';
+        
+        Alert.alert("Success", `Verification code sent to your ${isEmail ? 'email' : 'phone number'}.${testOtpCode}`, [
           { 
             text: "OK", 
             onPress: () => router.push({ 
@@ -38,23 +48,10 @@ export default function ForgotPassword() {
           }
         ]);
       } else {
-        Alert.alert("Error", res?.error || res?.msg || "Failed to send reset code.");
+        Alert.alert("Error", res?.error || "Failed to send reset code. Please try again.");
       }
-    } else {
-      const res = await sendOTP(value);
-      if (res?.success) {
-        Alert.alert("Success", "OTP sent to your phone number.", [
-          { 
-            text: "OK", 
-            onPress: () => router.push({ 
-              pathname: '/(auth)/verify-email', 
-              params: { identifier: value, flow: 'reset' } 
-            }) 
-          }
-        ]);
-      } else {
-        Alert.alert("Error", res?.error || res?.msg || "Failed to send OTP.");
-      }
+    } catch (err) {
+      Alert.alert("Connection Error", "Sorry, something went wrong. Please try your request again.");
     }
   };
 
@@ -99,12 +96,12 @@ export default function ForgotPassword() {
               style={[
                 GlobalStyles.primaryBtn, 
                 { backgroundColor: theme.primary },
-                loading && { opacity: 0.7 }
+                isLoading && { opacity: 0.7 }
               ]} 
               onPress={handleReset}
-              disabled={loading}
+              disabled={isLoading}
             >
-              {loading ? (
+              {isLoading ? (
                 <ActivityIndicator color={Colors.white} />
               ) : (
                 <Text style={GlobalStyles.btnText}>Send Reset Instructions</Text>

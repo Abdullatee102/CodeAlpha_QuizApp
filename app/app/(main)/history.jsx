@@ -1,36 +1,43 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   View, 
   Text, 
   StyleSheet, 
   FlatList, 
   TouchableOpacity, 
+  ActivityIndicator 
 } from 'react-native';
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useQuizStore } from '../../store/quizStore';
 import { useThemeStore } from '../../store/themeStore';
 import { useAuthStore } from '../../store/authStore'; 
 import { Colors } from '../../constants/colors';
+import api from '../../data/api';
 
 export default function HistoryScreen() {
   const router = useRouter();
-  const { allTimeHistory } = useQuizStore();
   const { theme, isDarkMode } = useThemeStore();
   const { user } = useAuthStore();
+  
+  const [history, setHistory] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const userFilteredHistory = useMemo(() => {
-    return (allTimeHistory || []).filter(item => {
-      // 1. Explicitly check if it matches the current logged in user
-      if (user?.uid && item.userId === user.uid) return true;
-      
-      // 2. Safe Fallback for existing debug/legacy mock data
-      if (item.userId === 'anonymous' || !item.hasOwnProperty('userId')) return true;
+  const fetchHistory = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get('/auth/quiz-history');
+      setHistory(response.data?.data || response.data || []);
+    } catch (err) {
+      console.error("Failed to fetch history:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      return false;
-    });
-  }, [allTimeHistory, user]);
+  useEffect(() => {
+    fetchHistory();
+  }, []);
 
   const formatDate = (dateString) => {
     if (!dateString) return 'Recent Quiz';
@@ -47,8 +54,9 @@ export default function HistoryScreen() {
   };
 
   const renderHistoryItem = ({ item }) => {
-    const totalQuestions = item.totalQuestions || 1; // Safeguard division by zero
-    const percentage = Math.round((item.correct / totalQuestions) * 100);
+    const totalQuestions = item.totalQuestions || 1; 
+    const correctCount = item.correct ?? item.correctAnswers ?? 0;
+    const percentage = Math.round((correctCount / totalQuestions) * 100);
     
     return (
       <View style={[styles.historyCard, { backgroundColor: theme.card }]}>
@@ -58,7 +66,7 @@ export default function HistoryScreen() {
           </View>
           <View style={styles.headerInfo}>
             <Text style={[styles.dateText, { color: theme.textSecondary }]}>
-              {formatDate(item.date || item.timestamp)}
+              {formatDate(item.date || item.timestamp || item.createdAt)}
             </Text>
             <Text style={[styles.categoryText, { color: theme.text }]}>
               {item.category ? item.category.toUpperCase() : 'Assessment'} Completed
@@ -77,7 +85,7 @@ export default function HistoryScreen() {
           <View style={[styles.statDivider, { backgroundColor: theme.border }]} />
           <View style={styles.statDetail}>
             <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Correct</Text>
-            <Text style={[styles.statValue, { color: theme.text }]}>{item.correct}/{item.totalQuestions}</Text>
+            <Text style={[styles.statValue, { color: theme.text }]}>{correctCount}/{totalQuestions}</Text>
           </View>
         </View>
       </View>
@@ -98,20 +106,30 @@ export default function HistoryScreen() {
     </View>
   );
 
+  if (loading && history.length === 0) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.background }}>
+        <ActivityIndicator size="large" color={theme.primary} />
+      </View>
+    );
+  }
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={[styles.header, { backgroundColor: theme.card, borderBottomColor: theme.border }]}>
-        <Text style={[styles.headerTitle, { color: theme.text }]}>Quiz History</Text>
+        <Text style={[styles.headerTitle, { color: theme.primary }]}>Quiz History</Text>
         <Text style={[styles.headerSub, { color: theme.textSecondary }]}>Tracking your growth over time</Text>
       </View>
 
       <FlatList
-        data={userFilteredHistory}
-        keyExtractor={(item) => item.id || Math.random().toString()}
+        data={history}
+        keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
         renderItem={renderHistoryItem}
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={EmptyState}
         showsVerticalScrollIndicator={false}
+        refreshing={loading}
+        onRefresh={fetchHistory}
       />
     </SafeAreaView>
   );
@@ -119,45 +137,19 @@ export default function HistoryScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { 
-    padding: 25, 
-    borderBottomWidth: 1, 
-  },
+  header: { padding: 25, borderBottomWidth: 1 },
   headerTitle: { fontFamily: 'Archivo-Black', fontSize: 26 },
   headerSub: { fontFamily: 'Ubuntu-Regular', fontSize: 14, marginTop: 4 },
   listContent: { padding: 20, paddingBottom: 100 },
-  historyCard: { 
-    borderRadius: 20, 
-    padding: 20, 
-    marginBottom: 15,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 10
-  },
+  historyCard: { borderRadius: 20, padding: 20, marginBottom: 15, elevation: 3, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10 },
   cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
-  iconCircle: { 
-    width: 45, 
-    height: 45, 
-    borderRadius: 22.5, 
-    justifyContent: 'center', 
-    alignItems: 'center' 
-  },
+  iconCircle: { width: 45, height: 45, borderRadius: 22.5, justifyContent: 'center', alignItems: 'center' },
   headerInfo: { flex: 1, marginLeft: 15 },
   dateText: { fontFamily: 'Ubuntu-Regular', fontSize: 12 },
   categoryText: { fontFamily: 'Ubuntu-Bold', fontSize: 16, marginTop: 2 },
-  percentageBadge: { 
-    paddingHorizontal: 12, 
-    paddingVertical: 6, 
-    borderRadius: 10 
-  },
+  percentageBadge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
   percentageText: { fontFamily: 'Ubuntu-Bold', fontSize: 14 },
-  statsRow: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    borderRadius: 12, 
-    padding: 15 
-  },
+  statsRow: { flexDirection: 'row', justifyContent: 'space-between', borderRadius: 12, padding: 15 },
   statDetail: { flex: 1, alignItems: 'center' },
   statLabel: { fontFamily: 'Ubuntu-Regular', fontSize: 11, marginBottom: 4 },
   statValue: { fontFamily: 'Archivo-Black', fontSize: 16 },
@@ -165,11 +157,6 @@ const styles = StyleSheet.create({
   emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', marginTop: 100 },
   emptyTitle: { fontFamily: 'Archivo-Black', fontSize: 20, marginTop: 20 },
   emptySub: { fontFamily: 'Ubuntu-Regular', fontSize: 14, textAlign: 'center', paddingHorizontal: 50, marginTop: 8 },
-  startBtn: { 
-    marginTop: 25, 
-    paddingHorizontal: 30, 
-    paddingVertical: 12, 
-    borderRadius: 25 
-  },
+  startBtn: { marginTop: 25, paddingHorizontal: 30, paddingVertical: 12, borderRadius: 25 },
   startBtnText: { color: '#FFF', fontFamily: 'Ubuntu-Bold' }
 });

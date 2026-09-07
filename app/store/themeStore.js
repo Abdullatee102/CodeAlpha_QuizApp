@@ -6,8 +6,8 @@ import { lightTheme, darkTheme } from '../constants/themes';
 export const useThemeStore = create(
   persist(
     (set) => ({
-      isDarkMode: false,
-      theme: lightTheme,
+      isDarkMode: true,
+      theme: darkTheme,
 
       toggleTheme: () => set((state) => {
         const nextMode = !state.isDarkMode;
