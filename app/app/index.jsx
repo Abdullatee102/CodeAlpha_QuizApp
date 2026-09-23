@@ -4,10 +4,10 @@ import { useThemeStore } from "../store/themeStore";
 import { View, ActivityIndicator } from "react-native";
 
 export default function Index() {
-  const { loading, isInitializing, _hasHydrated, user, hasFinishedOnboarding } = useAuthStore();
+  const { isLoading, isInitializing, _hasHydrated, user, hasFinishedOnboarding } = useAuthStore();
   const { theme } = useThemeStore(); 
 
-  if (!_hasHydrated || loading || isInitializing) {
+  if (!_hasHydrated || isLoading || isInitializing) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.background }}>
         <ActivityIndicator size="large" color={theme.primary} />

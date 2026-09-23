@@ -1,38 +1,24 @@
-// LeaderboardScreen.jsx
-import React, { useEffect, useState } from 'react';
-import { 
-  View, Text, FlatList, StyleSheet, ActivityIndicator, RefreshControl, Image 
+import React, { useState } from 'react';
+import {
+  View, Text, FlatList, StyleSheet, ActivityIndicator, Image, TouchableOpacity
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
+import { useLeaderboardQuery } from '../../hooks/useLeaderboardQuery';
 
 export default function LeaderboardScreen() {
-  const { leaderboard, fetchLeaderboard, profile } = useAuthStore();
+  const { profile } = useAuthStore();
   const { theme, isDarkMode } = useThemeStore();
-  const [refreshing, setRefreshing] = useState(false);
-  const [loading, setLoading] = useState(leaderboard.length === 0);
+  const [activeTab, setActiveTab] = useState('24h');
 
-  useEffect(() => {
-    if (leaderboard.length === 0) {
-      loadLeaderboard();
-    } else {
-      setLoading(false);
-    }
-  }, []);
-
-  const loadLeaderboard = async () => {
-    setLoading(true);
-    await fetchLeaderboard();
-    setLoading(false);
-  };
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await fetchLeaderboard();
-    setRefreshing(false);
-  };
+  const {
+    data: leaderboard = [],
+    isLoading,
+    isFetching,
+    refetch
+  } = useLeaderboardQuery(activeTab);
 
   const renderItem = ({ item, index }) => {
     const isCurrentUser = profile?.id === item.id || profile?.username === item.username;
@@ -40,13 +26,13 @@ export default function LeaderboardScreen() {
     const rank = index + 1;
     const rankColors = ['#FFD700', '#C0C0C0', '#CD7F32'];
 
-    const displayScore = typeof item.totalScore === 'number' 
-      ? Number(item.totalScore.toFixed(1)) 
+    const displayScore = typeof item.totalScore === 'number'
+      ? Number(item.totalScore.toFixed(1))
       : (item.totalScore || item.score || item.points || 0);
 
     return (
       <View style={[
-        styles.row, 
+        styles.row,
         { backgroundColor: isDarkMode ? '#1E1E1E' : '#F9F9F9', borderColor: theme.border },
         isCurrentUser && { borderColor: theme.primary, borderWidth: 2 }
       ]}>
@@ -57,7 +43,7 @@ export default function LeaderboardScreen() {
             <Text style={[styles.rankText, { color: theme.textSecondary }]}>{rank}</Text>
           )}
         </View>
-        
+
         <View style={styles.avatarContainer}>
           {item.photoURL ? (
             <Image source={{ uri: item.photoURL }} style={styles.avatar} />
@@ -84,11 +70,11 @@ export default function LeaderboardScreen() {
     );
   };
 
-  if (loading) {
+  if (isLoading && leaderboard.length === 0) {
     return (
-      <SafeAreaView style={[styles.centered, { flex: 1, backgroundColor: theme.background }]}>
+      <View style={[styles.centered, { backgroundColor: theme.background }]}>
         <ActivityIndicator size="large" color={theme.primary} />
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -97,6 +83,20 @@ export default function LeaderboardScreen() {
       <View style={styles.headerContainer}>
         <Text style={[styles.headerTitle, { color: theme.primary }]}>Leaderboard</Text>
         <Text style={[styles.subtitle, { color: theme.textSecondary }]}>See where you stand among top players.</Text>
+
+        <View style={[styles.tabContainer, { backgroundColor: isDarkMode ? '#1E1E1E' : '#E5E7EB' }]}>
+          {['24h', '30d', 'all'].map((tab) => (
+            <TouchableOpacity
+              key={tab}
+              style={[styles.tabButton, activeTab === tab && { backgroundColor: theme.primary }]}
+              onPress={() => setActiveTab(tab)}
+            >
+              <Text style={[styles.tabText, { color: activeTab === tab ? '#fff' : theme.textSecondary }]}>
+                {tab === '24h' ? '24 Hours' : tab === '30d' ? '30 Days' : 'All-Time'}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </View>
 
       <FlatList
@@ -105,9 +105,8 @@ export default function LeaderboardScreen() {
         renderItem={renderItem}
         contentContainerStyle={styles.listContainer}
         showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />
-        }
+        refreshing={isFetching}
+        onRefresh={refetch}
         ListEmptyComponent={
           <View style={styles.centered}>
             <Ionicons name="trophy-outline" size={48} color={theme.textSecondary} />
@@ -123,21 +122,13 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   headerContainer: { paddingHorizontal: 20, paddingTop: 15, paddingBottom: 10 },
   headerTitle: { fontFamily: 'Archivo-Black', fontSize: 28, marginBottom: 5 },
-  subtitle: { fontFamily: 'Ubuntu-Regular', fontSize: 14, marginBottom: 10 },
-  listContainer: { paddingHorizontal: 20, paddingBottom: 30, gap: 12 },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 14,
-    borderRadius: 16,
-    borderWidth: 1,
-  },
-  rankContainer: {
-    width: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 10,
-  },
+  subtitle: { fontFamily: 'Ubuntu-Regular', fontSize: 14, marginBottom: 15 },
+  tabContainer: { flexDirection: 'row', borderRadius: 12, padding: 4, marginBottom: 5 },
+  tabButton: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 10 },
+  tabText: { fontFamily: 'Ubuntu-Bold', fontSize: 13 },
+  listContainer: { paddingHorizontal: 20, paddingBottom: 30, gap: 12, paddingTop: 10 },
+  row: { flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 16, borderWidth: 1 },
+  rankContainer: { width: 30, alignItems: 'center', justifyContent: 'center', marginRight: 10 },
   rankText: { fontFamily: 'Ubuntu-Bold', fontSize: 14 },
   avatarContainer: { marginRight: 12 },
   avatar: { width: 40, height: 40, borderRadius: 20 },

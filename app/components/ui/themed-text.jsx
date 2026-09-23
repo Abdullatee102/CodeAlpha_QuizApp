@@ -2,7 +2,12 @@ import React from 'react';
 import { Text } from 'react-native';
 import { useThemeStore } from '../../store/themeStore';
 
-export default function ThemedText({ style, children, type = 'body', ...props }) {
+export default function ThemedText({
+  style,
+  children,
+  type = 'body',
+  ...props
+}) {
   const { theme } = useThemeStore();
 
   const colorMap = {
@@ -11,8 +16,18 @@ export default function ThemedText({ style, children, type = 'body', ...props })
     primary: theme.primary,
   };
 
+  const textColor = colorMap[type] || theme.text;
+
   return (
-    <Text style={[{ color: colorMap[type] }, style]} {...props}>
+    <Text
+      style={[
+        {
+          color: textColor,
+        },
+        style,
+      ]}
+      {...props}
+    >
       {children}
     </Text>
   );

@@ -1,10 +1,13 @@
-
 export const Colors = {
-  primary: '#8A2BE2', 
-  secondary: '#F3E5F5',
-  success: '#8A2BE2', 
+  // Fixed semantic colors
   error: '#FF3B30',
-  text: '#1C1C1E',
+
+  // Useful fixed colors
   white: '#FFFFFF',
-  tertiary: '#005D4B',
+  black: '#000000',
+
+  // Semantic colors that may still be used independently
+  success: '#27AE60',
+  warning: '#F39C12',
+  gold: '#FFD700',
 };

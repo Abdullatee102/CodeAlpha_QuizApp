@@ -1,14 +1,44 @@
 import { useEffect, useRef } from 'react';
-import { Stack, useRouter, useSegments } from 'expo-router';
+
+import {
+  Platform,
+  View,
+  ActivityIndicator,
+  Text,
+} from 'react-native';
+
+import {
+  Stack,
+  useRouter,
+  useSegments,
+} from 'expo-router';
+
 import * as SplashScreen from 'expo-splash-screen';
+
+import * as NavigationBar from 'expo-navigation-bar';
+
 import { useFonts } from 'expo-font';
+
 import { StatusBar } from 'expo-status-bar';
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
+
+import {
+  GoogleSignin,
+} from '@react-native-google-signin/google-signin';
+
 import { useAuthStore } from '../store/authStore';
-import { useThemeStore } from '../store/themeStore'; 
+
+import { useThemeStore } from '../store/themeStore';
+
 import { Colors } from '../constants/colors';
-import { View, ActivityIndicator, Text } from "react-native";
+
 import * as Notifications from 'expo-notifications';
+
+import {
+  QueryClient,
+  QueryClientProvider,
+} from '@tanstack/react-query';
+
+const queryClient = new QueryClient();
 
 SplashScreen.preventAutoHideAsync();
 
@@ -21,111 +51,376 @@ Notifications.setNotificationHandler({
 });
 
 export default function RootLayout() {
-  const { user, isInitializing, initialize, hasFinishedOnboarding, _hasHydrated } = useAuthStore();
-  const { theme, isDarkMode } = useThemeStore(); 
-  const segments = useSegments();
-  const router = useRouter();
-  
-  const notificationListener = useRef(null);
-  const responseListener = useRef(null);
+  const {
+    user,
+    isInitializing,
+    initialize,
+    hasFinishedOnboarding,
+    _hasHydrated,
+    registerPushNotifications,
+  } = useAuthStore();
+
+  const {
+    theme,
+    isDarkMode,
+  } = useThemeStore();
+
+  const segments =
+    useSegments();
+
+  const router =
+    useRouter();
+
+  const notificationListener =
+    useRef(null);
+
+  const responseListener =
+    useRef(null);
+
+  // =====================================================
+  // SYNC ANDROID NAVIGATION BAR
+  // =====================================================
+
+  useEffect(() => {
+    if (
+      Platform.OS === 'android'
+    ) {
+      try {
+        NavigationBar.setBackgroundColorAsync(
+          theme.card
+        );
+
+        NavigationBar.setButtonStyleAsync(
+          isDarkMode
+            ? 'light'
+            : 'dark'
+        );
+      } catch (e) {
+        console.warn(
+          'Navigation bar styling error:',
+          e
+        );
+      }
+    }
+  }, [
+    theme,
+    isDarkMode,
+  ]);
+
+  // =====================================================
+  // GOOGLE AUTH + NOTIFICATION LISTENERS
+  // =====================================================
 
   useEffect(() => {
     GoogleSignin.configure({
-      webClientId: '777496097951-jb7mabvi6ajftdvf5gvckp8qpuea543g.apps.googleusercontent.com', 
+      webClientId:
+        '777496097951-jb7mabvi6ajftdvf5gvckp8qpuea543g.apps.googleusercontent.com',
+
       offlineAccess: true,
     });
 
-    notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
-      console.log('Notification Received:', notification);
-    });
+    /*
+     * Notification received while the app is open.
+     *
+     * The backend is now responsible for creating and
+     * sending achievement notifications.
+     */
+    notificationListener.current =
+      Notifications.addNotificationReceivedListener(
+        (notification) => {
+          console.log(
+            'Notification Received:',
+            notification
+          );
+        }
+      );
 
-    responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
-      const { data } = response.notification.request.content;
-      if (data?.url) {
-        router.push(data.url);
-      }
-    });
+    /*
+     * Notification tapped by the user.
+     */
+    responseListener.current =
+      Notifications.addNotificationResponseReceivedListener(
+        (response) => {
+          const {
+            data,
+          } =
+            response.notification
+              .request.content;
 
-    return () => { 
-      if (notificationListener.current) {
+          if (data?.url) {
+            router.push(
+              data.url
+            );
+          }
+        }
+      );
+
+    return () => {
+      if (
+        notificationListener.current
+      ) {
         notificationListener.current.remove();
-        notificationListener.current = null;
+
+        notificationListener.current =
+          null;
       }
-      if (responseListener.current) {
+
+      if (
+        responseListener.current
+      ) {
         responseListener.current.remove();
-        responseListener.current = null;
+
+        responseListener.current =
+          null;
       }
     };
   }, []);
 
-  // Trigger initialize ONLY after Zustand storage is successfully hydrated
+  // =====================================================
+  // INITIALIZE AUTH SESSION
+  // =====================================================
+
   useEffect(() => {
     if (_hasHydrated) {
       initialize();
     }
-  }, [_hasHydrated]);
+  }, [
+    _hasHydrated,
+  ]);
 
-  const [fontsLoaded] = useFonts({
-    'Archivo-Black': require('../assets/fonts/Archivo_Black/ArchivoBlack-Regular.ttf'), 
-    'Ubuntu-Regular': require('../assets/fonts/Ubuntu/Ubuntu-Regular.ttf'),
-    'Ubuntu-Bold': require('../assets/fonts/Ubuntu/Ubuntu-Bold.ttf'),
-    'Ubuntu-Medium': require('../assets/fonts/Ubuntu/Ubuntu-Medium.ttf'),
-    'Ubuntu-Light': require('../assets/fonts/Ubuntu/Ubuntu-Light.ttf'),
-  });
+  // =====================================================
+  // REGISTER DEVICE FOR PUSH NOTIFICATIONS
+  // =====================================================
 
+  /*
+   * The root layout does NOT call the notification API.
+   *
+   * It only asks authStore to handle registration.
+   *
+   * This runs whenever an authenticated user exists.
+   *
+   * This also covers:
+   * - normal login
+   * - signup
+   * - OTP login
+   * - Google login
+   * - biometric login
+   * - app restart with an existing session
+   */
   useEffect(() => {
-    if (!fontsLoaded || isInitializing || !_hasHydrated) return;
-
-    const inAuthGroup = segments[0] === '(auth)';
-    const inOnboarding = segments[0] === 'onboarding';
-
-    if (!user) {
-      if (!hasFinishedOnboarding && !inOnboarding) {
-        router.replace('/onboarding');
-      } else if (hasFinishedOnboarding && !inAuthGroup && !inOnboarding) {
-        router.replace('/(auth)/sign-in');
-      }
-    } else if (user && (inAuthGroup || inOnboarding || segments.length === 0)) {
-      router.replace('/(main)'); 
+    if (
+      !_hasHydrated ||
+      isInitializing ||
+      !user
+    ) {
+      return;
     }
 
-    const hideSplash = async () => {
-      try {
-        await SplashScreen.hideAsync();
-      } catch (e) {
-        console.warn("Splash screen error:", e);
+    registerPushNotifications();
+  }, [
+    _hasHydrated,
+    isInitializing,
+    user,
+    registerPushNotifications,
+  ]);
+
+  // =====================================================
+  // LOAD FONTS
+  // =====================================================
+
+  const [
+    fontsLoaded,
+  ] = useFonts({
+    'Archivo-Black':
+      require('../assets/fonts/Archivo_Black/ArchivoBlack-Regular.ttf'),
+
+    'Ubuntu-Regular':
+      require('../assets/fonts/Ubuntu/Ubuntu-Regular.ttf'),
+
+    'Ubuntu-Bold':
+      require('../assets/fonts/Ubuntu/Ubuntu-Bold.ttf'),
+
+    'Ubuntu-Medium':
+      require('../assets/fonts/Ubuntu/Ubuntu-Medium.ttf'),
+
+    'Ubuntu-Light':
+      require('../assets/fonts/Ubuntu/Ubuntu-Light.ttf'),
+  });
+
+  // =====================================================
+  // AUTH NAVIGATION
+  // =====================================================
+
+  useEffect(() => {
+    if (
+      !fontsLoaded ||
+      isInitializing ||
+      !_hasHydrated
+    ) {
+      return;
+    }
+
+    const inAuthGroup =
+      segments[0] === '(auth)';
+
+    const inOnboarding =
+      segments[0] === 'onboarding';
+
+    if (!user) {
+      if (
+        !hasFinishedOnboarding &&
+        !inOnboarding
+      ) {
+        router.replace(
+          '/onboarding'
+        );
+      } else if (
+        hasFinishedOnboarding &&
+        !inAuthGroup &&
+        !inOnboarding
+      ) {
+        router.replace(
+          '/(auth)/sign-in'
+        );
       }
-    };
+    } else if (
+      user &&
+      (
+        inAuthGroup ||
+        inOnboarding ||
+        segments.length === 0
+      )
+    ) {
+      router.replace(
+        '/(main)'
+      );
+    }
+
+    const hideSplash =
+      async () => {
+        try {
+          await SplashScreen.hideAsync();
+        } catch (e) {
+          console.warn(
+            'Splash screen error:',
+            e
+          );
+        }
+      };
+
     hideSplash();
+  }, [
+    user,
+    isInitializing,
+    fontsLoaded,
+    _hasHydrated,
+  ]);
 
-  }, [user, isInitializing, fontsLoaded, _hasHydrated]); 
+  // =====================================================
+  // LOADING SCREEN
+  // =====================================================
 
-  if (!fontsLoaded || isInitializing || !_hasHydrated) {
+  if (
+    !fontsLoaded ||
+    isInitializing ||
+    !_hasHydrated
+  ) {
     return (
-      <View style={{ 
-        flex: 1, 
-        backgroundColor: Colors.tertiary, 
-        justifyContent: 'center', 
-        alignItems: 'center' 
-      }}>
-        <ActivityIndicator size="large" color="#ffffff" />
-        <Text style={{ color: '#fff', marginTop: 10, fontFamily: fontsLoaded ? 'Ubuntu-Medium' : 'System' }}>
+      <View
+        style={{
+          flex: 1,
+          backgroundColor:
+            Colors.tertiary,
+          justifyContent:
+            'center',
+          alignItems:
+            'center',
+        }}
+      >
+        <ActivityIndicator
+          size="large"
+          color="#ffffff"
+        />
+
+        <Text
+          style={{
+            color: '#fff',
+            marginTop: 10,
+            fontFamily:
+              fontsLoaded
+                ? 'Ubuntu-Medium'
+                : 'System',
+          }}
+        >
           Loading Brain Buzz...
         </Text>
       </View>
     );
   }
 
+  // =====================================================
+  // APP
+  // =====================================================
+
   return (
-    <>
-      <StatusBar style={isDarkMode ? "light" : "dark"} backgroundColor={theme.background} />
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.background } }}>
-        <Stack.Screen name="index" />
-        <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
-        <Stack.Screen name="(auth)" options={{ animation: 'fade' }} />
-        <Stack.Screen name="(main)" options={{ gestureEnabled: false, animation: 'slide_from_right' }} />
-        <Stack.Screen name="(profile)" options={{ animation: 'fade' }} />
+    <QueryClientProvider
+      client={queryClient}
+    >
+      <StatusBar
+        style={
+          isDarkMode
+            ? 'light'
+            : 'dark'
+        }
+        backgroundColor={
+          theme.background
+        }
+      />
+
+      <Stack
+        screenOptions={{
+          headerShown: false,
+
+          contentStyle: {
+            backgroundColor:
+              theme.background,
+          },
+        }}
+      >
+        <Stack.Screen
+          name="index"
+        />
+
+        <Stack.Screen
+          name="onboarding"
+          options={{
+            animation: 'fade',
+          }}
+        />
+
+        <Stack.Screen
+          name="(auth)"
+          options={{
+            animation: 'fade',
+          }}
+        />
+
+        <Stack.Screen
+          name="(main)"
+          options={{
+            gestureEnabled: false,
+            animation:
+              'slide_from_right',
+          }}
+        />
+
+        <Stack.Screen
+          name="(profile)"
+          options={{
+            animation: 'fade',
+          }}
+        />
       </Stack>
-    </>
+    </QueryClientProvider>
   );
 }
