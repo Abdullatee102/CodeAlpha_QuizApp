@@ -52,7 +52,16 @@ export default function LevelsScreen() {
     });
   };
 
+  const LEVEL_COLORS = {
+    100: '#059669',
+    200: '#2563EB',
+    300: '#4F46E5',
+    400: '#7C3AED',
+    500: '#D97706',
+  };
+
   const renderLevel = ({ item }) => {
+    const accentColor = LEVEL_COLORS[item] || theme.primary;
     return (
       <TouchableOpacity
         style={[
@@ -69,40 +78,61 @@ export default function LevelsScreen() {
           style={[
             styles.iconBox,
             {
-              backgroundColor: `${theme.primary}20`,
+              backgroundColor: `${accentColor}18`,
             },
           ]}
         >
           <MaterialCommunityIcons
             name="school-outline"
-            size={30}
-            color={theme.primary}
+            size={28}
+            color={accentColor}
           />
         </View>
 
         <View style={styles.levelInfo}>
-          <Text
-            style={[
-              styles.levelTitle,
-              { color: theme.text },
-            ]}
-          >
-            {item} Level
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Text
+              style={[
+                styles.levelTitle,
+                { color: theme.text },
+              ]}
+            >
+              {item} Level
+            </Text>
+            <View
+              style={{
+                marginLeft: 8,
+                backgroundColor: `${accentColor}15`,
+                paddingHorizontal: 8,
+                paddingVertical: 2,
+                borderRadius: 6,
+              }}
+            >
+              <Text
+                style={{
+                  color: accentColor,
+                  fontSize: 11,
+                  fontFamily: 'Ubuntu-Bold',
+                }}
+              >
+                Year {item / 100}
+              </Text>
+            </View>
+          </View>
 
           <Text
             style={[
               styles.levelSubtitle,
-              { color: theme.textSecondary },
+              { color: theme.textSecondary, marginTop: 4 },
             ]}
           >
-            View courses for {item} level
+            Academic curriculum & courses for {item}L
           </Text>
         </View>
 
         <Ionicons
           name="chevron-forward"
-          size={22}
+          size={20}
           color={theme.textSecondary}
         />
       </TouchableOpacity>

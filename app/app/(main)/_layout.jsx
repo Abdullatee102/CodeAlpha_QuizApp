@@ -1,8 +1,7 @@
 import { Tabs } from "expo-router";
 import { FontAwesome5, MaterialCommunityIcons, FontAwesome } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useThemeStore } from "../../store/themeStore"; 
-import { Colors } from "../../constants/colors";
+import { useThemeStore } from "../../store/themeStore";
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
@@ -69,12 +68,12 @@ export default function TabsLayout() {
       />
 
       <Tabs.Screen
-        name="history"
+        name="message"
         options={{
-          title: "History",
+          title: "Message",
           tabBarIcon: ({ focused, color }) => (
             <MaterialCommunityIcons 
-              name={focused ? "clipboard-text" : "clipboard-text-outline"} 
+              name={focused ? "chat-processing" : "chat-processing-outline"} 
               size={24} 
               color={color} 
             />
@@ -89,6 +88,14 @@ export default function TabsLayout() {
           tabBarIcon: ({ focused, color }) => (
             <FontAwesome name={focused ? "user" : "user-o"} size={22} color={color} />
           ),
+        }}
+      />
+
+      {/* History remains fully accessible via router.push('/history') and Profile, but is removed from bottom tab bar */}
+      <Tabs.Screen
+        name="history"
+        options={{
+          href: null,
         }}
       />
     </Tabs>

@@ -1,9 +1,6 @@
 // src/app/(main)/profile.jsx
 
-import React, {
-  useState,
-} from 'react';
-
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -14,116 +11,102 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-
-import {
-  SafeAreaView,
-} from 'react-native-safe-area-context';
-
-import {
-  useRouter,
-} from 'expo-router';
-
-import {
-  Ionicons,
-} from '@expo/vector-icons';
-
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { useQueryClient } from '@tanstack/react-query';
 
-import {
-  useQueryClient,
-} from '@tanstack/react-query';
-
-import {
-  useAuthStore,
-} from '../../store/authStore';
-
-import {
-  useThemeStore,
-} from '../../store/themeStore';
-
-import {
-  Colors,
-} from '../../constants/colors';
-
-import {
-  useProfileQuery,
-} from '../../hooks/useProfileQuery';
+import { useAuthStore } from '../../store/authStore';
+import { useThemeStore } from '../../store/themeStore';
+import { useProfileQuery } from '../../hooks/useProfileQuery';
+import { useQuizHistoryQuery } from '../../hooks/useQuizHistoryQuery';
+import { useAchievementsQuery } from '../../hooks/useAchievementsQuery';
 
 export default function ProfileScreen() {
-  // =====================================================
-  // AUTH / SESSION
-  // =====================================================
-
-  const {
-    user,
-    updateProfile,
-  } = useAuthStore();
-
-  // =====================================================
-  // THEME
-  // =====================================================
-
-  const {
-    theme,
-    isDarkMode,
-  } = useThemeStore();
-
-  // =====================================================
-  // ROUTER / QUERY CLIENT
-  // =====================================================
-
   const router = useRouter();
+  const queryClient = useQueryClient();
 
-  const queryClient =
-    useQueryClient();
+  const { user, updateProfile } = useAuthStore();
+  const { theme, isDarkMode } = useThemeStore();
 
-  // =====================================================
-  // LOCAL UI STATE
-  // =====================================================
+  const [uploading, setUploading] = useState(false);
 
-  const [uploading, setUploading] =
-    useState(false);
-
-  // =====================================================
-  // PROFILE QUERY
-  // =====================================================
-  /*
-   * TanStack Query is the source of truth
-   * for profile/server state.
-   *
-   * Home and Profile therefore consume
-   * the same ['profile'] query.
-   */
-
-  const {
-    data: profile,
-    isLoading,
-  } = useProfileQuery();
+  // Queries
+  const { data: profile } = useProfileQuery();
+  const { data: history = [] } = useQuizHistoryQuery();
+  const { data: achievements = [] } = useAchievementsQuery();
 
   // =====================================================
-  // PROFILE STATISTICS
+  // DERIVED TRUTHFUL METRICS
   // =====================================================
 
-  const totalQuizzes =
-    profile?.quizzesCompleted ??
-    profile?.totalQuizzesTaken ??
-    0;
+  const totalQuizzes = history.length || profile?.quizzesCompleted || 0;
 
-  const totalScore =
-    profile?.totalScore ??
-    0;
+  const { averageScore, bestScore, streak } = useMemo(() => {
+    if (!history || history.length === 0) {
+      return { averageScore: 0, bestScore: 0, streak: 0 };
+    }
 
-  const correctAnswers =
-    profile?.totalCorrect ??
-    profile?.totalCorrectAnswers ??
-    profile?.correctAnswers ??
-    profile?.correct ??
-    0;
+    const percentages = history.map((item) => {
+      if (item.percentage !== undefined && item.percentage !== null) {
+        return Number(item.percentage);
+      }
+      const totalQ = Number(item.totalQuestions || 0);
+      const score = Number(item.score || 0);
+      return totalQ > 0 ? (score / (totalQ * 10)) * 100 : 0;
+    });
 
-  // =====================================================
-  // PROFILE IDENTITY
-  // =====================================================
+    const sum = percentages.reduce((acc, curr) => acc + curr, 0);
+    const avg = Math.round(sum / percentages.length);
+    const best = Math.round(Math.max(...percentages));
 
+    // Real streak calculation from unique consecutive dates
+    const uniqueDates = [
+      ...new Set(
+        history
+          .map((h) => {
+            const raw = h.createdAt || h.date || h.timestamp;
+            if (!raw) return null;
+            const d = new Date(raw);
+            return isNaN(d.getTime()) ? null : d.toISOString().split('T')[0];
+          })
+          .filter(Boolean)
+      ),
+    ].sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+
+    let calculatedStreak = 0;
+    if (uniqueDates.length > 0) {
+      const todayStr = new Date().toISOString().split('T')[0];
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+      if (uniqueDates[0] === todayStr || uniqueDates[0] === yesterdayStr) {
+        calculatedStreak = 1;
+        for (let i = 1; i < uniqueDates.length; i++) {
+          const prev = new Date(uniqueDates[i - 1]);
+          const curr = new Date(uniqueDates[i]);
+          const diffDays = Math.round(
+            (prev.getTime() - curr.getTime()) / (1000 * 60 * 60 * 24)
+          );
+          if (diffDays === 1) {
+            calculatedStreak++;
+          } else {
+            break;
+          }
+        }
+      }
+    }
+
+    return {
+      averageScore: avg,
+      bestScore: best,
+      streak: calculatedStreak,
+    };
+  }, [history]);
+
+  // Identity
   const userInitial = (
     profile?.fullName ||
     user?.fullName ||
@@ -133,268 +116,98 @@ export default function ProfileScreen() {
     .charAt(0)
     .toUpperCase();
 
-  const profileImage =
-    profile?.photoURL ||
-    user?.photoURL;
+  const profileImage = profile?.photoURL || user?.photoURL;
+  const username = profile?.username || user?.username;
 
-  // =====================================================
-  // AVATAR BORDER COLOR
-  // =====================================================
-  /*
-   * Use a stronger, explicit color in light mode
-   * so the circular profile border remains visible.
-   *
-   * Dark mode continues using theme.primary.
-   */
-
-  const avatarBorderColor =
-    isDarkMode
-      ? theme.primary
-      : Colors.primary;
-
-  // =====================================================
-  // PICK PROFILE IMAGE
-  // =====================================================
+  // Academic values (truthful verification)
+  const facultyName = profile?.faculty || profile?.facultyName || null;
+  const departmentName = profile?.department || profile?.departmentName || null;
+  const studentLevel = profile?.level || null;
 
   const pickImage = async () => {
-    const {
-      status,
-    } =
-      await ImagePicker.requestMediaLibraryPermissionsAsync();
-
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert(
-        'Permission Denied',
-        'Camera roll permissions are required.'
+        'Permission Required',
+        'Camera roll permissions are required to upload an avatar.'
       );
-
       return;
     }
 
-    const result =
-      await ImagePicker.launchImageLibraryAsync(
-        {
-          mediaTypes: ['images'],
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
 
-          allowsEditing: true,
-
-          aspect: [1, 1],
-
-          quality: 0.5,
-        }
-      );
-
-    if (
-      !result.canceled &&
-      result.assets?.[0]?.uri
-    ) {
-      uploadProfileImage(
-        result.assets[0].uri
-      );
-    }
-  };
-
-  // =====================================================
-  // UPLOAD PROFILE IMAGE
-  // =====================================================
-
-  const uploadProfileImage =
-    async (uri) => {
-      setUploading(true);
-
+    if (!result.canceled && result.assets[0]?.uri) {
       try {
-        const result =
-          await updateProfile({
-            photoURL: uri,
-          });
-
-        if (!result?.success) {
-          throw new Error(
-            result?.error ||
-              'Failed to update profile image.'
-          );
-        }
-
-        /*
-         * updateProfile() synchronizes the
-         * authentication store.
-         *
-         * We then invalidate the Query cache
-         * so TanStack Query fetches the latest
-         * authoritative profile from the backend.
-         */
-
-        await queryClient.invalidateQueries(
-          {
-            queryKey: ['profile'],
-          }
-        );
-
-        Alert.alert(
-          'Success',
-          'Avatar updated!'
-        );
-      } catch (error) {
-        Alert.alert(
-          'Error',
-          error?.message ||
-            'Failed to update image.'
-        );
+        setUploading(true);
+        await updateProfile({ photoURL: result.assets[0].uri });
+        queryClient.invalidateQueries({ queryKey: ['profile'] });
+        Alert.alert('Success', 'Profile photo updated successfully!');
+      } catch (err) {
+        Alert.alert('Upload Failed', err?.message || 'Could not update photo.');
       } finally {
         setUploading(false);
       }
-    };
+    }
+  };
 
-  // =====================================================
-  // PROFILE LOADING
-  // =====================================================
-
-  if (
-    isLoading &&
-    !profile
-  ) {
-    return (
-      <View
-        style={[
-          styles.centered,
-          {
-            backgroundColor:
-              theme.background,
-          },
-        ]}
-      >
-        <ActivityIndicator
-          size="large"
-          color={theme.primary}
-        />
-      </View>
-    );
-  }
-
-  // =====================================================
-  // PROFILE
-  // =====================================================
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return '';
+    return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  };
 
   return (
     <SafeAreaView
-      style={{
-        flex: 1,
-        backgroundColor:
-          theme.background,
-      }}
+      style={[styles.container, { backgroundColor: theme.background }]}
+      edges={['top', 'left', 'right']}
     >
-      {/* Header */}
-
-      <View
-        style={styles.header}
-      >
-        <TouchableOpacity
-          onPress={() =>
-            router.back()
-          }
-          style={styles.backBtn}
-        >
-          <Ionicons
-            name="arrow-back"
-            size={24}
-            color={theme.text}
-          />
-        </TouchableOpacity>
-
-        <Text
-          style={[
-            styles.headerTitle,
-            {
-              color:
-                theme.primary,
-            },
-          ]}
-        >
-          My Profile
+      {/* Top Header with Profile title & Settings Icon */}
+      <View style={styles.topBar}>
+        <Text style={[styles.screenTitle, { color: theme.text }]}>
+          Scholar Profile
         </Text>
-
         <TouchableOpacity
-          onPress={() =>
-            router.push(
-              '/settings'
-            )
-          }
-          style={
-            styles.settingsBtn
-          }
+          onPress={() => router.push('/settings')}
+          style={[styles.settingsButton, { backgroundColor: `${theme.primary}12` }]}
+          activeOpacity={0.7}
         >
-          <Ionicons
-            name="settings-outline"
-            size={24}
-            color={theme.primary}
-          />
+          <Ionicons name="settings-outline" size={22} color={theme.primary} />
         </TouchableOpacity>
       </View>
 
       <ScrollView
-        showsVerticalScrollIndicator={
-          false
-        }
-        contentContainerStyle={{
-          paddingBottom: 40,
-        }}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
       >
-        {/* Profile Identity Section */}
-
-        <View
-          style={
-            styles.profileSection
-          }
-        >
+        {/* =====================================================
+            1. PROFILE HEADER
+            ===================================================== */}
+        <View style={styles.headerSection}>
           <TouchableOpacity
             onPress={pickImage}
             activeOpacity={0.8}
-            style={
-              styles.avatarWrapper
-            }
+            style={styles.avatarWrapper}
           >
             {profileImage ? (
-              <Image
-                source={{
-                  uri: profileImage,
-                }}
-                style={[
-                  styles.avatar,
-                  {
-                    borderColor:
-                      avatarBorderColor,
-                  },
-                ]}
-              />
+              <Image source={{ uri: profileImage }} style={styles.avatar} />
             ) : (
               <View
                 style={[
                   styles.avatar,
                   styles.initialAvatar,
                   {
-                    backgroundColor:
-                      isDarkMode
-                        ? theme.border
-                        : Colors.secondary,
-
-                    borderColor:
-                      avatarBorderColor,
-
-                    borderWidth: 3,
+                    backgroundColor: isDarkMode ? '#1E293B' : '#EEF2FF',
+                    borderColor: theme.primary,
                   },
                 ]}
               >
-                <Text
-                  style={[
-                    styles.initialText,
-                    {
-                      color:
-                        isDarkMode
-                          ? theme.primary
-                          : Colors.primary,
-                    },
-                  ]}
-                >
+                <Text style={[styles.initialText, { color: theme.primary }]}>
                   {userInitial}
                 </Text>
               </View>
@@ -403,554 +216,847 @@ export default function ProfileScreen() {
             <View
               style={[
                 styles.cameraBadge,
-                {
-                  backgroundColor:
-                    theme.primary,
-
-                  borderColor:
-                    theme.background,
-                },
+                { backgroundColor: theme.primary, borderColor: theme.background },
               ]}
             >
               {uploading ? (
-                <ActivityIndicator
-                  size="small"
-                  color="#fff"
-                />
+                <ActivityIndicator size="small" color="#fff" />
               ) : (
-                <Ionicons
-                  name="camera"
-                  size={16}
-                  color="#fff"
-                />
+                <Ionicons name="camera" size={14} color="#fff" />
               )}
             </View>
           </TouchableOpacity>
 
-          <Text
-            style={[
-              styles.userName,
-              {
-                color:
-                  theme.text,
-              },
-            ]}
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={0.75}
-          >
-            {profile?.fullName ||
-              user?.fullName ||
-              'Scholar'}
+          <Text style={[styles.userName, { color: theme.text }]} numberOfLines={1}>
+            {profile?.fullName || user?.fullName || 'LAUTECH Scholar'}
           </Text>
 
-          <Text
+          {username ? (
+            <Text style={[styles.userHandle, { color: theme.primary }]}>
+              @{username}
+            </Text>
+          ) : null}
+
+          {profile?.email ? (
+            <Text style={[styles.userEmail, { color: theme.textSecondary }]}>
+              {profile.email}
+            </Text>
+          ) : null}
+
+          {profile?.bio ? (
+            <Text style={[styles.userBio, { color: theme.textSecondary }]}>
+              {profile.bio}
+            </Text>
+          ) : null}
+
+          {/* Quick Edit Profile Action */}
+          <TouchableOpacity
             style={[
-              styles.userEmail,
+              styles.editProfileBtn,
               {
-                color:
-                  theme.textSecondary,
+                backgroundColor: theme.card,
+                borderColor: theme.border,
               },
             ]}
+            onPress={() => router.push('/edit-profile')}
+            activeOpacity={0.7}
           >
-            {profile?.email ||
-              user?.email}
-          </Text>
+            <Ionicons name="pencil" size={14} color={theme.primary} />
+            <Text style={[styles.editProfileText, { color: theme.text }]}>
+              Edit Profile
+            </Text>
+          </TouchableOpacity>
         </View>
 
-        {/* Stats Card */}
-
-        <View
-          style={[
-            styles.statsCard,
-            {
-              backgroundColor:
-                theme.card,
-
-              borderColor:
-                theme.border,
-
-              shadowColor:
-                isDarkMode
-                  ? '#000'
-                  : '#444',
-
-              elevation:
-                isDarkMode ? 2 : 4,
-            },
-          ]}
-        >
-          <View
-            style={styles.statItem}
-          >
-            <Ionicons
-              name="book"
-              size={20}
-              color={theme.primary}
-            />
-
-            <Text
-              style={[
-                styles.statValue,
-                {
-                  color:
-                    theme.text,
-                },
-              ]}
-            >
-              {totalQuizzes}
-            </Text>
-
-            <Text
-              style={[
-                styles.statLabel,
-                {
-                  color:
-                    theme.textSecondary,
-                },
-              ]}
-            >
-              Completed
-            </Text>
-          </View>
+        {/* =====================================================
+            2. ACADEMIC INFORMATION (Truthful State)
+            ===================================================== */}
+        <View style={styles.sectionBlock}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>
+            Academic Information
+          </Text>
 
           <View
             style={[
-              styles.divider,
-              {
-                backgroundColor:
-                  theme.border,
-              },
+              styles.academicCard,
+              { backgroundColor: theme.card, borderColor: theme.border },
             ]}
-          />
-
-          <View
-            style={styles.statItem}
           >
-            <Ionicons
-              name="star"
-              size={20}
-              color="#FFD700"
-            />
-
-            <Text
-              style={[
-                styles.statValue,
-                {
-                  color:
-                    theme.text,
-                },
-              ]}
-            >
-              {totalScore}
-            </Text>
-
-            <Text
-              style={[
-                styles.statLabel,
-                {
-                  color:
-                    theme.textSecondary,
-                },
-              ]}
-            >
-              Total Pts
-            </Text>
-          </View>
-
-          <View
-            style={[
-              styles.divider,
-              {
-                backgroundColor:
-                  theme.border,
-              },
-            ]}
-          />
-
-          <View
-            style={styles.statItem}
-          >
-            <Ionicons
-              name="trending-up"
-              size={20}
-              color="#27AE60"
-            />
-
-            <Text
-              style={[
-                styles.statValue,
-                {
-                  color:
-                    theme.text,
-                },
-              ]}
-            >
-              {correctAnswers}
-            </Text>
-
-            <Text
-              style={[
-                styles.statLabel,
-                {
-                  color:
-                    theme.textSecondary,
-                },
-              ]}
-            >
-              Correct
-            </Text>
+            {facultyName || departmentName || studentLevel ? (
+              <View style={styles.academicRowList}>
+                {facultyName && (
+                  <View style={styles.academicRow}>
+                    <Text style={[styles.academicLabel, { color: theme.textSecondary }]}>
+                      Faculty
+                    </Text>
+                    <Text style={[styles.academicValue, { color: theme.text }]}>
+                      {facultyName}
+                    </Text>
+                  </View>
+                )}
+                {departmentName && (
+                  <View style={styles.academicRow}>
+                    <Text style={[styles.academicLabel, { color: theme.textSecondary }]}>
+                      Department
+                    </Text>
+                    <Text style={[styles.academicValue, { color: theme.text }]}>
+                      {departmentName}
+                    </Text>
+                  </View>
+                )}
+                {studentLevel && (
+                  <View style={styles.academicRow}>
+                    <Text style={[styles.academicLabel, { color: theme.textSecondary }]}>
+                      Level
+                    </Text>
+                    <Text style={[styles.academicValue, { color: theme.text }]}>
+                      {studentLevel} Level
+                    </Text>
+                  </View>
+                )}
+              </View>
+            ) : (
+              <View style={styles.unconfiguredAcademic}>
+                <View
+                  style={[
+                    styles.unconfiguredIconBox,
+                    { backgroundColor: `${theme.primary}15` },
+                  ]}
+                >
+                  <MaterialCommunityIcons
+                    name="school-outline"
+                    size={28}
+                    color={theme.primary}
+                  />
+                </View>
+                <View style={{ flex: 1, marginLeft: 12 }}>
+                  <Text style={[styles.unconfiguredTitle, { color: theme.text }]}>
+                    Academic Profile Not Configured
+                  </Text>
+                  <Text
+                    style={[
+                      styles.unconfiguredDesc,
+                      { color: theme.textSecondary },
+                    ]}
+                  >
+                    Select your faculty and department to browse official courses.
+                  </Text>
+                </View>
+              </View>
+            )}
           </View>
         </View>
 
-        {/* Menu Options */}
-
-        <View
-          style={[
-            styles.menuContainer,
-            {
-              backgroundColor:
-                theme.background,
-            },
-          ]}
-        >
-          <Text
-            style={[
-              styles.menuSectionTitle,
-              {
-                color:
-                  theme.textSecondary,
-              },
-            ]}
-          >
-            Achievement & Growth
+        {/* =====================================================
+            3. QUIZ OVERVIEW (Real Calculated Metrics)
+            ===================================================== */}
+        <View style={styles.sectionBlock}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>
+            Quiz Overview
           </Text>
 
-          <MenuButton
-            icon="medal-outline"
-            title="My Achievements"
-            onPress={() =>
-              router.push(
-                '/achievements'
-              )
-            }
-            theme={theme}
-          />
-
-          <MenuButton
-            icon="time-outline"
-            title="Quiz History"
-            onPress={() =>
-              router.push('/history')
-            }
-            theme={theme}
-          />
-
-          <Text
+          <View
             style={[
-              styles.menuSectionTitle,
-              {
-                marginTop: 25,
-                color:
-                  theme.textSecondary,
-              },
+              styles.metricsGrid,
+              { backgroundColor: theme.card, borderColor: theme.border },
             ]}
           >
-            Security & Preference
+            <View style={styles.metricBox}>
+              <View
+                style={[
+                  styles.metricIconWrap,
+                  { backgroundColor: `${theme.primary}18` },
+                ]}
+              >
+                <Ionicons name="book-outline" size={18} color={theme.primary} />
+              </View>
+              <Text style={[styles.metricNumber, { color: theme.text }]}>
+                {totalQuizzes}
+              </Text>
+              <Text style={[styles.metricLabel, { color: theme.textSecondary }]}>
+                Quizzes Taken
+              </Text>
+            </View>
+
+            <View style={[styles.metricDivider, { backgroundColor: theme.border }]} />
+
+            <View style={styles.metricBox}>
+              <View
+                style={[
+                  styles.metricIconWrap,
+                  { backgroundColor: '#05966918' },
+                ]}
+              >
+                <Ionicons name="trending-up" size={18} color="#059669" />
+              </View>
+              <Text style={[styles.metricNumber, { color: theme.text }]}>
+                {averageScore}%
+              </Text>
+              <Text style={[styles.metricLabel, { color: theme.textSecondary }]}>
+                Average Score
+              </Text>
+            </View>
+
+            <View style={[styles.metricDivider, { backgroundColor: theme.border }]} />
+
+            <View style={styles.metricBox}>
+              <View
+                style={[
+                  styles.metricIconWrap,
+                  { backgroundColor: '#EAB30818' },
+                ]}
+              >
+                <Ionicons name="trophy-outline" size={18} color="#D97706" />
+              </View>
+              <Text style={[styles.metricNumber, { color: theme.text }]}>
+                {bestScore}%
+              </Text>
+              <Text style={[styles.metricLabel, { color: theme.textSecondary }]}>
+                Best Score
+              </Text>
+            </View>
+
+            <View style={[styles.metricDivider, { backgroundColor: theme.border }]} />
+
+            <View style={styles.metricBox}>
+              <View
+                style={[
+                  styles.metricIconWrap,
+                  { backgroundColor: '#DC262618' },
+                ]}
+              >
+                <MaterialCommunityIcons
+                  name="fire"
+                  size={20}
+                  color="#DC2626"
+                />
+              </View>
+              <Text style={[styles.metricNumber, { color: theme.text }]}>
+                {streak}
+              </Text>
+              <Text style={[styles.metricLabel, { color: theme.textSecondary }]}>
+                Day Streak
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* =====================================================
+            4. ACHIEVEMENTS PREVIEW
+            ===================================================== */}
+        <View style={styles.sectionBlock}>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>
+              Achievements
+            </Text>
+            <TouchableOpacity onPress={() => router.push('/achievements')}>
+              <Text style={[styles.viewAllText, { color: theme.primary }]}>
+                View All ({achievements.length})
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {achievements.length === 0 ? (
+            <View
+              style={[
+                styles.emptySectionCard,
+                { backgroundColor: theme.card, borderColor: theme.border },
+              ]}
+            >
+              <MaterialCommunityIcons
+                name="medal-outline"
+                size={30}
+                color={theme.textSecondary}
+              />
+              <Text style={[styles.emptySectionText, { color: theme.textSecondary }]}>
+                Complete quizzes and score well to unlock academic badges.
+              </Text>
+            </View>
+          ) : (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.achievementsScroll}
+            >
+              {achievements.slice(0, 6).map((ach) => (
+                <View
+                  key={ach.id || ach.achievementKey}
+                  style={[
+                    styles.achievementBadge,
+                    { backgroundColor: theme.card, borderColor: theme.border },
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.badgeIconBox,
+                      { backgroundColor: '#F59E0B20' },
+                    ]}
+                  >
+                    <MaterialCommunityIcons
+                      name={ach.icon || 'trophy'}
+                      size={24}
+                      color="#D97706"
+                    />
+                  </View>
+                  <Text
+                    style={[styles.badgeTitle, { color: theme.text }]}
+                    numberOfLines={1}
+                  >
+                    {ach.title}
+                  </Text>
+                </View>
+              ))}
+            </ScrollView>
+          )}
+        </View>
+
+        {/* =====================================================
+            5. RECENT ACTIVITY / QUIZ HISTORY PREVIEW
+            ===================================================== */}
+        <View style={styles.sectionBlock}>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>
+              Recent Activity
+            </Text>
+            <TouchableOpacity onPress={() => router.push('/history')}>
+              <Text style={[styles.viewAllText, { color: theme.primary }]}>
+                Full History →
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {history.length === 0 ? (
+            <View
+              style={[
+                styles.emptySectionCard,
+                { backgroundColor: theme.card, borderColor: theme.border },
+              ]}
+            >
+              <MaterialCommunityIcons
+                name="clipboard-text-clock-outline"
+                size={30}
+                color={theme.textSecondary}
+              />
+              <Text style={[styles.emptySectionText, { color: theme.textSecondary }]}>
+                No completed assessments yet. Start a quiz to track your performance history.
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.historyList}>
+              {history.slice(0, 3).map((item) => {
+                const isCbt = (item.quizType || 'cbt') === 'cbt';
+                const percent = Math.round(
+                  item.percentage ??
+                    (item.totalQuestions > 0
+                      ? (item.score / (item.totalQuestions * 10)) * 100
+                      : 0)
+                );
+
+                return (
+                  <View
+                    key={item.id}
+                    style={[
+                      styles.historyItemCard,
+                      { backgroundColor: theme.card, borderColor: theme.border },
+                    ]}
+                  >
+                    <View
+                      style={[
+                        styles.historyIconBox,
+                        {
+                          backgroundColor: isCbt
+                            ? '#2563EB15'
+                            : '#7C3AED15',
+                        },
+                      ]}
+                    >
+                      <MaterialCommunityIcons
+                        name={isCbt ? 'checkbox-marked-circle-outline' : 'text-box-outline'}
+                        size={22}
+                        color={isCbt ? '#2563EB' : '#7C3AED'}
+                      />
+                    </View>
+
+                    <View style={styles.historyDetails}>
+                      <View style={styles.historyTitleRow}>
+                        <Text
+                          style={[styles.historyCourseCode, { color: theme.text }]}
+                          numberOfLines={1}
+                        >
+                          {item.courseCode || item.category || 'Assessment'}
+                        </Text>
+                        <View
+                          style={[
+                            styles.typeBadge,
+                            {
+                              backgroundColor: isCbt
+                                ? '#2563EB15'
+                                : '#7C3AED15',
+                            },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.typeBadgeText,
+                              {
+                                color: isCbt ? '#2563EB' : '#7C3AED',
+                              },
+                            ]}
+                          >
+                            {isCbt ? 'CBT' : 'THEORY'}
+                          </Text>
+                        </View>
+                      </View>
+
+                      <Text
+                        style={[styles.historyCourseTitle, { color: theme.textSecondary }]}
+                        numberOfLines={1}
+                      >
+                        {item.courseTitle || 'Course Assessment'} • {formatDate(item.createdAt || item.date)}
+                      </Text>
+                    </View>
+
+                    <View style={styles.historyScoreBox}>
+                      <Text
+                        style={[
+                          styles.historyPercent,
+                          {
+                            color:
+                              percent >= 70
+                                ? '#059669'
+                                : percent >= 45
+                                ? '#D97706'
+                                : '#DC2626',
+                          },
+                        ]}
+                      >
+                        {percent}%
+                      </Text>
+                      <Text
+                        style={[
+                          styles.historyFraction,
+                          { color: theme.textSecondary },
+                        ]}
+                      >
+                        {item.correctAnswers ?? 0}/{item.totalQuestions ?? 0}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+        </View>
+
+        {/* =====================================================
+            6. SECONDARY NAVIGATION / SUPPORT LINKS
+            ===================================================== */}
+        <View style={[styles.sectionBlock, { marginBottom: 30 }]}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>
+            Scholar Resources
           </Text>
 
-          <MenuButton
-            icon="person-outline"
-            title="Edit Profile"
-            onPress={() =>
-              router.push(
-                '/edit-profile'
-              )
-            }
-            theme={theme}
-          />
-
-          <MenuButton
-            icon="finger-print-outline"
-            title="Biometric Security"
-            onPress={() =>
-              router.push('/security')
-            }
-            theme={theme}
-          />
-
-          <MenuButton
-            icon="lock-closed-outline"
-            title="Change Password"
-            onPress={() =>
-              router.push(
-                '/change-password'
-              )
-            }
-            theme={theme}
-          />
-
-          <Text
+          <View
             style={[
-              styles.menuSectionTitle,
-              {
-                marginTop: 25,
-                color:
-                  theme.textSecondary,
-              },
+              styles.menuContainer,
+              { backgroundColor: theme.card, borderColor: theme.border },
             ]}
           >
-            Support
-          </Text>
+            <TouchableOpacity
+              style={styles.menuRow}
+              onPress={() => router.push('/(main)/message')}
+              activeOpacity={0.7}
+            >
+              <View
+                style={[
+                  styles.menuIconWrap,
+                  { backgroundColor: `${theme.primary}15` },
+                ]}
+              >
+                <MaterialCommunityIcons
+                  name="chat-processing-outline"
+                  size={20}
+                  color={theme.primary}
+                />
+              </View>
+              <View style={styles.menuInfo}>
+                <Text style={[styles.menuTitle, { color: theme.text }]}>
+                  Academic Discussions
+                </Text>
+                <Text
+                  style={[styles.menuSubtitle, { color: theme.textSecondary }]}
+                >
+                  Join student forums for your faculty and level
+                </Text>
+              </View>
+              <Ionicons
+                name="chevron-forward"
+                size={18}
+                color={theme.textSecondary}
+              />
+            </TouchableOpacity>
 
-          <MenuButton
-            icon="help-circle-outline"
-            title="Help Center"
-            onPress={() =>
-              router.push('/support')
-            }
-            theme={theme}
-          />
+            <View style={[styles.menuDivider, { backgroundColor: theme.border }]} />
+
+            <TouchableOpacity
+              style={styles.menuRow}
+              onPress={() => router.push('/support')}
+              activeOpacity={0.7}
+            >
+              <View
+                style={[
+                  styles.menuIconWrap,
+                  { backgroundColor: '#05966915' },
+                ]}
+              >
+                <Ionicons
+                  name="help-buoy-outline"
+                  size={20}
+                  color="#059669"
+                />
+              </View>
+              <View style={styles.menuInfo}>
+                <Text style={[styles.menuTitle, { color: theme.text }]}>
+                  Help & Support Center
+                </Text>
+                <Text
+                  style={[styles.menuSubtitle, { color: theme.textSecondary }]}
+                >
+                  FAQs, exam guidelines, and support
+                </Text>
+              </View>
+              <Ionicons
+                name="chevron-forward"
+                size={18}
+                color={theme.textSecondary}
+              />
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-// =====================================================
-// MENU BUTTON
-// =====================================================
-
-const MenuButton = ({
-  icon,
-  title,
-  onPress,
-  theme,
-}) => (
-  <TouchableOpacity
-    style={[
-      styles.menuItem,
-      {
-        backgroundColor:
-          theme.card,
-
-        borderColor:
-          theme.border,
-      },
-    ]}
-    onPress={onPress}
-    activeOpacity={0.6}
-  >
-    <View
-      style={styles.menuLeft}
-    >
-      <View
-        style={[
-          styles.menuIconBox,
-          {
-            backgroundColor:
-              `${theme.primary}15`,
-          },
-        ]}
-      >
-        <Ionicons
-          name={icon}
-          size={20}
-          color={theme.primary}
-        />
-      </View>
-
-      <Text
-        style={[
-          styles.menuText,
-          {
-            color:
-              theme.text,
-          },
-        ]}
-      >
-        {title}
-      </Text>
-    </View>
-
-    <Ionicons
-      name="chevron-forward"
-      size={18}
-      color={
-        theme.textSecondary
-      }
-    />
-  </TouchableOpacity>
-);
-
-// =====================================================
-// STYLES
-// =====================================================
-
 const styles = StyleSheet.create({
-  centered: {
+  container: {
     flex: 1,
+  },
+  topBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 12,
+  },
+  screenTitle: {
+    fontSize: 22,
+    fontFamily: 'Ubuntu-Bold',
+    letterSpacing: -0.3,
+  },
+  settingsButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     justifyContent: 'center',
     alignItems: 'center',
   },
-
-  header: {
-    flexDirection: 'row',
-    justifyContent:
-      'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 25,
-    paddingTop: 20,
-    marginBottom: 20,
-  },
-
-  headerTitle: {
-    fontFamily: 'Archivo-Black',
-    fontSize: 20,
-  },
-
-  backBtn: {
-    padding: 5,
-  },
-
-  settingsBtn: {
-    padding: 5,
-  },
-
-  profileSection: {
-    alignItems: 'center',
-    marginVertical: 10,
+  scrollContent: {
     paddingHorizontal: 20,
+    paddingBottom: 36,
   },
-
+  headerSection: {
+    alignItems: 'center',
+    marginVertical: 12,
+  },
   avatarWrapper: {
     position: 'relative',
+    marginBottom: 12,
   },
-
   avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    borderWidth: 3,
+    width: 88,
+    height: 88,
+    borderRadius: 44,
   },
-
   initialAvatar: {
+    borderWidth: 2,
     justifyContent: 'center',
     alignItems: 'center',
   },
-
   initialText: {
-    fontFamily:
-      'Archivo-Black',
-    fontSize: 36,
+    fontSize: 34,
+    fontFamily: 'Ubuntu-Bold',
   },
-
   cameraBadge: {
     position: 'absolute',
     bottom: 0,
     right: 0,
-    padding: 8,
-    borderRadius: 20,
-    borderWidth: 3,
-  },
-
-  userName: {
-    fontFamily:
-      'Archivo-Black',
-    fontSize: 24,
-    marginTop: 15,
-    maxWidth: '100%',
-    textAlign: 'center',
-  },
-
-  userEmail: {
-    fontFamily:
-      'Ubuntu-Light',
-    fontSize: 14,
-    marginTop: 2,
-  },
-
-  statsCard: {
-    flexDirection: 'row',
-    marginHorizontal: 25,
-    borderRadius: 22,
-    padding: 20,
-    justifyContent:
-      'space-around',
-    elevation: 4,
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    marginVertical: 25,
-    borderWidth: 1,
-  },
-
-  statItem: {
-    alignItems: 'center',
-  },
-
-  statValue: {
-    fontFamily:
-      'Archivo-Black',
-    fontSize: 20,
-  },
-
-  statLabel: {
-    fontFamily:
-      'Ubuntu-Regular',
-    fontSize: 11,
-    marginTop: 2,
-  },
-
-  divider: {
-    width: 1,
-    height: 35,
-  },
-
-  menuContainer: {
-    paddingHorizontal: 22,
-    marginTop: 10,
-  },
-
-  menuSectionTitle: {
-    fontFamily:
-      'Ubuntu-Bold',
-    fontSize: 12,
-    textTransform:
-      'uppercase',
-    letterSpacing: 1,
-    marginBottom: 15,
-  },
-
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent:
-      'space-between',
-    paddingVertical: 12,
-    paddingHorizontal: 5,
-    paddingLeft: 10,
+    width: 28,
+    height: 28,
     borderRadius: 14,
-    marginBottom: 10,
-    borderWidth: 1,
-  },
-
-  menuLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 15,
-  },
-
-  menuIconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    borderWidth: 2,
     justifyContent: 'center',
     alignItems: 'center',
   },
-
-  menuText: {
-    fontFamily:
-      'Ubuntu-Medium',
+  userName: {
+    fontSize: 19,
+    fontFamily: 'Ubuntu-Bold',
+    letterSpacing: -0.2,
+  },
+  userHandle: {
+    fontSize: 13,
+    fontFamily: 'Ubuntu-Bold',
+    marginTop: 2,
+  },
+  userEmail: {
+    fontSize: 13,
+    fontFamily: 'Ubuntu-Regular',
+    marginTop: 2,
+  },
+  userBio: {
+    fontSize: 13,
+    fontFamily: 'Ubuntu-Regular',
+    textAlign: 'center',
+    marginTop: 6,
+    paddingHorizontal: 24,
+    lineHeight: 18,
+  },
+  editProfileBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 20,
+    borderWidth: 1,
+    marginTop: 12,
+    gap: 6,
+  },
+  editProfileText: {
+    fontSize: 12,
+    fontFamily: 'Ubuntu-Bold',
+  },
+  sectionBlock: {
+    marginTop: 20,
+  },
+  sectionTitle: {
     fontSize: 16,
+    fontFamily: 'Ubuntu-Bold',
+    marginBottom: 10,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  viewAllText: {
+    fontSize: 12,
+    fontFamily: 'Ubuntu-Bold',
+  },
+  academicCard: {
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  academicRowList: {
+    gap: 8,
+  },
+  academicRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  academicLabel: {
+    fontSize: 13,
+    fontFamily: 'Ubuntu-Regular',
+  },
+  academicValue: {
+    fontSize: 13,
+    fontFamily: 'Ubuntu-Bold',
+  },
+  unconfiguredAcademic: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  unconfiguredIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  unconfiguredTitle: {
+    fontSize: 14,
+    fontFamily: 'Ubuntu-Bold',
+  },
+  unconfiguredDesc: {
+    fontSize: 12,
+    fontFamily: 'Ubuntu-Regular',
+    marginTop: 2,
+    lineHeight: 16,
+  },
+  metricsGrid: {
+    flexDirection: 'row',
+    borderRadius: 16,
+    borderWidth: 1,
+    paddingVertical: 14,
+    paddingHorizontal: 6,
+    alignItems: 'center',
+    justifyContent: 'space-around',
+  },
+  metricBox: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  metricIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  metricNumber: {
+    fontSize: 16,
+    fontFamily: 'Ubuntu-Bold',
+  },
+  metricLabel: {
+    fontSize: 10,
+    fontFamily: 'Ubuntu-Regular',
+    marginTop: 2,
+    textAlign: 'center',
+  },
+  metricDivider: {
+    width: 1,
+    height: 36,
+  },
+  achievementsScroll: {
+    gap: 10,
+  },
+  achievementBadge: {
+    width: 100,
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  badgeIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  badgeTitle: {
+    fontSize: 11,
+    fontFamily: 'Ubuntu-Bold',
+    textAlign: 'center',
+  },
+  emptySectionCard: {
+    padding: 20,
+    borderRadius: 14,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  emptySectionText: {
+    fontSize: 12,
+    fontFamily: 'Ubuntu-Regular',
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  historyList: {
+    gap: 8,
+  },
+  historyItemCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  historyIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  historyDetails: {
+    flex: 1,
+    marginLeft: 12,
+    marginRight: 8,
+  },
+  historyTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  historyCourseCode: {
+    fontSize: 13,
+    fontFamily: 'Ubuntu-Bold',
+    marginRight: 6,
+  },
+  typeBadge: {
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 4,
+  },
+  typeBadgeText: {
+    fontSize: 9,
+    fontFamily: 'Ubuntu-Bold',
+  },
+  historyCourseTitle: {
+    fontSize: 12,
+    fontFamily: 'Ubuntu-Regular',
+    marginTop: 2,
+  },
+  historyScoreBox: {
+    alignItems: 'flex-end',
+  },
+  historyPercent: {
+    fontSize: 15,
+    fontFamily: 'Ubuntu-Bold',
+  },
+  historyFraction: {
+    fontSize: 10,
+    fontFamily: 'Ubuntu-Regular',
+    marginTop: 1,
+  },
+  menuContainer: {
+    borderRadius: 16,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  menuRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+  },
+  menuIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  menuInfo: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  menuTitle: {
+    fontSize: 13,
+    fontFamily: 'Ubuntu-Bold',
+  },
+  menuSubtitle: {
+    fontSize: 11,
+    fontFamily: 'Ubuntu-Regular',
+    marginTop: 2,
+  },
+  menuDivider: {
+    height: 1,
+    marginLeft: 62,
   },
 });

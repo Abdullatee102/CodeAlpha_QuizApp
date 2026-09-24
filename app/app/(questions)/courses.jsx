@@ -28,6 +28,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useQuizStore } from '../../store/quizStore';
 import { useThemeStore } from '../../store/themeStore';
+import { getCourseIcon } from '../../constants/academicIcons';
 
 export default function CoursesScreen() {
   const router = useRouter();
@@ -172,13 +173,13 @@ export default function CoursesScreen() {
     if (
       value === 'harmattan'
     ) {
-      return 'First Semester';
+      return 'Harmattan';
     }
 
     if (
       value === 'rain'
     ) {
-      return 'Second Semester';
+      return 'Rain';
     }
 
     return value;
@@ -191,6 +192,9 @@ export default function CoursesScreen() {
   const renderCourse = ({
     item,
   }) => {
+    const courseIcon =
+      getCourseIcon(item.code);
+
     return (
       <TouchableOpacity
         style={[
@@ -215,13 +219,13 @@ export default function CoursesScreen() {
             styles.iconBox,
             {
               backgroundColor:
-                `${theme.primary}20`,
+                `${theme.primary}18`,
             },
           ]}
         >
           <MaterialCommunityIcons
-            name="book-open-variant"
-            size={28}
+            name={courseIcon}
+            size={26}
             color={
               theme.primary
             }

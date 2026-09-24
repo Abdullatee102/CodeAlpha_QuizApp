@@ -47,6 +47,10 @@ import {
 } from '../../constants/colors';
 
 import {
+  getFacultyMeta,
+} from '../../constants/academicIcons';
+
+import {
   SafeAreaView,
 } from 'react-native-safe-area-context';
 
@@ -298,11 +302,14 @@ export default function HomeScreen() {
     item,
     index,
   }) => {
+    const meta =
+      getFacultyMeta(item);
+
     const icon =
-      getFacultyIcon(item);
+      meta.icon;
 
     const color =
-      getFacultyColor(index);
+      meta.color;
 
     return (
       <TouchableOpacity
@@ -326,7 +333,7 @@ export default function HomeScreen() {
             styles.iconBox,
             {
               backgroundColor:
-                `${color}20`,
+                `${color}18`,
             },
           ]}
         >
@@ -355,7 +362,7 @@ export default function HomeScreen() {
             styles.facultyCode,
             {
               color:
-                theme.textSecondary,
+                color,
             },
           ]}
         >

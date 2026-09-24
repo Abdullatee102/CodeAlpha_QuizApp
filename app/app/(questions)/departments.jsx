@@ -22,6 +22,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useQuizStore } from '../../store/quizStore';
 import { useThemeStore } from '../../store/themeStore';
+import { getDepartmentMeta } from '../../constants/academicIcons';
 
 export default function DepartmentsScreen() {
   const router = useRouter();
@@ -62,6 +63,7 @@ export default function DepartmentsScreen() {
   };
 
   const renderDepartment = ({ item }) => {
+    const meta = getDepartmentMeta(item, facultyCode);
     return (
       <TouchableOpacity
         style={[
@@ -78,14 +80,14 @@ export default function DepartmentsScreen() {
           style={[
             styles.iconBox,
             {
-              backgroundColor: `${theme.primary}20`,
+              backgroundColor: `${meta.color}18`,
             },
           ]}
         >
           <MaterialCommunityIcons
-            name="book-education-outline"
-            size={28}
-            color={theme.primary}
+            name={meta.icon}
+            size={26}
+            color={meta.color}
           />
         </View>
 
@@ -103,7 +105,7 @@ export default function DepartmentsScreen() {
           <Text
             style={[
               styles.departmentCode,
-              { color: theme.textSecondary },
+              { color: meta.color },
             ]}
           >
             {item.code}
@@ -112,7 +114,7 @@ export default function DepartmentsScreen() {
 
         <Ionicons
           name="chevron-forward"
-          size={22}
+          size={20}
           color={theme.textSecondary}
         />
       </TouchableOpacity>

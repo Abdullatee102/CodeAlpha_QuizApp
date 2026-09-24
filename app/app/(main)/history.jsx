@@ -470,30 +470,47 @@ export default function HistoryScreen() {
           },
         ]}
       >
-        <Text
-          style={[
-            styles.headerTitle,
-            {
-              color:
-                theme.primary,
-            },
-          ]}
-        >
-          Quiz History
-        </Text>
+        <View style={styles.headerTopRow}>
+          {router.canGoBack() && (
+            <TouchableOpacity
+              onPress={() => router.back()}
+              style={styles.backButton}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name="arrow-back"
+                size={24}
+                color={theme.text}
+              />
+            </TouchableOpacity>
+          )}
 
-        <Text
-          style={[
-            styles.headerSub,
-            {
-              color:
-                theme.textSecondary,
-            },
-          ]}
-        >
-          Tracking your growth
-          over time
-        </Text>
+          <View style={{ flex: 1 }}>
+            <Text
+              style={[
+                styles.headerTitle,
+                {
+                  color:
+                    theme.primary,
+                },
+              ]}
+            >
+              Quiz History
+            </Text>
+
+            <Text
+              style={[
+                styles.headerSub,
+                {
+                  color:
+                    theme.textSecondary,
+                },
+              ]}
+            >
+              Tracking your academic assessment growth over time
+            </Text>
+          </View>
+        </View>
       </View>
 
       <FlatList
@@ -536,21 +553,31 @@ const styles = StyleSheet.create({
   },
 
   header: {
-    padding: 25,
+    padding: 20,
     borderBottomWidth: 1,
+  },
+
+  headerTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  backButton: {
+    padding: 6,
+    marginRight: 12,
   },
 
   headerTitle: {
     fontFamily:
       'Archivo-Black',
-    fontSize: 26,
+    fontSize: 22,
   },
 
   headerSub: {
     fontFamily:
       'Ubuntu-Regular',
-    fontSize: 14,
-    marginTop: 4,
+    fontSize: 13,
+    marginTop: 2,
   },
 
   listContent: {

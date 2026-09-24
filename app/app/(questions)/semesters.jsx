@@ -24,13 +24,21 @@ import { useThemeStore } from '../../store/themeStore';
 const SEMESTERS = [
   {
     id: 'first',
-    name: 'First Semester',
+    name: 'Harmattan',
+    sessionType: 'Harmattan Semester',
+    subtitle: 'Alpha academic session courses',
     value: 'harmattan',
+    icon: 'weather-sunset',
+    color: '#D97706', // Warm Amber
   },
   {
     id: 'second',
-    name: 'Second Semester',
+    name: 'Rain',
+    sessionType: 'Rain Semester',
+    subtitle: 'Beta academic session courses',
     value: 'rain',
+    icon: 'weather-pouring',
+    color: '#0284C7', // Sky Blue
   },
 ];
 
@@ -82,44 +90,61 @@ export default function SemestersScreen() {
           style={[
             styles.iconBox,
             {
-              backgroundColor: `${theme.primary}20`,
+              backgroundColor: `${item.color}18`,
             },
           ]}
         >
           <MaterialCommunityIcons
-            name={
-              item.id === 'first'
-                ? 'numeric-1-circle-outline'
-                : 'numeric-2-circle-outline'
-            }
-            size={32}
-            color={theme.primary}
+            name={item.icon}
+            size={30}
+            color={item.color}
           />
         </View>
 
         <View style={styles.semesterInfo}>
-          <Text
-            style={[
-              styles.semesterTitle,
-              { color: theme.text },
-            ]}
-          >
-            {item.name}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Text
+              style={[
+                styles.semesterTitle,
+                { color: theme.text },
+              ]}
+            >
+              {item.name}
+            </Text>
+            <View
+              style={{
+                marginLeft: 8,
+                backgroundColor: `${item.color}15`,
+                paddingHorizontal: 8,
+                paddingVertical: 2,
+                borderRadius: 6,
+              }}
+            >
+              <Text
+                style={{
+                  color: item.color,
+                  fontSize: 11,
+                  fontFamily: 'Ubuntu-Bold',
+                }}
+              >
+                Semester
+              </Text>
+            </View>
+          </View>
 
           <Text
             style={[
               styles.semesterSubtitle,
-              { color: theme.textSecondary },
+              { color: theme.textSecondary, marginTop: 4 },
             ]}
           >
-            View available courses
+            {item.subtitle}
           </Text>
         </View>
 
         <Ionicons
           name="chevron-forward"
-          size={22}
+          size={20}
           color={theme.textSecondary}
         />
       </TouchableOpacity>
