@@ -28,6 +28,7 @@ import {
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { storage } from '../../utils/mmkvStorage';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
 import {
@@ -69,7 +70,8 @@ export default function LoginScreen() {
   useEffect(() => {
     (async () => {
       const savedEmail =
-        await AsyncStorage.getItem('lastUserEmail');
+        storage.getString('lastUserEmail') ||
+        (await AsyncStorage.getItem('lastUserEmail'));
 
       if (savedEmail) {
         setIdentifier(savedEmail);
@@ -92,6 +94,7 @@ export default function LoginScreen() {
     );
 
     if (res?.success) {
+      storage.set('lastUserEmail', identifier);
       await AsyncStorage.setItem(
         'lastUserEmail',
         identifier
@@ -108,17 +111,6 @@ export default function LoginScreen() {
     const isEnrolled =
       await LocalAuthentication.isEnrolledAsync();
 
-    const savedEmail =
-      await AsyncStorage.getItem(
-        'lastUserEmail'
-      );
-
-    const biometricEnabled = savedEmail
-      ? await AsyncStorage.getItem(
-          `useBiometrics_${savedEmail}`
-        )
-      : null;
-
     if (!hasHardware || !isEnrolled) {
       Alert.alert(
         'Not Available',
@@ -127,10 +119,24 @@ export default function LoginScreen() {
       return;
     }
 
-    if (
-      biometricEnabled !== 'true' ||
-      !savedEmail
-    ) {
+    const savedEmail =
+      storage.getString('lastUserEmail') ||
+      (await AsyncStorage.getItem('lastUserEmail'));
+
+    const biometricToken = storage.getString('biometricRefreshToken');
+    const isBioEnabledInStore = useAuthStore.getState().biometricEnabled;
+
+    const biometricEnabledPref = savedEmail
+      ? storage.getString(`useBiometrics_${savedEmail}`) ||
+        (await AsyncStorage.getItem(`useBiometrics_${savedEmail}`))
+      : null;
+
+    const isBiometricConfigured =
+      (isBioEnabledInStore || biometricEnabledPref === 'true') &&
+      !!biometricToken &&
+      !!savedEmail;
+
+    if (!isBiometricConfigured) {
       Alert.alert(
         'Setup Required',
         'Please sign in with your password first and enable Biometrics in Security settings.'
@@ -142,6 +148,7 @@ export default function LoginScreen() {
       await LocalAuthentication.authenticateAsync({
         promptMessage: `Login as ${savedEmail}`,
         fallbackLabel: 'Use Password',
+        cancelLabel: 'Cancel',
       });
 
     if (result.success) {
@@ -159,6 +166,19 @@ export default function LoginScreen() {
           'Authentication Failed',
           res?.error ||
             'Could not complete biometric sign-in. Please log in with your password.'
+        );
+      }
+    } else {
+      const cancellationErrors = [
+        'user_cancel',
+        'system_cancel',
+        'app_cancel',
+        'user_fallback',
+      ];
+      if (result.error && !cancellationErrors.includes(result.error)) {
+        Alert.alert(
+          'Biometric Verification Failed',
+          'Biometric verification was not successful. Please try again or use your password.'
         );
       }
     }
@@ -553,7 +573,7 @@ export default function LoginScreen() {
                 },
               ]}
             >
-              Don't have an account?{' '}
+              Don&apos;t have an account?{' '}
             </Text>
 
             <TouchableOpacity

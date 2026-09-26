@@ -1,5 +1,5 @@
 // app/app/conversation.jsx
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,19 +11,23 @@ import {
   Platform,
   ActivityIndicator,
   Image,
+  Keyboard,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useQueryClient } from '@tanstack/react-query';
 import { useThemeStore } from '../store/themeStore';
 import { useAuthStore } from '../store/authStore';
 import {
   useConversationMessagesQuery,
   useSendMessageMutation,
 } from '../hooks/useMessagesQuery';
+import { socketService } from '../services/socket';
 
 export default function ConversationScreen() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { theme, isDarkMode } = useThemeStore();
   const user = useAuthStore((state) => state.user);
   const profile = useAuthStore((state) => state.profile);
@@ -31,6 +35,24 @@ export default function ConversationScreen() {
   const { conversationId, title, code } = useLocalSearchParams();
   const [inputText, setInputText] = useState('');
   const flatListRef = useRef(null);
+
+  const insets = useSafeAreaInsets();
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      () => setIsKeyboardVisible(true)
+    );
+    const hideSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setIsKeyboardVisible(false)
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   const currentUserId = user?.id || user?.userId || profile?.id;
 
@@ -43,6 +65,34 @@ export default function ConversationScreen() {
   const { mutateAsync: sendMessage, isPending: isSending } =
     useSendMessageMutation();
 
+  // Socket.IO real-time subscription
+  useEffect(() => {
+    if (!conversationId) return;
+
+    socketService.connect();
+    socketService.joinConversation(conversationId);
+
+    const handleNewMessage = (newMessage) => {
+      if (newMessage && newMessage.conversationId === conversationId) {
+        queryClient.setQueryData(['messages', conversationId], (oldMessages = []) => {
+          const exists = oldMessages.some((m) => m.id === newMessage.id);
+          if (exists) return oldMessages;
+          return [...oldMessages, newMessage];
+        });
+        setTimeout(() => {
+          flatListRef.current?.scrollToEnd({ animated: true });
+        }, 100);
+      }
+    };
+
+    socketService.on('new_message', handleNewMessage);
+
+    return () => {
+      socketService.off('new_message', handleNewMessage);
+      socketService.leaveConversation(conversationId);
+    };
+  }, [conversationId, queryClient]);
+
   const handleSend = async () => {
     const textToSend = inputText.trim();
     if (!textToSend || isSending) return;
@@ -53,7 +103,6 @@ export default function ConversationScreen() {
         conversationId,
         text: textToSend,
       });
-      // Scroll to bottom after sending
       setTimeout(() => {
         flatListRef.current?.scrollToEnd({ animated: true });
       }, 100);
@@ -206,7 +255,7 @@ export default function ConversationScreen() {
       {/* Messages List / Keyboard Container */}
       <KeyboardAvoidingView
         style={styles.chatContainer}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
         {isLoading ? (
@@ -251,7 +300,12 @@ export default function ConversationScreen() {
         )}
 
         {/* Input Composer */}
-        <SafeAreaView edges={['bottom']} style={{ backgroundColor: theme.card }}>
+        <View
+          style={{
+            backgroundColor: theme.card,
+            paddingBottom: isKeyboardVisible ? 6 : Math.max(insets.bottom, 8),
+          }}
+        >
           <View
             style={[
               styles.composer,
@@ -298,7 +352,7 @@ export default function ConversationScreen() {
               )}
             </TouchableOpacity>
           </View>
-        </SafeAreaView>
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

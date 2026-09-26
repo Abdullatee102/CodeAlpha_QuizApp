@@ -7,6 +7,12 @@ import {
 export function useNotificationsQuery(
   limit = 50
 ) {
+  const token =
+    useAuthStore(
+      (state) =>
+        state.token
+    );
+
   const fetchNotifications =
     useAuthStore(
       (state) =>
@@ -18,6 +24,7 @@ export function useNotificationsQuery(
       'notifications',
       limit,
     ],
+    enabled: !!token,
 
     queryFn: async () => {
       const result =
@@ -38,8 +45,8 @@ export function useNotificationsQuery(
     staleTime:
       1000 * 60 * 2,
 
-    refetchOnMount: true,
+    refetchOnMount: false,
 
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: false,
   });
 }

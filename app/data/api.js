@@ -1,7 +1,11 @@
 import axios from 'axios';
 import { storage } from '../utils/mmkvStorage';
+import { queryClient } from './queryClient';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
+
+// Shared promise to serialize concurrent 401 token refresh attempts
+let refreshPromise = null;
 
 console.log('====================================');
 console.log('[API] API_URL:', API_URL);
@@ -104,119 +108,138 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    // Handle expired access token
-    if (
-      error.response?.status === 401 &&
-      !originalRequest?._retry
-    ) {
+    // Distinguish 401 cases
+    if (error.response?.status === 401 && !originalRequest?._retry) {
+      const requestUrl = originalRequest?.url || '';
+
+      // Never attempt token refresh on public auth endpoints or refresh-token endpoint itself
+      const isPublicOrAuthEndpoint =
+        requestUrl.includes('/auth/login') ||
+        requestUrl.includes('/auth/signup') ||
+        requestUrl.includes('/auth/send-otp') ||
+        requestUrl.includes('/auth/verify-otp') ||
+        requestUrl.includes('/auth/forgot-password') ||
+        requestUrl.includes('/auth/reset-password') ||
+        requestUrl.includes('/auth/refresh-token');
+
+      if (isPublicOrAuthEndpoint) {
+        return Promise.reject(error);
+      }
+
+      const refreshToken = storage.getString('refreshToken');
+      const hadAuthHeader = !!originalRequest?.headers?.Authorization;
+
+      // Case B: No active access token/session — do NOT attempt refresh, do NOT throw error storm
+      if (!refreshToken || !hadAuthHeader) {
+        console.log(
+          '[API] 401 received with no active session/tokens. Skipping token refresh.'
+        );
+        return Promise.reject(error);
+      }
+
+      // Case A & C: Authenticated request with expired access token and valid refresh token available
       originalRequest._retry = true;
 
       console.log(
-        '[API] Access token expired/invalid.'
+        '[API] Access token expired. Initiating token rotation...'
       );
-      console.log(
-        '[API] Attempting token refresh...'
-      );
+
+      if (!refreshPromise) {
+        refreshPromise = (async () => {
+          try {
+            const currentRefreshToken = storage.getString('refreshToken');
+
+            if (!currentRefreshToken) {
+              return null;
+            }
+
+            const response = await axios.post(
+              `${API_URL}/auth/refresh-token`,
+              { refreshToken: currentRefreshToken }
+            );
+
+            console.log(
+              '[API] Refresh successful.'
+            );
+
+            const newAccessToken =
+              response.data?.tokens?.accessToken;
+            const newRefreshToken =
+              response.data?.tokens?.refreshToken;
+
+            if (!newAccessToken) {
+              throw new Error(
+                'No access token returned from refresh'
+              );
+            }
+
+            // Save new tokens to MMKV
+            storage.set(
+              'userToken',
+              newAccessToken
+            );
+
+            if (newRefreshToken) {
+              storage.set(
+                'refreshToken',
+                newRefreshToken
+              );
+            }
+
+            return newAccessToken;
+          } catch (refreshError) {
+            console.log(
+              '===================================='
+            );
+            console.log(
+              '[API] TOKEN REFRESH FAILED:',
+              refreshError?.message
+            );
+            console.log(
+              '===================================='
+            );
+
+            // Case D: Refresh token invalid or revoked
+            if (
+              refreshError.response?.status === 401 ||
+              refreshError.response?.status === 403
+            ) {
+              console.log(
+                '[API] Refresh token expired or revoked. Clearing normal session tokens...'
+              );
+
+              storage.delete('userToken');
+              storage.delete('refreshToken');
+
+              try {
+                queryClient.clear();
+              } catch (e) {}
+            }
+
+            throw refreshError;
+          } finally {
+            refreshPromise = null;
+          }
+        })();
+      }
 
       try {
-        const refreshToken =
-          storage.getString('refreshToken');
-
-        console.log(
-          '[API] Refresh token exists:',
-          !!refreshToken
-        );
-
-        if (!refreshToken) {
-          throw new Error('No refresh token');
-        }
-
-        const response = await axios.post(
-          `${API_URL}/auth/refresh-token`,
-          { refreshToken }
-        );
-
-        console.log(
-          '[API] Refresh response:',
-          response.data
-        );
-
-        const newAccessToken =
-          response.data?.tokens?.accessToken;
-
-        const newRefreshToken =
-          response.data?.tokens?.refreshToken;
+        const newAccessToken = await refreshPromise;
 
         if (!newAccessToken) {
-          throw new Error(
-            'No access token returned from refresh'
-          );
+          return Promise.reject(error);
         }
-
-        // Save new tokens to MMKV
-        storage.set(
-          'userToken',
-          newAccessToken
-        );
-
-        if (newRefreshToken) {
-          storage.set(
-            'refreshToken',
-            newRefreshToken
-          );
-        }
-
-        console.log(
-          '[API] New access token saved.'
-        );
 
         // Retry original request with new access token
         originalRequest.headers.Authorization =
           `Bearer ${newAccessToken}`;
 
         console.log(
-          '[API] Retrying original request...'
+          '[API] Retrying original request with rotated token...'
         );
 
         return api(originalRequest);
-
       } catch (refreshError) {
-        console.log(
-          '===================================='
-        );
-        console.log(
-          '[API] TOKEN REFRESH FAILED'
-        );
-        console.log(
-          '[API] Refresh error:',
-          refreshError?.message
-        );
-        console.log(
-          '[API] Refresh status:',
-          refreshError?.response?.status
-        );
-        console.log(
-          '[API] Refresh data:',
-          refreshError?.response?.data
-        );
-        console.log(
-          '===================================='
-        );
-
-        // Only clear tokens when the refresh token
-        // is actually invalid
-        if (
-          refreshError.response?.status === 401 ||
-          refreshError.response?.status === 403
-        ) {
-          console.log(
-            '[API] Clearing invalid tokens...'
-          );
-
-          storage.delete('userToken');
-          storage.delete('refreshToken');
-        }
-
         return Promise.reject(refreshError);
       }
     }

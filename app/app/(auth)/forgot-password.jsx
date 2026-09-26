@@ -148,7 +148,7 @@ export default function ForgotPassword() {
               },
             ]}
           >
-            Enter your email address or phone number and we'll
+            Enter your email address or phone number and we&apos;ll
             help you get back into your account.
           </Text>
 

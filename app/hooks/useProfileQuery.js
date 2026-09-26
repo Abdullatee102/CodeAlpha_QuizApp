@@ -5,6 +5,12 @@ import {
 } from '../store/authStore';
 
 export function useProfileQuery() {
+  const token =
+    useAuthStore(
+      (state) =>
+        state.token
+    );
+
   const fetchProfile =
     useAuthStore(
       (state) =>
@@ -19,6 +25,7 @@ export function useProfileQuery() {
 
   return useQuery({
     queryKey: ['profile'],
+    enabled: !!token,
 
     queryFn: async () => {
       const result =
@@ -40,8 +47,8 @@ export function useProfileQuery() {
     staleTime:
       1000 * 60 * 5,
 
-    refetchOnMount: true,
+    refetchOnMount: false,
 
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: false,
   });
 }

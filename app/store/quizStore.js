@@ -561,7 +561,15 @@ export const useQuizStore = create(
       // FETCH FACULTIES
       // =====================================================
 
-      fetchFaculties: async () => {
+      fetchFaculties: async (force = false) => {
+        const existing = get().faculties;
+        if (!force && Array.isArray(existing) && existing.length > 0) {
+          return {
+            success: true,
+            data: existing,
+          };
+        }
+
         set({
           isLoadingFaculties: true,
           error: null,

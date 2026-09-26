@@ -4,7 +4,17 @@ import {
   useQuizStore,
 } from '../store/quizStore';
 
+import {
+  useAuthStore,
+} from '../store/authStore';
+
 export function useQuizHistoryQuery() {
+  const token =
+    useAuthStore(
+      (state) =>
+        state.token
+    );
+
   const fetchQuizHistory =
     useQuizStore(
       (state) =>
@@ -19,6 +29,7 @@ export function useQuizHistoryQuery() {
 
   return useQuery({
     queryKey: ['quizHistory'],
+    enabled: !!token,
 
     queryFn: async () => {
       const result =
@@ -40,8 +51,8 @@ export function useQuizHistoryQuery() {
     staleTime:
       1000 * 60 * 5,
 
-    refetchOnMount: true,
+    refetchOnMount: false,
 
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: false,
   });
 }

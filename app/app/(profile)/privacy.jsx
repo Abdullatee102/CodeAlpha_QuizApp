@@ -158,7 +158,7 @@ export default function PrivacyScreen() {
           authentication is enabled, Brain Buzz relies on the
           authentication mechanisms provided by your device
           operating system. Your biometric data remains under
-          the control of your device's secure authentication
+          the control of your device&apos;s secure authentication
           system.
         </Text>
 
@@ -182,7 +182,7 @@ export default function PrivacyScreen() {
           ]}
         >
           If you enable push notifications, Brain Buzz may
-          store your device's push notification token so that
+          store your device&apos;s push notification token so that
           we can deliver relevant notifications to you. You can
           disable push notifications through your device or
           application settings.

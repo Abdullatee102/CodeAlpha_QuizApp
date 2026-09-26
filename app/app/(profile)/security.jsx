@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Switch, TouchableOpacity, Alert, ScrollView, Pl
 import { Ionicons } from '@expo/vector-icons';
 import * as LocalAuthentication from 'expo-local-authentication';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { storage } from '../../utils/mmkvStorage';
 import { Colors } from '../../constants/colors';
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from 'expo-router';
@@ -31,7 +32,7 @@ export default function SecurityScreen() {
 
   const loadBiometricSetting = async () => {
     try {
-      const saved = await AsyncStorage.getItem(`useBiometrics_${userKey}`);
+      const saved = storage.getString(`useBiometrics_${userKey}`) || (await AsyncStorage.getItem(`useBiometrics_${userKey}`));
       setIsBiometricEnabled(saved === 'true');
     } catch (err) {
       console.error("Failed to load biometric setting:", err);
@@ -52,15 +53,18 @@ export default function SecurityScreen() {
 
       if (result.success) {
         try {
+          storage.set(`useBiometrics_${userKey}`, 'true');
           await AsyncStorage.setItem(`useBiometrics_${userKey}`, 'true');
           setStoreBiometric(true);
           
-          const activeRefresh = refreshToken || await AsyncStorage.getItem('refreshToken');
+          const activeRefresh = refreshToken || storage.getString('refreshToken') || (await AsyncStorage.getItem('refreshToken'));
           if (activeRefresh) {
+            storage.set('biometricRefreshToken', activeRefresh);
             await AsyncStorage.setItem('biometricRefreshToken', activeRefresh);
           }
 
           if (user?.email) {
+            storage.set('lastUserEmail', user.email);
             await AsyncStorage.setItem('lastUserEmail', user.email);
           }
           setIsBiometricEnabled(true);
@@ -75,8 +79,10 @@ export default function SecurityScreen() {
       }
     } else {
       try {
+        storage.set(`useBiometrics_${userKey}`, 'false');
         await AsyncStorage.setItem(`useBiometrics_${userKey}`, 'false');
         setStoreBiometric(false);
+        storage.delete('biometricRefreshToken');
         await AsyncStorage.removeItem('biometricRefreshToken');
         setIsBiometricEnabled(false);
       } catch (err) {

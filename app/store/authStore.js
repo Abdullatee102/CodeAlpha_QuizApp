@@ -35,6 +35,8 @@ import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 
 import Constants from 'expo-constants';
+import { queryClient } from '../data/queryClient';
+import { socketService } from '../services/socket';
 
 export const useAuthStore = create(
   persist(
@@ -45,7 +47,7 @@ export const useAuthStore = create(
 
       isLoading: false,
 
-      isInitializing: false,
+      isInitializing: true,
 
       error: null,
 
@@ -72,10 +74,14 @@ export const useAuthStore = create(
           _hasHydrated: state,
         }),
 
-      setBiometricEnabled: (value) =>
+      setBiometricEnabled: (value) => {
+        if (!value) {
+          storage.delete('biometricRefreshToken');
+        }
         set({
           biometricEnabled: value,
-        }),
+        });
+      },
 
       setHasFinishedOnboarding: (value) =>
         set({
@@ -199,6 +205,22 @@ export const useAuthStore = create(
             };
           }
 
+          const lastRegisteredToken =
+            storage.getString('registeredPushToken');
+
+          if (lastRegisteredToken === pushToken) {
+            console.log(
+              '[PUSH] Device push token already registered on server:',
+              pushToken
+            );
+
+            return {
+              success: true,
+              pushToken,
+              alreadyRegistered: true,
+            };
+          }
+
           const platform =
             Platform.OS === 'ios'
               ? 'ios'
@@ -212,6 +234,11 @@ export const useAuthStore = create(
                 platform,
               }
             );
+
+          storage.set(
+            'registeredPushToken',
+            pushToken
+          );
 
           console.log(
             '[PUSH] Device registered successfully:',
@@ -309,6 +336,8 @@ export const useAuthStore = create(
                 },
               }
             );
+
+            storage.delete('registeredPushToken');
 
             console.log(
               '[PUSH] Device unregistered successfully.'
@@ -475,6 +504,18 @@ export const useAuthStore = create(
       fetchNotifications: async (
         limit = 50
       ) => {
+        const token =
+          storage.getString('userToken') ||
+          get().token;
+
+        if (!token) {
+          return {
+            success: false,
+            error: 'No active session',
+            data: [],
+          };
+        }
+
         try {
           const response =
             await api.get(
@@ -622,6 +663,18 @@ export const useAuthStore = create(
       // =====================================================
 
       fetchProfile: async () => {
+        const token =
+          storage.getString('userToken') ||
+          get().token;
+
+        if (!token) {
+          return {
+            success: false,
+            error: 'No active session',
+            data: null,
+          };
+        }
+
         try {
           const response =
             await api.get(
@@ -632,28 +685,22 @@ export const useAuthStore = create(
             const profileData =
               response.data.data;
 
+            // Sanitize legacy "Verified User" backend fallback name
+            if (
+              profileData.fullName === 'Verified User' ||
+              profileData.fullName === 'Verified'
+            ) {
+              profileData.fullName =
+                profileData.username ||
+                'Scholar';
+            }
+
             set({
               profile:
                 profileData,
               user:
                 profileData,
             });
-
-            /*
-             * IMPORTANT:
-             *
-             * TanStack Query is now the source
-             * of truth for server-side profile,
-             * statistics, history, achievements,
-             * and leaderboard data.
-             *
-             * We intentionally DO NOT call:
-             *
-             * useQuizStore.getState()
-             *   .hydrateUserStats(...)
-             *
-             * here.
-             */
 
             return {
               success: true,
@@ -669,70 +716,11 @@ export const useAuthStore = create(
           };
         } catch (err) {
           if (
-            err?.response?.status === 401
+            err?.response?.status === 401 ||
+            err?.response?.status === 403
           ) {
-            const refreshResult =
-              await get()
-                .refreshAuthToken();
-
-            if (
-              refreshResult.success
-            ) {
-              try {
-                const retryResponse =
-                  await api.get(
-                    '/auth/profile'
-                  );
-
-                if (
-                  retryResponse
-                    .data?.data
-                ) {
-                  const profileData =
-                    retryResponse.data.data;
-
-                  set({
-                    profile:
-                      profileData,
-                    user:
-                      profileData,
-                  });
-
-                  return {
-                    success: true,
-                    data:
-                      profileData,
-                  };
-                }
-
-                return {
-                  success: false,
-                  error:
-                    'Profile data was not returned after token refresh.',
-                };
-              } catch (
-                retryError
-              ) {
-                const formatted =
-                  formatAxiosError(
-                    retryError
-                  );
-
-                console.error(
-                  'Profile fetch retry error:',
-                  formatted.message
-                );
-
-                return {
-                  success: false,
-                  error:
-                    formatted.message,
-                };
-              }
-            }
-
             console.log(
-              'Session expired or invalid. Clearing local auth tokens.'
+              'Session expired or invalid in fetchProfile. Clearing session.'
             );
 
             await get().logout();
@@ -767,6 +755,18 @@ export const useAuthStore = create(
       fetchLeaderboard: async (
         tab = '24h'
       ) => {
+        const token =
+          storage.getString('userToken') ||
+          get().token;
+
+        if (!token) {
+          return {
+            success: false,
+            error: 'No active session',
+            data: [],
+          };
+        }
+
         try {
           const response =
             await api.get(
@@ -929,7 +929,8 @@ export const useAuthStore = create(
 
       verifyOTP: async (
         code,
-        identifier
+        identifier,
+        fullName
       ) => {
         set({
           isLoading: true,
@@ -943,17 +944,19 @@ export const useAuthStore = create(
           const isEmail =
             safeIdentifier.includes('@');
 
-          const payload = isEmail
-            ? {
-                email:
-                  safeIdentifier,
-                code,
-              }
-            : {
-                phoneNumber:
-                  safeIdentifier,
-                code,
-              };
+          const payload = {
+            code,
+            ...(isEmail
+              ? {
+                  email:
+                    safeIdentifier,
+                }
+              : {
+                  phoneNumber:
+                    safeIdentifier,
+                }),
+            ...(fullName ? { fullName } : {}),
+          };
 
           const response =
             await api.post(
@@ -1095,66 +1098,11 @@ export const useAuthStore = create(
               payload
             );
 
-          const accessToken =
-            response.data?.tokens
-              ?.accessToken;
-
-          const refreshTokenVal =
-            response.data?.tokens
-              ?.refreshToken;
-
           const userData =
             response.data?.user;
 
-          if (!accessToken) {
-            throw new Error(
-              'Signup succeeded but no access token was returned.'
-            );
-          }
-
-          set({
-            token:
-              accessToken,
-
-            refreshToken:
-              refreshTokenVal ||
-              null,
-
-            user:
-              userData || {
-                uid:
-                  safeIdentifier,
-              },
-          });
-
-          storage.set(
-            'userToken',
-            accessToken
-          );
-
-          if (refreshTokenVal) {
-            storage.set(
-              'refreshToken',
-              refreshTokenVal
-            );
-
-            if (
-              get()
-                .biometricEnabled
-            ) {
-              storage.set(
-                'biometricRefreshToken',
-                refreshTokenVal
-              );
-            }
-          }
-
-          await get().fetchProfile();
-
-          await get().fetchLeaderboard(
-            '24h'
-          );
-
+          // Note: We do NOT commit user to Zustand here to prevent premature navigation
+          // to /(main) via route guards before OTP verification completes.
           set({
             isLoading: false,
             error: null,
@@ -1164,6 +1112,7 @@ export const useAuthStore = create(
             success: true,
             data:
               response.data,
+            user: userData,
           };
         } catch (err) {
           const formatted =
@@ -1471,6 +1420,21 @@ export const useAuthStore = create(
             success: true,
           };
         } catch (err) {
+          if (
+            err?.response?.status === 401 ||
+            err?.response?.status === 403
+          ) {
+            storage.delete('biometricRefreshToken');
+            set({
+              isLoading: false,
+              error: 'Biometric session expired. Please sign in with your password.',
+            });
+            return {
+              success: false,
+              error: 'Biometric session expired. Please sign in with your password.',
+            };
+          }
+
           const formatted =
             formatAxiosError(err);
 
@@ -1757,117 +1721,47 @@ export const useAuthStore = create(
       // GOOGLE AUTH
       // =====================================================
 
-      googleAuth: async (
-        idToken
-      ) => {
+      googleAuth: async (idToken) => {
         set({
           isLoading: true,
           error: null,
         });
 
         try {
-          const credential =
-            GoogleAuthProvider.credential(
-              idToken
-            );
+          if (!idToken) {
+            throw new Error('Google ID token is required.');
+          }
 
-          const userCredential =
-            await signInWithCredential(
-              auth,
-              credential
-            );
+          const response = await api.post('/auth/google', { idToken });
 
-          const {
-            email,
-            displayName,
-          } =
-            userCredential.user;
-
-          const uniqueUsername =
-            email
-              ? `${email
-                  .split('@')[0]
-                  .toLowerCase()
-                  .replace(
-                    /[^a-z0-9]/g,
-                    ''
-                  )}_${Math.floor(
-                    1000 +
-                      Math.random() *
-                        9000
-                  )}`
-              : `user_${Math.floor(
-                  10000 +
-                    Math.random() *
-                      90000
-                )}`;
-
-          const response =
-            await api.post(
-              '/auth/google',
-              {
-                email,
-                fullName:
-                  displayName ||
-                  'Google User',
-                username:
-                  uniqueUsername,
-              }
-            );
-
-          const accessToken =
-            response.data?.tokens
-              ?.accessToken;
-
-          const refreshTokenVal =
-            response.data?.tokens
-              ?.refreshToken;
+          const accessToken = response.data?.tokens?.accessToken;
+          const refreshTokenVal = response.data?.tokens?.refreshToken;
+          const userData = response.data?.user;
 
           if (!accessToken) {
-            throw new Error(
-              'Google authentication succeeded but no access token was returned.'
-            );
+            throw new Error('Google authentication succeeded but no access token was returned.');
           }
 
           set({
-            user:
-              userCredential.user,
-            token:
-              accessToken,
-            refreshToken:
-              refreshTokenVal ||
-              null,
+            user: userData || null,
+            token: accessToken,
+            refreshToken: refreshTokenVal || null,
           });
 
           if (accessToken) {
-            storage.set(
-              'userToken',
-              accessToken
-            );
+            storage.set('userToken', accessToken);
           }
 
           if (refreshTokenVal) {
-            storage.set(
-              'refreshToken',
-              refreshTokenVal
-            );
+            storage.set('refreshToken', refreshTokenVal);
 
-            if (
-              get()
-                .biometricEnabled
-            ) {
-              storage.set(
-                'biometricRefreshToken',
-                refreshTokenVal
-              );
+            if (get().biometricEnabled) {
+              storage.set('biometricRefreshToken', refreshTokenVal);
             }
           }
 
           await get().fetchProfile();
-
-          await get().fetchLeaderboard(
-            '24h'
-          );
+          await get().fetchLeaderboard('24h');
 
           set({
             isLoading: false,
@@ -1876,23 +1770,19 @@ export const useAuthStore = create(
 
           return {
             success: true,
-            data:
-              userCredential.user,
+            data: userData,
           };
         } catch (error) {
-          const formatted =
-            formatAxiosError(error);
+          const formatted = formatAxiosError(error);
 
           set({
             isLoading: false,
-            error:
-              formatted.message,
+            error: formatted.message,
           });
 
           return {
             success: false,
-            error:
-              formatted.message,
+            error: formatted.message,
           };
         }
       },
@@ -2024,6 +1914,10 @@ export const useAuthStore = create(
             'lastUserEmail'
           );
 
+          storage.delete(
+            'registeredPushToken'
+          );
+
           /*
            * Clear the quiz store as well.
            *
@@ -2040,10 +1934,25 @@ export const useAuthStore = create(
             .clearUserSession();
 
           /*
+           * Disconnect realtime socket.
+           */
+          try {
+            socketService.disconnect();
+          } catch (socketErr) {
+            console.warn(
+              '[AUTH] Socket disconnect failed during deleteAccount:',
+              socketErr
+            );
+          }
+
+          /*
+           * Invalidate and clear all TanStack Query cache.
+           */
+          queryClient.cancelQueries();
+          queryClient.clear();
+
+          /*
            * Clear authStore state.
-           *
-           * TanStack Query cache is cleared by
-           * settings.jsx through useQueryClient().
            */
           set({
             user: null,
@@ -2051,6 +1960,7 @@ export const useAuthStore = create(
             profileImage: null,
             token: null,
             refreshToken: null,
+            biometricEnabled: false,
             leaderboard: [],
             error: null,
             isLoading: false,
@@ -2090,6 +2000,18 @@ export const useAuthStore = create(
 
       logout: async () => {
         try {
+          /*
+           * Disconnect realtime socket immediately.
+           */
+          try {
+            socketService.disconnect();
+          } catch (socketErr) {
+            console.warn(
+              '[AUTH] Socket disconnect failed during logout:',
+              socketErr
+            );
+          }
+
           const storedRefreshToken =
             storage.getString(
               'refreshToken'
@@ -2162,11 +2084,18 @@ export const useAuthStore = create(
           );
 
           /*
-           * Remove biometric refresh token
-           * from the current active session.
+           * Only clear biometricRefreshToken if biometric login is NOT enabled.
+           * When biometric login is enabled, the separately stored biometric
+           * credential stays alive until explicitly disabled or account deleted.
            */
+          if (!get().biometricEnabled) {
+            storage.delete(
+              'biometricRefreshToken'
+            );
+          }
+
           storage.delete(
-            'biometricRefreshToken'
+            'registeredPushToken'
           );
 
           /*
@@ -2182,6 +2111,12 @@ export const useAuthStore = create(
           useQuizStore
             .getState()
             .clearUserSession();
+
+          /*
+           * Cancel inflight queries and clear all TanStack Query cache.
+           */
+          queryClient.cancelQueries();
+          queryClient.clear();
 
           /*
            * Clear authenticated Zustand state.

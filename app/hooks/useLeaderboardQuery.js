@@ -7,6 +7,12 @@ import {
 export function useLeaderboardQuery(
   activeTab = '24h'
 ) {
+  const token =
+    useAuthStore(
+      (state) =>
+        state.token
+    );
+
   const fetchLeaderboard =
     useAuthStore(
       (state) =>
@@ -24,6 +30,7 @@ export function useLeaderboardQuery(
       'leaderboard',
       activeTab,
     ],
+    enabled: !!token,
 
     queryFn: async () => {
       const result =
@@ -41,14 +48,11 @@ export function useLeaderboardQuery(
       return result.data || [];
     },
 
-    placeholderData:
-      initialLeaderboard,
-
     staleTime:
       1000 * 60 * 5,
 
-    refetchOnMount: true,
+    refetchOnMount: false,
 
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: false,
   });
 }

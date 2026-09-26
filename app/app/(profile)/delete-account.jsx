@@ -166,7 +166,7 @@ export default function DeleteAccountScreen() {
               { color: theme.textSecondary },
             ]}
           >
-            We're sorry to see you go. Please make sure
+            We&apos;re sorry to see you go. Please make sure
             you understand what happens before continuing.
           </Text>
         </View>

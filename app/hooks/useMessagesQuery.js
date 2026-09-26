@@ -2,10 +2,14 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../data/api';
 import formatAxiosError from '../data/formatError';
+import { useAuthStore } from '../store/authStore';
 
 export function useAcademicChannelsQuery() {
+  const token = useAuthStore((state) => state.token);
+
   return useQuery({
     queryKey: ['academicChannels'],
+    enabled: !!token,
     queryFn: async () => {
       try {
         const response = await api.get('/messages/academic-channels');
@@ -20,8 +24,11 @@ export function useAcademicChannelsQuery() {
 }
 
 export function useRecentConversationsQuery() {
+  const token = useAuthStore((state) => state.token);
+
   return useQuery({
     queryKey: ['recentConversations'],
+    enabled: !!token,
     queryFn: async () => {
       try {
         const response = await api.get('/messages/conversations');
@@ -32,11 +39,13 @@ export function useRecentConversationsQuery() {
       }
     },
     staleTime: 30 * 1000,
-    refetchInterval: 15 * 1000,
+    refetchInterval: token ? 15 * 1000 : false,
   });
 }
 
 export function useConversationMessagesQuery(conversationId) {
+  const token = useAuthStore((state) => state.token);
+
   return useQuery({
     queryKey: ['messages', conversationId],
     queryFn: async () => {
@@ -49,8 +58,8 @@ export function useConversationMessagesQuery(conversationId) {
         throw new Error(formatted.message);
       }
     },
-    enabled: !!conversationId,
-    refetchInterval: 5 * 1000, // Light polling for active conversation
+    enabled: !!token && !!conversationId,
+    refetchInterval: token && conversationId ? 25 * 1000 : false, // Background fallback sync (Socket.IO delivers instant messages)
   });
 }
 

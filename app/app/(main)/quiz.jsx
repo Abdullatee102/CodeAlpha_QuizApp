@@ -218,10 +218,10 @@ export default function QuizScreen() {
    * This is intentionally local to the QuizScreen.
    *
    * CBT:
-   *   30 seconds × number of questions
+   *   30 seconds Ã— number of questions
    *
    * Theory:
-   *   100 seconds × number of questions
+   *   100 seconds Ã— number of questions
    *
    * The timer is ONE continuous timer for the entire
    * assessment. It does not reset between questions.
@@ -469,10 +469,10 @@ export default function QuizScreen() {
            * number of questions returned by the server.
            *
            * CBT:
-           *   5 questions × 30 seconds = 150 seconds = 02:30
+           *   5 questions Ã— 30 seconds = 150 seconds = 02:30
            *
            * THEORY:
-           *   5 questions × 100 seconds = 500 seconds = 08:20
+           *   5 questions Ã— 100 seconds = 500 seconds = 08:20
            * =====================================================
            */
           const totalAssessmentSeconds =
@@ -516,7 +516,7 @@ export default function QuizScreen() {
                 );
 
               Alert.alert(
-                'Fair Play Rules 🛡️',
+                'Fair Play Rules ðŸ›¡ï¸',
 
                 `${
                   isTheory
@@ -1205,7 +1205,7 @@ export default function QuizScreen() {
       setIsEditingReview(false);
 
       Alert.alert(
-        'Time Elapsed ⏰',
+        'Time Elapsed â°',
         'Your assessment time has ended. Your answers are now read-only. Review your answers, then submit the assessment when you are ready.',
         [
           {
@@ -1855,6 +1855,8 @@ export default function QuizScreen() {
 
         setIsStarted(false);
 
+        setIsPreparing(false);
+
         setIsReviewing(false);
 
         setIsEditingReview(
@@ -1944,7 +1946,7 @@ export default function QuizScreen() {
               )
                 ? courseCode[0]
                 : courseCode
-            } • ${resolvedQuizType.toUpperCase()}`,
+            } â€¢ ${resolvedQuizType.toUpperCase()}`,
 
           /*
            * finalScore represents POINTS.
@@ -2052,35 +2054,75 @@ export default function QuizScreen() {
         true
       );
 
+      if (isTheory) {
+        const maxScore = Number(grading.maxScore ?? (totalQuestions * 10));
+        const details = Array.isArray(grading.details) ? grading.details : [];
+        // Aggregate matched and missing concepts from details if not at root
+        const matched = Array.isArray(grading.matchedConcepts) && grading.matchedConcepts.length > 0
+          ? grading.matchedConcepts
+          : details.flatMap((d) => d.matchedConcepts || []).filter(Boolean);
+
+        const missing = Array.isArray(grading.missingConcepts) && grading.missingConcepts.length > 0
+          ? grading.missingConcepts
+          : details.flatMap((d) => d.missingConcepts || []).filter(Boolean);
+
+        const feedback = grading.feedback || details.map((d) => d.feedback).filter(Boolean).join('\n') || '';
+
+        let theoryMessage = `Percentage: ${finalScore}%\nPoints: ${scorePoints} / ${maxScore}\nQuestions Evaluated: ${totalQuestions}`;
+
+        if (matched.length > 0) {
+          theoryMessage += `\n\nâœ“ Matched Rubric Concepts (${matched.length}):\nâ€¢ ${matched.slice(0, 6).join('\nâ€¢ ')}`;
+        }
+        if (missing.length > 0) {
+          theoryMessage += `\n\nâœ— Missing Rubric Concepts (${missing.length}):\nâ€¢ ${missing.slice(0, 6).join('\nâ€¢ ')}`;
+        }
+        if (feedback) {
+          theoryMessage += `\n\nRubric Feedback:\n${feedback}`;
+        }
+
+        Alert.alert(
+          'Theory Assessment Evaluation',
+          theoryMessage,
+          [
+            {
+              text: 'Share Report',
+              onPress: () => handleDownloadReport(),
+            },
+            {
+              text: 'Done',
+              onPress: () => {
+                abandonQuiz();
+                router.replace('/(main)');
+              },
+            },
+          ],
+          {
+            cancelable: false,
+          }
+        );
+        return;
+      }
+
       Alert.alert(
-        isTheory
-          ? 'Theory Assessment Completed!'
-          : 'Quiz Completed!',
-
+        'Quiz Completed!',
         `Score: ${finalScore}%\n\nPoints: ${scorePoints}/${totalQuestions * 10}\n\nCorrect: ${correctCount}/${totalQuestions}\n\nWrong: ${wrongCount}`,
-
         [
           {
             text:
               'Share Report',
-
             onPress: () =>
               handleDownloadReport(),
           },
-
           {
             text: 'Done',
-
             onPress: () => {
               abandonQuiz();
-
               router.replace(
                 '/(main)'
               );
             },
           },
         ],
-
         {
           cancelable:
             false,
@@ -2113,6 +2155,244 @@ export default function QuizScreen() {
     isSubmittingFinalQuiz,
     isResultShown,
   ]);
+
+  // =========================================================
+  // COMPLETED RESULT VIEW
+  // =========================================================
+
+  if (isFinished && serverGrading) {
+    const finalScore = Number(serverGrading.percentage ?? 0);
+    const scorePoints = Number(serverGrading.score ?? 0);
+    const correctCount = Number(serverGrading.correctAnswers ?? 0);
+    const totalQuestions = Number(serverGrading.totalQuestions ?? questions.length);
+    const wrongCount = Number(
+      serverGrading.wrongAnswers ?? Math.max(0, totalQuestions - correctCount)
+    );
+    const maxScore = Number(serverGrading.maxScore ?? (totalQuestions * 10));
+
+    return (
+      <SafeAreaView
+        style={[
+          styles.container,
+          {
+            backgroundColor: theme.background,
+          },
+        ]}
+      >
+        <ScrollView
+          contentContainerStyle={styles.resultScrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View
+            style={[
+              styles.resultCard,
+              {
+                backgroundColor: theme.card,
+                borderColor: theme.border,
+              },
+            ]}
+          >
+            <View
+              style={[
+                styles.resultIconWrap,
+                {
+                  backgroundColor: `${theme.primary}18`,
+                },
+              ]}
+            >
+              <Ionicons name="trophy" size={48} color={theme.primary} />
+            </View>
+
+            <Text
+              style={[
+                styles.resultTitle,
+                {
+                  color: theme.text,
+                },
+              ]}
+            >
+              Assessment Completed!
+            </Text>
+
+            <Text
+              style={[
+                styles.resultSubTitle,
+                {
+                  color: theme.textSecondary,
+                },
+              ]}
+            >
+              {Array.isArray(courseCode) ? courseCode[0] : courseCode || 'Assessment'} â€¢{' '}
+              {resolvedQuizType.toUpperCase()}
+            </Text>
+
+            <View style={styles.scoreBadgeBox}>
+              <Text
+                style={[
+                  styles.scorePercentText,
+                  {
+                    color: theme.primary,
+                  },
+                ]}
+              >
+                {finalScore}%
+              </Text>
+
+              <Text
+                style={[
+                  styles.scorePointsText,
+                  {
+                    color: theme.textSecondary,
+                  },
+                ]}
+              >
+                {scorePoints} / {maxScore} Points
+              </Text>
+            </View>
+
+            <View style={styles.statsRow}>
+              <View
+                style={[
+                  styles.statBox,
+                  {
+                    backgroundColor: theme.background,
+                    borderColor: theme.border,
+                  },
+                ]}
+              >
+                <Ionicons name="checkmark-circle" size={20} color="#059669" />
+                <Text
+                  style={[
+                    styles.statNum,
+                    {
+                      color: theme.text,
+                    },
+                  ]}
+                >
+                  {correctCount}
+                </Text>
+                <Text
+                  style={[
+                    styles.statLabel,
+                    {
+                      color: theme.textSecondary,
+                    },
+                  ]}
+                >
+                  Correct
+                </Text>
+              </View>
+
+              <View
+                style={[
+                  styles.statBox,
+                  {
+                    backgroundColor: theme.background,
+                    borderColor: theme.border,
+                  },
+                ]}
+              >
+                <Ionicons name="close-circle" size={20} color={Colors.error} />
+                <Text
+                  style={[
+                    styles.statNum,
+                    {
+                      color: theme.text,
+                    },
+                  ]}
+                >
+                  {wrongCount}
+                </Text>
+                <Text
+                  style={[
+                    styles.statLabel,
+                    {
+                      color: theme.textSecondary,
+                    },
+                  ]}
+                >
+                  Wrong
+                </Text>
+              </View>
+
+              <View
+                style={[
+                  styles.statBox,
+                  {
+                    backgroundColor: theme.background,
+                    borderColor: theme.border,
+                  },
+                ]}
+              >
+                <Ionicons name="help-circle" size={20} color={theme.primary} />
+                <Text
+                  style={[
+                    styles.statNum,
+                    {
+                      color: theme.text,
+                    },
+                  ]}
+                >
+                  {totalQuestions}
+                </Text>
+                <Text
+                  style={[
+                    styles.statLabel,
+                    {
+                      color: theme.textSecondary,
+                    },
+                  ]}
+                >
+                  Total
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.resultActions}>
+              <TouchableOpacity
+                style={[
+                  styles.resultPrimaryBtn,
+                  {
+                    backgroundColor: theme.primary,
+                  },
+                ]}
+                onPress={handleDownloadReport}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="share-outline" size={20} color="#fff" />
+                <Text style={styles.resultPrimaryBtnText}>Share PDF Report</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.resultSecondaryBtn,
+                  {
+                    borderColor: theme.border,
+                  },
+                ]}
+                onPress={() => {
+                  abandonQuiz();
+                  router.replace('/(main)');
+                }}
+                activeOpacity={0.8}
+              >
+                <Text
+                  style={[
+                    styles.resultSecondaryBtnText,
+                    {
+                      color: theme.text,
+                    },
+                  ]}
+                >
+                  Back to Courses
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
 
   // =========================================================
   // INVALID COURSE STATE
@@ -2329,7 +2609,7 @@ export default function QuizScreen() {
             : isLoading
               ? 'Please wait while your assessment is prepared.'
               : questions.length > 0
-                ? `${questions.length} questions • ${secondsPerQuestion} seconds per question • ${formatDuration(
+                ? `${questions.length} questions â€¢ ${secondsPerQuestion} seconds per question â€¢ ${formatDuration(
                     getTotalAssessmentSeconds(
                       questions.length
                     )
@@ -2579,7 +2859,7 @@ export default function QuizScreen() {
               )
                 ? courseCode[0]
                 : courseCode}{' '}
-              •{' '}
+              â€¢{' '}
               {resolvedQuizType.toUpperCase()}
             </Text>
 
@@ -2609,7 +2889,7 @@ export default function QuizScreen() {
                 },
               ]}
             >
-              {level} Level •{' '}
+              {level} Level â€¢{' '}
               {semester}{' '}
               Semester
             </Text>
@@ -3371,7 +3651,7 @@ export default function QuizScreen() {
               )
                 ? courseCode[0]
                 : courseCode}{' '}
-              •{' '}
+              â€¢{' '}
               {resolvedQuizType.toUpperCase()}
             </Text>
 
@@ -3797,7 +4077,7 @@ export default function QuizScreen() {
                   ]}
                 >
                   {assessmentTimeExpired
-                    ? 'Time expired • answers locked'
+                    ? 'Time expired â€¢ answers locked'
                     : `${formatDuration(
                         assessmentTimeLeft
                       )} remaining`}
@@ -4803,5 +5083,106 @@ const styles =
 
       textAlign:
         'center',
+    },
+
+    /*
+     * =========================================================
+     * RESULT SCREEN STYLES
+     * =========================================================
+     */
+    resultScrollContent: {
+      padding: 20,
+      justifyContent: 'center',
+      minHeight: '100%',
+    },
+    resultCard: {
+      borderRadius: 24,
+      borderWidth: 1,
+      padding: 24,
+      alignItems: 'center',
+    },
+    resultIconWrap: {
+      width: 90,
+      height: 90,
+      borderRadius: 45,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 16,
+    },
+    resultTitle: {
+      fontFamily: 'Ubuntu-Bold',
+      fontSize: 22,
+      textAlign: 'center',
+    },
+    resultSubTitle: {
+      fontFamily: 'Ubuntu-Regular',
+      fontSize: 14,
+      marginTop: 4,
+      textAlign: 'center',
+    },
+    scoreBadgeBox: {
+      alignItems: 'center',
+      marginVertical: 20,
+    },
+    scorePercentText: {
+      fontFamily: 'Ubuntu-Bold',
+      fontSize: 48,
+    },
+    scorePointsText: {
+      fontFamily: 'Ubuntu-Medium',
+      fontSize: 14,
+      marginTop: 2,
+    },
+    statsRow: {
+      flexDirection: 'row',
+      gap: 10,
+      width: '100%',
+      marginBottom: 24,
+    },
+    statBox: {
+      flex: 1,
+      alignItems: 'center',
+      paddingVertical: 14,
+      paddingHorizontal: 6,
+      borderRadius: 16,
+      borderWidth: 1,
+    },
+    statNum: {
+      fontFamily: 'Ubuntu-Bold',
+      fontSize: 18,
+      marginTop: 6,
+    },
+    statLabel: {
+      fontFamily: 'Ubuntu-Regular',
+      fontSize: 11,
+      marginTop: 2,
+    },
+    resultActions: {
+      width: '100%',
+      gap: 12,
+    },
+    resultPrimaryBtn: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: 8,
+      paddingVertical: 16,
+      borderRadius: 16,
+    },
+    resultPrimaryBtnText: {
+      color: '#fff',
+      fontFamily: 'Ubuntu-Bold',
+      fontSize: 15,
+    },
+    resultSecondaryBtn: {
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingVertical: 15,
+      borderRadius: 16,
+      borderWidth: 1,
+    },
+    resultSecondaryBtnText: {
+      fontFamily: 'Ubuntu-Bold',
+      fontSize: 15,
     },
   });

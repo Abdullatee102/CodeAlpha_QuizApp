@@ -631,8 +631,7 @@ export default function CoursesScreen() {
             style={[
               styles.modalContainer,
               {
-                backgroundColor:
-                  theme.background,
+                backgroundColor: theme.card,
               },
             ]}
           >

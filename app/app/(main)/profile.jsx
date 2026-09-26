@@ -119,10 +119,40 @@ export default function ProfileScreen() {
   const profileImage = profile?.photoURL || user?.photoURL;
   const username = profile?.username || user?.username;
 
-  // Academic values (truthful verification)
-  const facultyName = profile?.faculty || profile?.facultyName || null;
-  const departmentName = profile?.department || profile?.departmentName || null;
-  const studentLevel = profile?.level || null;
+  // Academic values (truthful extraction supporting both object and string shapes)
+  const facultyObj =
+    profile?.faculty && typeof profile.faculty === 'object'
+      ? profile.faculty
+      : null;
+  const facultyName =
+    facultyObj?.name ||
+    (typeof profile?.faculty === 'string' ? profile.faculty : null) ||
+    profile?.facultyName ||
+    null;
+  const facultyCode = facultyObj?.code || profile?.facultyCode || null;
+  const displayFaculty = facultyName
+    ? facultyCode && !facultyName.includes(facultyCode)
+      ? `${facultyName} (${facultyCode})`
+      : facultyName
+    : null;
+
+  const departmentObj =
+    profile?.department && typeof profile.department === 'object'
+      ? profile.department
+      : null;
+  const departmentName =
+    departmentObj?.name ||
+    (typeof profile?.department === 'string' ? profile.department : null) ||
+    profile?.departmentName ||
+    null;
+  const departmentCode = departmentObj?.code || profile?.departmentCode || null;
+  const displayDepartment = departmentName
+    ? departmentCode && !departmentName.includes(departmentCode)
+      ? `${departmentName} (${departmentCode})`
+      : departmentName
+    : null;
+
+  const studentLevel = profile?.level ? Number(profile.level) : null;
 
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -167,18 +197,27 @@ export default function ProfileScreen() {
       style={[styles.container, { backgroundColor: theme.background }]}
       edges={['top', 'left', 'right']}
     >
-      {/* Top Header with Profile title & Settings Icon */}
+      {/* Top Header with Profile title & Settings / Edit Icons */}
       <View style={styles.topBar}>
         <Text style={[styles.screenTitle, { color: theme.text }]}>
           Scholar Profile
         </Text>
-        <TouchableOpacity
-          onPress={() => router.push('/settings')}
-          style={[styles.settingsButton, { backgroundColor: `${theme.primary}12` }]}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="settings-outline" size={22} color={theme.primary} />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <TouchableOpacity
+            onPress={() => router.push('/edit-profile')}
+            style={[styles.settingsButton, { backgroundColor: `${theme.primary}12` }]}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="pencil" size={18} color={theme.primary} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => router.push('/settings')}
+            style={[styles.settingsButton, { backgroundColor: `${theme.primary}12` }]}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="settings-outline" size={20} color={theme.primary} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
@@ -231,12 +270,6 @@ export default function ProfileScreen() {
             {profile?.fullName || user?.fullName || 'LAUTECH Scholar'}
           </Text>
 
-          {username ? (
-            <Text style={[styles.userHandle, { color: theme.primary }]}>
-              @{username}
-            </Text>
-          ) : null}
-
           {profile?.email ? (
             <Text style={[styles.userEmail, { color: theme.textSecondary }]}>
               {profile.email}
@@ -248,33 +281,27 @@ export default function ProfileScreen() {
               {profile.bio}
             </Text>
           ) : null}
-
-          {/* Quick Edit Profile Action */}
-          <TouchableOpacity
-            style={[
-              styles.editProfileBtn,
-              {
-                backgroundColor: theme.card,
-                borderColor: theme.border,
-              },
-            ]}
-            onPress={() => router.push('/edit-profile')}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="pencil" size={14} color={theme.primary} />
-            <Text style={[styles.editProfileText, { color: theme.text }]}>
-              Edit Profile
-            </Text>
-          </TouchableOpacity>
         </View>
 
         {/* =====================================================
             2. ACADEMIC INFORMATION (Truthful State)
             ===================================================== */}
         <View style={styles.sectionBlock}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>
-            Academic Information
-          </Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <Text style={[styles.sectionTitle, { color: theme.text, marginBottom: 0 }]}>
+              Academic Information
+            </Text>
+            <TouchableOpacity
+              onPress={() => router.push('/edit-profile')}
+              activeOpacity={0.7}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+            >
+              <Ionicons name="create-outline" size={16} color={theme.primary} />
+              <Text style={{ fontFamily: 'Ubuntu-Medium', fontSize: 13, color: theme.primary }}>
+                {displayFaculty || displayDepartment || studentLevel ? 'Edit' : 'Configure'}
+              </Text>
+            </TouchableOpacity>
+          </View>
 
           <View
             style={[
@@ -282,41 +309,110 @@ export default function ProfileScreen() {
               { backgroundColor: theme.card, borderColor: theme.border },
             ]}
           >
-            {facultyName || departmentName || studentLevel ? (
+            {displayFaculty || displayDepartment || studentLevel ? (
               <View style={styles.academicRowList}>
-                {facultyName && (
-                  <View style={styles.academicRow}>
-                    <Text style={[styles.academicLabel, { color: theme.textSecondary }]}>
-                      Faculty
-                    </Text>
-                    <Text style={[styles.academicValue, { color: theme.text }]}>
-                      {facultyName}
-                    </Text>
+                {displayFaculty && (
+                  <View style={styles.academicItem}>
+                    <View
+                      style={[
+                        styles.academicIconBox,
+                        { backgroundColor: `${theme.primary}14` },
+                      ]}
+                    >
+                      <MaterialCommunityIcons
+                        name="bank-outline"
+                        size={18}
+                        color={theme.primary}
+                      />
+                    </View>
+                    <View style={styles.academicTextContent}>
+                      <Text
+                        style={[
+                          styles.academicLabel,
+                          { color: theme.textSecondary },
+                        ]}
+                      >
+                        Faculty
+                      </Text>
+                      <Text
+                        style={[styles.academicValue, { color: theme.text }]}
+                      >
+                        {displayFaculty}
+                      </Text>
+                    </View>
                   </View>
                 )}
-                {departmentName && (
-                  <View style={styles.academicRow}>
-                    <Text style={[styles.academicLabel, { color: theme.textSecondary }]}>
-                      Department
-                    </Text>
-                    <Text style={[styles.academicValue, { color: theme.text }]}>
-                      {departmentName}
-                    </Text>
+
+                {displayDepartment && (
+                  <View style={styles.academicItem}>
+                    <View
+                      style={[
+                        styles.academicIconBox,
+                        { backgroundColor: `${theme.primary}14` },
+                      ]}
+                    >
+                      <MaterialCommunityIcons
+                        name="school-outline"
+                        size={18}
+                        color={theme.primary}
+                      />
+                    </View>
+                    <View style={styles.academicTextContent}>
+                      <Text
+                        style={[
+                          styles.academicLabel,
+                          { color: theme.textSecondary },
+                        ]}
+                      >
+                        Department / Programme
+                      </Text>
+                      <Text
+                        style={[styles.academicValue, { color: theme.text }]}
+                      >
+                        {displayDepartment}
+                      </Text>
+                    </View>
                   </View>
                 )}
+
                 {studentLevel && (
-                  <View style={styles.academicRow}>
-                    <Text style={[styles.academicLabel, { color: theme.textSecondary }]}>
-                      Level
-                    </Text>
-                    <Text style={[styles.academicValue, { color: theme.text }]}>
-                      {studentLevel} Level
-                    </Text>
+                  <View style={styles.academicItem}>
+                    <View
+                      style={[
+                        styles.academicIconBox,
+                        { backgroundColor: `${theme.primary}14` },
+                      ]}
+                    >
+                      <MaterialCommunityIcons
+                        name="stairs-up"
+                        size={18}
+                        color={theme.primary}
+                      />
+                    </View>
+                    <View style={styles.academicTextContent}>
+                      <Text
+                        style={[
+                          styles.academicLabel,
+                          { color: theme.textSecondary },
+                        ]}
+                      >
+                        Academic Level
+                      </Text>
+                      <Text
+                        style={[styles.academicValue, { color: theme.text }]}
+                      >
+                        {studentLevel} Level
+                      </Text>
+                    </View>
                   </View>
                 )}
               </View>
             ) : (
-              <View style={styles.unconfiguredAcademic}>
+              <TouchableOpacity
+                style={styles.unconfiguredAcademic}
+                onPress={() => router.push('/edit-profile')}
+                activeOpacity={0.7}
+              >
                 <View
                   style={[
                     styles.unconfiguredIconBox,
@@ -339,10 +435,11 @@ export default function ProfileScreen() {
                       { color: theme.textSecondary },
                     ]}
                   >
-                    Select your faculty and department to browse official courses.
+                    Tap here to select your faculty, department, and level for personalized courses.
                   </Text>
                 </View>
-              </View>
+                <Ionicons name="chevron-forward" size={18} color={theme.primary} />
+              </TouchableOpacity>
             )}
           </View>
         </View>
@@ -821,6 +918,8 @@ const styles = StyleSheet.create({
     marginTop: 6,
     paddingHorizontal: 24,
     lineHeight: 18,
+    flexWrap: 'wrap',
+    alignSelf: 'center',
   },
   editProfileBtn: {
     flexDirection: 'row',
@@ -860,20 +959,36 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   academicRowList: {
-    gap: 8,
+    gap: 14,
   },
-  academicRow: {
+  academicItem: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  academicIconBox: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    justifyContent: 'center',
     alignItems: 'center',
+    marginTop: 2,
+  },
+  academicTextContent: {
+    flex: 1,
+    marginLeft: 12,
   },
   academicLabel: {
-    fontSize: 13,
-    fontFamily: 'Ubuntu-Regular',
+    fontSize: 11,
+    fontFamily: 'Ubuntu-Bold',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 2,
   },
   academicValue: {
-    fontSize: 13,
-    fontFamily: 'Ubuntu-Bold',
+    fontSize: 14,
+    fontFamily: 'Ubuntu-Medium',
+    lineHeight: 20,
+    flexShrink: 1,
   },
   unconfiguredAcademic: {
     flexDirection: 'row',

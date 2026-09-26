@@ -20,6 +20,7 @@ import * as NavigationBar from 'expo-navigation-bar';
 import { useFonts } from 'expo-font';
 
 import { StatusBar } from 'expo-status-bar';
+import * as SystemUI from 'expo-system-ui';
 
 import {
   GoogleSignin,
@@ -34,11 +35,9 @@ import { Colors } from '../constants/colors';
 import * as Notifications from 'expo-notifications';
 
 import {
-  QueryClient,
   QueryClientProvider,
 } from '@tanstack/react-query';
-
-const queryClient = new QueryClient();
+import { queryClient } from '../data/queryClient';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -86,14 +85,13 @@ export default function RootLayout() {
       Platform.OS === 'android'
     ) {
       try {
-        NavigationBar.setBackgroundColorAsync(
-          theme.card
-        );
-
         NavigationBar.setButtonStyleAsync(
           isDarkMode
             ? 'light'
             : 'dark'
+        );
+        NavigationBar.setBackgroundColorAsync(
+          theme.background
         );
       } catch (e) {
         console.warn(
@@ -103,8 +101,23 @@ export default function RootLayout() {
       }
     }
   }, [
-    theme,
     isDarkMode,
+    theme.background,
+  ]);
+
+  useEffect(() => {
+    try {
+      SystemUI.setBackgroundColorAsync(
+        theme.background
+      );
+    } catch (e) {
+      console.warn(
+        'SystemUI styling error:',
+        e
+      );
+    }
+  }, [
+    theme.background,
   ]);
 
   // =====================================================
@@ -266,6 +279,9 @@ export default function RootLayout() {
     const inOnboarding =
       segments[0] === 'onboarding';
 
+    const inResetPassword =
+      segments[0] === '(auth)' && segments[1] === 'reset-password';
+
     if (!user) {
       if (
         !hasFinishedOnboarding &&
@@ -285,6 +301,7 @@ export default function RootLayout() {
       }
     } else if (
       user &&
+      !inResetPassword &&
       (
         inAuthGroup ||
         inOnboarding ||
@@ -314,6 +331,8 @@ export default function RootLayout() {
     isInitializing,
     fontsLoaded,
     _hasHydrated,
+    hasFinishedOnboarding,
+    segments,
   ]);
 
   // =====================================================

@@ -7,6 +7,7 @@ import {
 
 import {
   mmkvStorage,
+  storage,
 } from '../utils/mmkvStorage';
 
 import {
@@ -56,31 +57,41 @@ const getThemeForAppearance = (
   };
 };
 
+const getInitialThemeState = () => {
+  const systemScheme = getSystemColorScheme();
+  try {
+    const raw = storage.getString('theme-storage');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      const savedAppearance = parsed?.state?.appearance;
+      if (savedAppearance) {
+        const themeConfig = getThemeForAppearance(savedAppearance, systemScheme);
+        return {
+          appearance: savedAppearance,
+          theme: themeConfig.theme,
+          isDarkMode: themeConfig.isDarkMode,
+        };
+      }
+    }
+  } catch (e) {
+    console.warn('[THEME] Error reading initial theme from MMKV:', e);
+  }
+  const defaultTheme = getThemeForAppearance('system', systemScheme);
+  return {
+    appearance: 'system',
+    theme: defaultTheme.theme,
+    isDarkMode: defaultTheme.isDarkMode,
+  };
+};
+
+const initialThemeState = getInitialThemeState();
+
 export const useThemeStore = create(
   persist(
     (set, get) => ({
-      /*
-       * Available values:
-       *
-       * 'system'
-       * 'light'
-       * 'dark'
-       */
-      appearance: 'system',
-
-      /*
-       * These remain available so existing screens
-       * do not need to be rewritten.
-       */
-      isDarkMode:
-        getSystemColorScheme() ===
-        'dark',
-
-      theme:
-        getSystemColorScheme() ===
-        'dark'
-          ? darkTheme
-          : lightTheme,
+      appearance: initialThemeState.appearance,
+      isDarkMode: initialThemeState.isDarkMode,
+      theme: initialThemeState.theme,
 
       /*
        * Change appearance preference.
@@ -185,16 +196,24 @@ export const useThemeStore = create(
           () => mmkvStorage
         ),
 
-      /*
-       * Only persist the user's preference.
-       *
-       * theme and isDarkMode are derived values and
-       * should be recalculated when the app starts.
-       */
       partialize: (state) => ({
         appearance:
           state.appearance,
+        isDarkMode:
+          state.isDarkMode,
       }),
+
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          const systemColorScheme = getSystemColorScheme();
+          const next = getThemeForAppearance(
+            state.appearance,
+            systemColorScheme
+          );
+          state.theme = next.theme;
+          state.isDarkMode = next.isDarkMode;
+        }
+      },
     }
   )
 );

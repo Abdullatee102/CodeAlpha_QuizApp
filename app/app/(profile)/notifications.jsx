@@ -407,7 +407,7 @@ export default function NotificationsScreen() {
               },
             ]}
           >
-            Couldn't load notifications
+            Couldn&apos;t load notifications
           </Text>
 
           <Text

@@ -40,6 +40,9 @@ export default function VerifyEmail() {
   const identifier =
     params?.identifier || '';
 
+  const fullName =
+    params?.fullName || '';
+
   const isPasswordResetFlow =
     params?.flow === 'reset';
 
@@ -96,7 +99,8 @@ export default function VerifyEmail() {
 
     const res = await verifyOTP(
       otpCode,
-      identifier
+      identifier,
+      fullName
     );
 
     if (res?.success) {
@@ -384,7 +388,7 @@ export default function VerifyEmail() {
               },
             ]}
           >
-            Didn't receive a code?{' '}
+            Didn&apos;t receive a code?{' '}
           </Text>
 
           <TouchableOpacity

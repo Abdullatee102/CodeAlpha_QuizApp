@@ -1,14 +1,17 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { useQuizStore } from '../store/quizStore';
+import { useAuthStore } from '../store/authStore';
 
 export function useAchievementsQuery() {
+  const token = useAuthStore((state) => state.token);
   const fetchAchievements = useQuizStore(
     (state) => state.fetchAchievements
   );
 
   return useQuery({
     queryKey: ['achievements'],
+    enabled: !!token,
 
     queryFn: async () => {
       const result =
@@ -26,8 +29,8 @@ export function useAchievementsQuery() {
 
     staleTime: 1000 * 60 * 5,
 
-    refetchOnMount: true,
+    refetchOnMount: false,
 
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: false,
   });
 }

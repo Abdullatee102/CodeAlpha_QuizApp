@@ -24,6 +24,13 @@ import { useThemeStore } from '../../store/themeStore';
 
 import { useAchievementsQuery } from '../../hooks/useAchievementsQuery';
 
+function AchievementIcon({ name, size, color }) {
+  if (name === 'code-slash' || name === 'code') {
+    return <Ionicons name={name} size={size} color={color} />;
+  }
+  return <MaterialCommunityIcons name={name || 'trophy'} size={size} color={color} />;
+}
+
 export default function AchievementScreen() {
   const router = useRouter();
 
@@ -103,7 +110,7 @@ export default function AchievementScreen() {
           id: '4',
           title: 'CSC Starter',
           desc: 'Complete a Computer Science quiz',
-          icon: 'code-tags',
+          icon: 'code-slash',
           color: '#27AE60',
         },
         {
@@ -167,7 +174,7 @@ export default function AchievementScreen() {
             },
           ]}
         >
-          <MaterialCommunityIcons
+          <AchievementIcon
             name={
               isUnlocked
                 ? item.icon
