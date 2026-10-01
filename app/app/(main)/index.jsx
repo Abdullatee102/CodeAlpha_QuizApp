@@ -1,6 +1,17 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, FlatList, ActivityIndicator, Modal, Pressable } from 'react-native';
-import{ useRouter } from 'expo-router';
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Image,
+  FlatList,
+  ActivityIndicator,
+  Modal,
+  Pressable,
+} from 'react-native';
+import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../store/authStore';
 import { useQuizStore } from '../../store/quizStore';
@@ -9,7 +20,10 @@ import { useNotificationsQuery } from '../../hooks/useNotificationsQuery';
 import { useProfileQuery } from '../../hooks/useProfileQuery';
 import { useRecommendedCoursesQuery } from '../../hooks/useRecommendedCoursesQuery';
 import { Colors } from '../../constants/colors';
-import { getFacultyMeta, getCourseIcon } from '../../constants/academicIcons';
+import {
+  getFacultyMeta,
+  getCourseIcon,
+} from '../../constants/academicIcons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function HomeScreen() {
@@ -25,13 +39,21 @@ export default function HomeScreen() {
   // PROFILE
   // =====================================================
 
-  const { data: profile, isLoading: isProfileLoading } = useProfileQuery();
+  const {
+    data: profile,
+    isLoading: isProfileLoading,
+  } = useProfileQuery();
 
   // =====================================================
   // QUIZ STORE
   // =====================================================
 
-  const { abandonQuiz, faculties, isLoadingFaculties, fetchFaculties } = useQuizStore();
+  const {
+    abandonQuiz,
+    faculties,
+    isLoadingFaculties,
+    fetchFaculties,
+  } = useQuizStore();
 
   // =====================================================
   // THEME
@@ -143,19 +165,39 @@ export default function HomeScreen() {
   // PROFILE STATISTICS
   // =====================================================
 
-  const totalQuizzes = profile?.quizzesCompleted ?? profile?.totalQuizzesTaken ?? 0;
+  const totalQuizzes =
+    profile?.quizzesCompleted ??
+    profile?.totalQuizzesTaken ??
+    0;
 
   const totalScore = profile?.totalScore ?? 0;
 
-  const correctAnswers = profile?.totalCorrect ?? profile?.totalCorrectAnswers ?? profile?.correctAnswers ?? profile?.correct ?? 0;
+  const correctAnswers =
+    profile?.totalCorrect ??
+    profile?.totalCorrectAnswers ??
+    profile?.correctAnswers ??
+    profile?.correct ??
+    0;
 
   // =====================================================
   // PROFILE IDENTITY
   // =====================================================
 
-  const rawInitialName = profile?.fullName || user?.displayName || user?.fullName || profile?.username || user?.username || 'Scholar';
+  const rawInitialName =
+    profile?.fullName ||
+    user?.displayName ||
+    user?.fullName ||
+    profile?.username ||
+    user?.username ||
+    'Scholar';
 
-  const cleanInitialName = rawInitialName === 'Verified User' || rawInitialName === 'Verified' ? profile?.username || user?.username || 'Scholar' : rawInitialName;
+  const cleanInitialName =
+    rawInitialName === 'Verified User' ||
+    rawInitialName === 'Verified'
+      ? profile?.username ||
+        user?.username ||
+        'Scholar'
+      : rawInitialName;
 
   const userInitial = cleanInitialName
     .split(' ')[0]
@@ -181,6 +223,7 @@ export default function HomeScreen() {
           facultyCode: 'MIXED',
         },
       });
+
       return;
     }
 
@@ -194,17 +237,29 @@ export default function HomeScreen() {
     });
   };
 
+  // =====================================================
+  // FACULTIES + MIXED PRACTICE
+  // =====================================================
+
   const allFacultiesWithMixed = useMemo(() => {
     const list = Array.isArray(faculties) ? [...faculties] : [];
-    const hasMixed = list.some((f) => f.id === 'mixed' || f.code === 'MIXED');
+
+    const hasMixed = list.some(
+      (faculty) =>
+        faculty.id === 'mixed' ||
+        faculty.code === 'MIXED'
+    );
+
     if (!hasMixed) {
       list.push({
         id: 'mixed',
         name: 'All Faculties Practice',
         code: 'MIXED',
-        description: 'Randomized questions across all LAUTECH faculties',
+        description:
+          'Randomized questions across all LAUTECH faculties',
       });
     }
+
     return list;
   }, [faculties]);
 
@@ -227,26 +282,13 @@ export default function HomeScreen() {
         onPress={() => handleFacultyPress(item)}
         activeOpacity={0.7}
       >
-        <View
-          style={[
-            styles.iconBox,
-            {
-              backgroundColor: `${meta.color}18`,
-            },
-          ]}
-        >
-          <MaterialCommunityIcons
-            name={meta.icon}
-            size={30}
-            color={meta.color}
-          />
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%', marginBottom: 12 }}>
+        {/* Faculty icon + arrow */}
+        <View style={styles.facultyTopRow}>
           <View
             style={[
               styles.iconBox,
               {
                 backgroundColor: `${meta.color}18`,
-                marginBottom: 0,
               },
             ]}
           >
@@ -257,11 +299,23 @@ export default function HomeScreen() {
             />
           </View>
 
-          <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: `${meta.color}15`, justifyContent: 'center', alignItems: 'center' }}>
-            <Ionicons name="arrow-forward" size={13} color={meta.color} />
+          <View
+            style={[
+              styles.facultyArrow,
+              {
+                backgroundColor: `${meta.color}15`,
+              },
+            ]}
+          >
+            <Ionicons
+              name="arrow-forward"
+              size={13}
+              color={meta.color}
+            />
           </View>
         </View>
 
+        {/* Faculty name */}
         <Text
           style={[
             styles.facultyTitle,
@@ -274,6 +328,7 @@ export default function HomeScreen() {
           {item.name}
         </Text>
 
+        {/* Faculty code */}
         <Text
           style={[
             styles.facultyCode,
@@ -356,9 +411,21 @@ export default function HomeScreen() {
               minimumFontScale={0.75}
             >
               {(() => {
-                const rawName = profile?.fullName || user?.displayName || user?.fullName || profile?.username || user?.username || 'Scholar';
+                const rawName =
+                  profile?.fullName ||
+                  user?.displayName ||
+                  user?.fullName ||
+                  profile?.username ||
+                  user?.username ||
+                  'Scholar';
 
-                const cleanName = rawName === 'Verified User' || rawName === 'Verified' ? profile?.username || user?.username || 'Scholar' : rawName;
+                const cleanName =
+                  rawName === 'Verified User' ||
+                  rawName === 'Verified'
+                    ? profile?.username ||
+                      user?.username ||
+                      'Scholar'
+                    : rawName;
 
                 return cleanName.split(' ')[0];
               })()}
@@ -501,9 +568,8 @@ export default function HomeScreen() {
                 },
               ]}
             >
-              Pick a faculty, select your
-              department and course, then
-              start your assessment.
+              Pick a faculty, select your department and
+              course, then start your assessment.
             </Text>
           </View>
         </View>
@@ -754,20 +820,18 @@ export default function HomeScreen() {
                     Finding departmental courses...
                   </Text>
                 </View>
-              ) : recResponse.data?.length > 0 ? (
+              ) : recResponse?.data?.length > 0 ? (
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={
-                    styles.recCoursesList
-                  }
+                  contentContainerStyle={styles.recCoursesList}
                 >
-                  {recResponse.data.map((c) => {
-                    const icon = getCourseIcon(c.code);
+                  {recResponse.data.map((course) => {
+                    const icon = getCourseIcon(course.code);
 
                     return (
                       <TouchableOpacity
-                        key={c.id}
+                        key={course.id}
                         style={[
                           styles.recCourseCard,
                           {
@@ -776,7 +840,7 @@ export default function HomeScreen() {
                           },
                         ]}
                         onPress={() =>
-                          handleRecommendedCoursePress(c)
+                          handleRecommendedCoursePress(course)
                         }
                         activeOpacity={0.8}
                       >
@@ -801,7 +865,7 @@ export default function HomeScreen() {
                               styles.recSemesterBadge,
                               {
                                 backgroundColor:
-                                  c.semester === 'harmattan'
+                                  course.semester === 'harmattan'
                                     ? 'rgba(217, 119, 6, 0.15)'
                                     : 'rgba(2, 132, 199, 0.15)',
                               },
@@ -812,13 +876,13 @@ export default function HomeScreen() {
                                 styles.recSemesterBadgeText,
                                 {
                                   color:
-                                    c.semester === 'harmattan'
+                                    course.semester === 'harmattan'
                                       ? '#D97706'
                                       : '#0284C7',
                                 },
                               ]}
                             >
-                              {c.semester === 'harmattan'
+                              {course.semester === 'harmattan'
                                 ? 'Harmattan'
                                 : 'Rain'}
                             </Text>
@@ -834,7 +898,7 @@ export default function HomeScreen() {
                           ]}
                           numberOfLines={1}
                         >
-                          {c.code}
+                          {course.code}
                         </Text>
 
                         <Text
@@ -846,7 +910,7 @@ export default function HomeScreen() {
                           ]}
                           numberOfLines={2}
                         >
-                          {c.title}
+                          {course.title}
                         </Text>
 
                         <View style={styles.recStartRow}>
@@ -950,8 +1014,8 @@ export default function HomeScreen() {
                       },
                     ]}
                   >
-                    Configure your Faculty, Department, and Level to see
-                    tailored course recommendations.
+                    Configure your Faculty, Department, and
+                    Level to see tailored course recommendations.
                   </Text>
                 </View>
               </View>
@@ -963,16 +1027,10 @@ export default function HomeScreen() {
                     backgroundColor: theme.primary,
                   },
                 ]}
-                onPress={() =>
-                  router.push('/edit-profile')
-                }
+                onPress={() => router.push('/edit-profile')}
                 activeOpacity={0.8}
               >
-                <Text
-                  style={
-                    styles.unconfiguredBannerBtnText
-                  }
-                >
+                <Text style={styles.unconfiguredBannerBtnText}>
                   Set Up Profile
                 </Text>
 
@@ -1018,7 +1076,7 @@ export default function HomeScreen() {
                 Loading faculties...
               </Text>
             </View>
-          ) : faculties.length === 0 ? (
+          ) : allFacultiesWithMixed.length === 0 ? (
             <View
               style={[
                 styles.emptyContainer,
@@ -1053,7 +1111,7 @@ export default function HomeScreen() {
                   },
                 ]}
               >
-                We couldn&apos;t load the faculties right now.
+                We couldn't load the faculties right now.
               </Text>
 
               <TouchableOpacity
@@ -1072,10 +1130,9 @@ export default function HomeScreen() {
             </View>
           ) : (
             <FlatList
-              data={faculties}
               data={allFacultiesWithMixed}
               renderItem={renderFaculty}
-              keyExtractor={(item) => item.id}
+              keyExtractor={(item) => String(item.id)}
               numColumns={2}
               scrollEnabled={false}
               columnWrapperStyle={styles.row}
@@ -1262,7 +1319,8 @@ export default function HomeScreen() {
                     },
                   ]}
                 >
-                  Multiple-choice questions. Choose the correct option.
+                  Multiple-choice questions. Choose the correct
+                  option.
                 </Text>
               </View>
 
@@ -1321,7 +1379,8 @@ export default function HomeScreen() {
                     },
                   ]}
                 >
-                  Detailed written explanations and conceptual answers.
+                  Detailed written explanations and conceptual
+                  answers.
                 </Text>
               </View>
 
@@ -1483,7 +1542,6 @@ const styles = StyleSheet.create({
   statLabel: {
     fontFamily: 'Ubuntu-Regular',
     fontSize: 11,
-    color: '#999',
     marginTop: 2,
   },
 
@@ -1515,13 +1573,28 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
 
+  facultyTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    width: '100%',
+    marginBottom: 12,
+  },
+
   iconBox: {
     width: 50,
     height: 50,
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 15,
-    marginBottom: 15,
+  },
+
+  facultyArrow: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 
   facultyTitle: {
@@ -1602,7 +1675,9 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 
-  // Recommended Courses Styles
+  // =====================================================
+  // RECOMMENDED COURSES
+  // =====================================================
 
   recHeaderRow: {
     flexDirection: 'row',
@@ -1727,7 +1802,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  // Unconfigured Banner
+  // =====================================================
+  // UNCONFIGURED BANNER
+  // =====================================================
 
   unconfiguredBanner: {
     borderRadius: 16,
@@ -1777,7 +1854,9 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
 
-  // Assessment Modal Styles
+  // =====================================================
+  // ASSESSMENT MODAL
+  // =====================================================
 
   modalOverlay: {
     flex: 1,
