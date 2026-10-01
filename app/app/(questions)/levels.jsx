@@ -38,20 +38,27 @@ export default function LevelsScreen() {
     isMixed,
   } = params;
 
+  const isMixedQuiz = isMixed === 'true' || facultyId === 'mixed';
+  const displayName = isMixedQuiz
+    ? (facultyName || departmentName || 'All Faculties Practice')
+    : (departmentName || facultyName || 'Academic Curriculum');
+  const displayCode = isMixedQuiz
+    ? (facultyCode || departmentCode || 'MIXED')
+    : (departmentCode || facultyCode || '');
+
   const { theme } = useThemeStore();
 
   const handleLevelPress = (level) => {
     router.push({
       pathname: '/(questions)/semesters',
       params: {
-        departmentId,
-        departmentName,
-        departmentCode,
+        departmentId: isMixedQuiz ? 'mixed' : departmentId,
+        departmentName: displayName,
+        departmentCode: displayCode,
         facultyId,
         facultyName,
         facultyCode,
-        isMixed:
-          isMixed || (facultyId === 'mixed' ? 'true' : 'false'),
+        isMixed: isMixedQuiz ? 'true' : 'false',
         level: String(level),
       },
     });
@@ -199,7 +206,7 @@ export default function LevelsScreen() {
             ]}
             numberOfLines={1}
           >
-            {departmentName}
+            {displayName}
           </Text>
         </View>
       </View>
@@ -239,7 +246,7 @@ export default function LevelsScreen() {
             ]}
             numberOfLines={2}
           >
-            {departmentName}
+            {displayName}
           </Text>
 
           <Text
@@ -250,7 +257,7 @@ export default function LevelsScreen() {
               },
             ]}
           >
-            {departmentCode}
+            {displayCode}
           </Text>
         </View>
       </View>

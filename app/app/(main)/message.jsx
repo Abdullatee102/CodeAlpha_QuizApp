@@ -475,18 +475,6 @@ export default function MessageScreen() {
                     </Text>
                   </View>
 
-                  <Text
-                    style={[
-                      styles.recentMessageSnippet,
-                      { color: theme.textSecondary },
-                    ]}
-                    numberOfLines={1}
-                  >
-                    {chat.lastMessage?.senderName
-                      ? `${chat.lastMessage.senderName.split(' ')[0]}: `
-                      : ''}
-                    {chat.lastMessage?.text || 'No messages yet'}
-                  </Text>
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 }}>
                     <Text
                       style={[

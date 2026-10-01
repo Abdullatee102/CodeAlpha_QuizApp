@@ -42,6 +42,12 @@ export default function CoursesScreen() {
   } = searchParams;
 
   const isMixedQuiz = isMixed === 'true' || facultyId === 'mixed';
+  const displayName = isMixedQuiz
+    ? (facultyName || departmentName || 'All Faculties Practice')
+    : (departmentName || facultyName || 'Academic Curriculum');
+  const displayCode = isMixedQuiz
+    ? (facultyCode || departmentCode || 'MIXED')
+    : (departmentCode || facultyCode || '');
 
   const {
     courses,
@@ -96,9 +102,9 @@ export default function CoursesScreen() {
         courseTitle: course.title,
         courseCode: course.code,
         quizType,
-        departmentId,
-        departmentName,
-        departmentCode,
+        departmentId: isMixedQuiz ? 'mixed' : departmentId,
+        departmentName: displayName,
+        departmentCode: displayCode,
         facultyId,
         facultyName,
         facultyCode,
@@ -243,7 +249,7 @@ export default function CoursesScreen() {
             ]}
             numberOfLines={1}
           >
-            {departmentName} | {level} Level
+            {displayName} | {level} Level
           </Text>
         </View>
       </View>
@@ -279,7 +285,7 @@ export default function CoursesScreen() {
             ]}
             numberOfLines={1}
           >
-            {departmentName}
+            {displayName}
           </Text>
 
           <Text
@@ -288,7 +294,7 @@ export default function CoursesScreen() {
               { color: theme.textSecondary },
             ]}
           >
-            {departmentCode} | {level} Level |{' '}
+            {displayCode ? `${displayCode} | ` : ''}{level} Level |{' '}
             {getSemesterName(semester)}
           </Text>
         </View>

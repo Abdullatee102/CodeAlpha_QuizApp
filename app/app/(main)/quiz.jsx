@@ -2442,6 +2442,351 @@ export default function QuizScreen() {
   }
 
   // =========================================================
+  // FAIR PLAY RULES CUSTOM MODAL RENDERER
+  // =========================================================
+
+  const renderFairPlayModal = () => (
+    <Modal
+      visible={showFairPlayModal}
+      transparent
+      animationType="fade"
+      onRequestClose={() => {}}
+    >
+      <View style={styles.rulesOverlay}>
+        <View
+          style={[
+            styles.rulesCard,
+            {
+              backgroundColor: theme.card,
+              borderColor: theme.border,
+            },
+          ]}
+        >
+          <View
+            style={[
+              styles.rulesHeaderIconBox,
+              { backgroundColor: '#05966918' },
+            ]}
+          >
+            <Ionicons
+              name="shield-checkmark"
+              size={32}
+              color="#059669"
+            />
+          </View>
+
+          <Text
+            style={[
+              styles.rulesModalTitle,
+              { color: theme.text },
+            ]}
+          >
+            Fair Play Rules
+          </Text>
+
+          <View
+            style={[
+              styles.rulesTypeBadge,
+              {
+                backgroundColor: isTheory
+                  ? '#7C3AED15'
+                  : '#2563EB15',
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.rulesTypeBadgeText,
+                {
+                  color: isTheory
+                    ? '#7C3AED'
+                    : '#2563EB',
+                },
+              ]}
+            >
+              {isTheory
+                ? 'Theory Assessment'
+                : 'Computer Based Test (CBT)'}
+            </Text>
+          </View>
+
+          <View
+            style={[
+              styles.rulesMetaRow,
+              {
+                backgroundColor: isDarkMode
+                  ? '#1E293B'
+                  : '#F8FAFC',
+                borderColor: theme.border,
+              },
+            ]}
+          >
+            <View style={styles.rulesMetaItem}>
+              <Text
+                style={[
+                  styles.rulesMetaValue,
+                  { color: theme.text },
+                ]}
+              >
+                {questions.length}
+              </Text>
+              <Text
+                style={[
+                  styles.rulesMetaLabel,
+                  { color: theme.textSecondary },
+                ]}
+              >
+                Questions
+              </Text>
+            </View>
+            <View
+              style={[
+                styles.rulesMetaDivider,
+                { backgroundColor: theme.border },
+              ]}
+            />
+            <View style={styles.rulesMetaItem}>
+              <Text
+                style={[
+                  styles.rulesMetaValue,
+                  { color: theme.text },
+                ]}
+              >
+                {secondsPerQuestion}s
+              </Text>
+              <Text
+                style={[
+                  styles.rulesMetaLabel,
+                  { color: theme.textSecondary },
+                ]}
+              >
+                per Question
+              </Text>
+            </View>
+            <View
+              style={[
+                styles.rulesMetaDivider,
+                { backgroundColor: theme.border },
+              ]}
+            />
+            <View style={styles.rulesMetaItem}>
+              <Text
+                style={[
+                  styles.rulesMetaValue,
+                  { color: theme.text },
+                ]}
+              >
+                {formatDuration(
+                  getTotalAssessmentSeconds(
+                    questions.length
+                  )
+                )}
+              </Text>
+              <Text
+                style={[
+                  styles.rulesMetaLabel,
+                  { color: theme.textSecondary },
+                ]}
+              >
+                Total Time
+              </Text>
+            </View>
+          </View>
+
+          <ScrollView
+            style={{ maxHeight: 220, marginVertical: 12 }}
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.rulesList}>
+              <View style={styles.ruleRow}>
+                <View
+                  style={[
+                    styles.ruleIconWrap,
+                    { backgroundColor: '#EF444415' },
+                  ]}
+                >
+                  <MaterialCommunityIcons
+                    name="exit-to-app"
+                    size={16}
+                    color="#EF4444"
+                  />
+                </View>
+                <Text
+                  style={[
+                    styles.ruleText,
+                    { color: theme.text },
+                  ]}
+                >
+                  Leaving this screen clears your progress.
+                </Text>
+              </View>
+
+              <View style={styles.ruleRow}>
+                <View
+                  style={[
+                    styles.ruleIconWrap,
+                    { backgroundColor: '#F59E0B15' },
+                  ]}
+                >
+                  <MaterialCommunityIcons
+                    name="cellphone-off"
+                    size={16}
+                    color="#F59E0B"
+                  />
+                </View>
+                <Text
+                  style={[
+                    styles.ruleText,
+                    { color: theme.text },
+                  ]}
+                >
+                  Switching apps or minimizing terminates assessment.
+                </Text>
+              </View>
+
+              <View style={styles.ruleRow}>
+                <View
+                  style={[
+                    styles.ruleIconWrap,
+                    { backgroundColor: '#3B82F615' },
+                  ]}
+                >
+                  <Ionicons
+                    name="timer-outline"
+                    size={16}
+                    color="#3B82F6"
+                  />
+                </View>
+                <Text
+                  style={[
+                    styles.ruleText,
+                    { color: theme.text },
+                  ]}
+                >
+                  The timer is one continuous assessment timer.
+                </Text>
+              </View>
+
+              <View style={styles.ruleRow}>
+                <View
+                  style={[
+                    styles.ruleIconWrap,
+                    { backgroundColor: '#8B5CF615' },
+                  ]}
+                >
+                  <Ionicons
+                    name="swap-horizontal"
+                    size={16}
+                    color="#8B5CF6"
+                  />
+                </View>
+                <Text
+                  style={[
+                    styles.ruleText,
+                    { color: theme.text },
+                  ]}
+                >
+                  Move backward and forward between questions freely.
+                </Text>
+              </View>
+
+              <View style={styles.ruleRow}>
+                <View
+                  style={[
+                    styles.ruleIconWrap,
+                    { backgroundColor: '#10B98115' },
+                  ]}
+                >
+                  <MaterialCommunityIcons
+                    name="clipboard-check-outline"
+                    size={16}
+                    color="#10B981"
+                  />
+                </View>
+                <Text
+                  style={[
+                    styles.ruleText,
+                    { color: theme.text },
+                  ]}
+                >
+                  Review and edit your answers before final submission.
+                </Text>
+              </View>
+
+              <View style={styles.ruleRow}>
+                <View
+                  style={[
+                    styles.ruleIconWrap,
+                    { backgroundColor: '#6366F115' },
+                  ]}
+                >
+                  <MaterialCommunityIcons
+                    name="shield-lock-outline"
+                    size={16}
+                    color="#6366F1"
+                  />
+                </View>
+                <Text
+                  style={[
+                    styles.ruleText,
+                    { color: theme.text },
+                  ]}
+                >
+                  Graded securely by the server after submission.
+                </Text>
+              </View>
+            </View>
+          </ScrollView>
+
+          <View style={styles.rulesActionRow}>
+            <TouchableOpacity
+              style={[
+                styles.rulesBackBtn,
+                { borderColor: theme.border },
+              ]}
+              onPress={() => {
+                setShowFairPlayModal(false);
+                abandonQuiz();
+                setAssessmentTimeLeft(0);
+                setIsStarted(false);
+                router.back();
+              }}
+              activeOpacity={0.7}
+            >
+              <Text
+                style={[
+                  styles.rulesBackBtnText,
+                  { color: theme.textSecondary },
+                ]}
+              >
+                Go Back
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.rulesStartBtn,
+                { backgroundColor: theme.primary },
+              ]}
+              onPress={() => {
+                setShowFairPlayModal(false);
+                hasHandledTimeExpiry.current = false;
+                setIsPreparing(false);
+                setIsStarted(true);
+              }}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.rulesStartBtnText}>
+                I Understand, Start
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+
+  // =========================================================
   // LOADING / PREPARING / SUBMITTING
   // =========================================================
 
@@ -2508,6 +2853,8 @@ export default function QuizScreen() {
                   )} total`
                 : 'Preparing your assessment...'}
         </Text>
+
+        {renderFairPlayModal()}
       </View>
     );
   }
@@ -4069,122 +4416,7 @@ export default function QuizScreen() {
         </KeyboardAvoidingView>
       
       {/* FAIR PLAY RULES CUSTOM MODAL */}
-      <Modal
-        visible={showFairPlayModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => {}}
-      >
-        <View style={styles.rulesOverlay}>
-          <View style={[styles.rulesCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
-            <View style={[styles.rulesHeaderIconBox, { backgroundColor: '#05966918' }]}>
-              <Ionicons name="shield-checkmark" size={32} color="#059669" />
-            </View>
-
-            <Text style={[styles.rulesModalTitle, { color: theme.text }]}>
-              Fair Play Rules
-            </Text>
-
-            <View style={[styles.rulesTypeBadge, { backgroundColor: isTheory ? '#7C3AED15' : '#2563EB15' }]}>
-              <Text style={[styles.rulesTypeBadgeText, { color: isTheory ? '#7C3AED' : '#2563EB' }]}>
-                {isTheory ? 'Theory Assessment' : 'Computer Based Test (CBT)'}
-              </Text>
-            </View>
-
-            <View style={[styles.rulesMetaRow, { backgroundColor: isDarkMode ? '#1E293B' : '#F8FAFC', borderColor: theme.border }]}>
-              <View style={styles.rulesMetaItem}>
-                <Text style={[styles.rulesMetaValue, { color: theme.text }]}>{questions.length}</Text>
-                <Text style={[styles.rulesMetaLabel, { color: theme.textSecondary }]}>Questions</Text>
-              </View>
-              <View style={[styles.rulesMetaDivider, { backgroundColor: theme.border }]} />
-              <View style={styles.rulesMetaItem}>
-                <Text style={[styles.rulesMetaValue, { color: theme.text }]}>{secondsPerQuestion}s</Text>
-                <Text style={[styles.rulesMetaLabel, { color: theme.textSecondary }]}>per Question</Text>
-              </View>
-              <View style={[styles.rulesMetaDivider, { backgroundColor: theme.border }]} />
-              <View style={styles.rulesMetaItem}>
-                <Text style={[styles.rulesMetaValue, { color: theme.text }]}>{formatDuration(getTotalAssessmentSeconds(questions.length))}</Text>
-                <Text style={[styles.rulesMetaLabel, { color: theme.textSecondary }]}>Total Time</Text>
-              </View>
-            </View>
-
-            <ScrollView style={{ maxHeight: 220, marginVertical: 12 }} showsVerticalScrollIndicator={false}>
-              <View style={styles.rulesList}>
-                <View style={styles.ruleRow}>
-                  <View style={[styles.ruleIconWrap, { backgroundColor: '#EF444415' }]}>
-                    <MaterialCommunityIcons name="exit-to-app" size={16} color="#EF4444" />
-                  </View>
-                  <Text style={[styles.ruleText, { color: theme.text }]}>Leaving this screen clears your progress.</Text>
-                </View>
-
-                <View style={styles.ruleRow}>
-                  <View style={[styles.ruleIconWrap, { backgroundColor: '#F59E0B15' }]}>
-                    <MaterialCommunityIcons name="cellphone-off" size={16} color="#F59E0B" />
-                  </View>
-                  <Text style={[styles.ruleText, { color: theme.text }]}>Switching apps or minimizing terminates assessment.</Text>
-                </View>
-
-                <View style={styles.ruleRow}>
-                  <View style={[styles.ruleIconWrap, { backgroundColor: '#3B82F615' }]}>
-                    <Ionicons name="timer-outline" size={16} color="#3B82F6" />
-                  </View>
-                  <Text style={[styles.ruleText, { color: theme.text }]}>The timer is one continuous assessment timer.</Text>
-                </View>
-
-                <View style={styles.ruleRow}>
-                  <View style={[styles.ruleIconWrap, { backgroundColor: '#8B5CF615' }]}>
-                    <Ionicons name="swap-horizontal" size={16} color="#8B5CF6" />
-                  </View>
-                  <Text style={[styles.ruleText, { color: theme.text }]}>Move backward and forward between questions freely.</Text>
-                </View>
-
-                <View style={styles.ruleRow}>
-                  <View style={[styles.ruleIconWrap, { backgroundColor: '#10B98115' }]}>
-                    <MaterialCommunityIcons name="clipboard-check-outline" size={16} color="#10B981" />
-                  </View>
-                  <Text style={[styles.ruleText, { color: theme.text }]}>Review and edit your answers before final submission.</Text>
-                </View>
-
-                <View style={styles.ruleRow}>
-                  <View style={[styles.ruleIconWrap, { backgroundColor: '#6366F115' }]}>
-                    <MaterialCommunityIcons name="shield-lock-outline" size={16} color="#6366F1" />
-                  </View>
-                  <Text style={[styles.ruleText, { color: theme.text }]}>Graded securely by the server after submission.</Text>
-                </View>
-              </View>
-            </ScrollView>
-
-            <View style={styles.rulesActionRow}>
-              <TouchableOpacity
-                style={[styles.rulesBackBtn, { borderColor: theme.border }]}
-                onPress={() => {
-                  setShowFairPlayModal(false);
-                  abandonQuiz();
-                  setAssessmentTimeLeft(0);
-                  setIsStarted(false);
-                  router.back();
-                }}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.rulesBackBtnText, { color: theme.textSecondary }]}>Go Back</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.rulesStartBtn, { backgroundColor: theme.primary }]}
-                onPress={() => {
-                  setShowFairPlayModal(false);
-                  hasHandledTimeExpiry.current = false;
-                  setIsPreparing(false);
-                  setIsStarted(true);
-                }}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.rulesStartBtnText}>I Understand, Start</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      {renderFairPlayModal()}
 
 </SafeAreaView>
     );

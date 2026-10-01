@@ -221,6 +221,8 @@ export default function HomeScreen() {
           facultyId: 'mixed',
           facultyName: 'All Faculties Practice',
           facultyCode: 'MIXED',
+          departmentName: 'All Faculties Practice',
+          departmentCode: 'MIXED',
         },
       });
 

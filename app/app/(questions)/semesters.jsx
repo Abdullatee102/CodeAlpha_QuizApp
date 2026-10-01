@@ -58,21 +58,28 @@ export default function SemestersScreen() {
     isMixed,
   } = params;
 
+  const isMixedQuiz = isMixed === 'true' || facultyId === 'mixed';
+  const displayName = isMixedQuiz
+    ? (facultyName || departmentName || 'All Faculties Practice')
+    : (departmentName || facultyName || 'Academic Curriculum');
+  const displayCode = isMixedQuiz
+    ? (facultyCode || departmentCode || 'MIXED')
+    : (departmentCode || facultyCode || '');
+
   const { theme } = useThemeStore();
 
   const handleSemesterPress = (semester) => {
     router.push({
       pathname: '/(questions)/courses',
       params: {
-        departmentId,
-        departmentName,
-        departmentCode,
+        departmentId: isMixedQuiz ? 'mixed' : departmentId,
+        departmentName: displayName,
+        departmentCode: displayCode,
         facultyId,
         facultyName,
         facultyCode,
         level,
-        isMixed:
-          isMixed || (facultyId === 'mixed' ? 'true' : 'false'),
+        isMixed: isMixedQuiz ? 'true' : 'false',
         semester: semester.value,
       },
     });
@@ -210,7 +217,7 @@ export default function SemestersScreen() {
             ]}
             numberOfLines={1}
           >
-            {departmentName} | {level} Level
+            {displayName} | {level} Level
           </Text>
         </View>
       </View>
@@ -250,7 +257,7 @@ export default function SemestersScreen() {
             ]}
             numberOfLines={2}
           >
-            {departmentName}
+            {displayName}
           </Text>
 
           <Text
@@ -261,7 +268,7 @@ export default function SemestersScreen() {
               },
             ]}
           >
-            {departmentCode} | {level} Level
+            {displayCode ? `${displayCode} | ` : ''}{level} Level
           </Text>
         </View>
       </View>
