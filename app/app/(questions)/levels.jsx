@@ -26,6 +26,8 @@ const LEVELS = [100, 200, 300, 400, 500];
 export default function LevelsScreen() {
   const router = useRouter();
 
+  const params = useLocalSearchParams();
+
   const {
     departmentId,
     departmentName,
@@ -34,8 +36,7 @@ export default function LevelsScreen() {
     facultyName,
     facultyCode,
     isMixed,
-  } = useLocalSearchParams();
-
+  } = params;
 
   const { theme } = useThemeStore();
 
@@ -49,7 +50,8 @@ export default function LevelsScreen() {
         facultyId,
         facultyName,
         facultyCode,
-        isMixed: isMixed || (facultyId === 'mixed' ? 'true' : 'false'),
+        isMixed:
+          isMixed || (facultyId === 'mixed' ? 'true' : 'false'),
         level: String(level),
       },
     });
@@ -65,6 +67,7 @@ export default function LevelsScreen() {
 
   const renderLevel = ({ item }) => {
     const accentColor = LEVEL_COLORS[item] || theme.primary;
+
     return (
       <TouchableOpacity
         style={[
@@ -93,15 +96,23 @@ export default function LevelsScreen() {
         </View>
 
         <View style={styles.levelInfo}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+            }}
+          >
             <Text
               style={[
                 styles.levelTitle,
-                { color: theme.text },
+                {
+                  color: theme.text,
+                },
               ]}
             >
               {item} Level
             </Text>
+
             <View
               style={{
                 marginLeft: 8,
@@ -126,7 +137,9 @@ export default function LevelsScreen() {
           <Text
             style={[
               styles.levelSubtitle,
-              { color: theme.textSecondary, marginTop: 4 },
+              {
+                color: theme.textSecondary,
+              },
             ]}
           >
             Academic curriculum & courses for {item}L
@@ -156,6 +169,7 @@ export default function LevelsScreen() {
         <TouchableOpacity
           onPress={() => router.back()}
           style={styles.backButton}
+          activeOpacity={0.7}
         >
           <Ionicons
             name="arrow-back"
@@ -168,7 +182,9 @@ export default function LevelsScreen() {
           <Text
             style={[
               styles.headerTitle,
-              { color: theme.text },
+              {
+                color: theme.text,
+              },
             ]}
           >
             Select Level
@@ -177,7 +193,9 @@ export default function LevelsScreen() {
           <Text
             style={[
               styles.headerSubtitle,
-              { color: theme.textSecondary },
+              {
+                color: theme.textSecondary,
+              },
             ]}
             numberOfLines={1}
           >
@@ -215,7 +233,9 @@ export default function LevelsScreen() {
           <Text
             style={[
               styles.departmentName,
-              { color: theme.text },
+              {
+                color: theme.text,
+              },
             ]}
             numberOfLines={2}
           >
@@ -225,7 +245,9 @@ export default function LevelsScreen() {
           <Text
             style={[
               styles.departmentCode,
-              { color: theme.textSecondary },
+              {
+                color: theme.textSecondary,
+              },
             ]}
           >
             {departmentCode}
@@ -238,7 +260,9 @@ export default function LevelsScreen() {
         <Text
           style={[
             styles.sectionTitle,
-            { color: theme.text },
+            {
+              color: theme.text,
+            },
           ]}
         >
           Choose your level

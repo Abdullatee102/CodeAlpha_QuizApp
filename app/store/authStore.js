@@ -930,7 +930,6 @@ export const useAuthStore = create(
       verifyOTP: async (
         code,
         identifier,
-        fullName
         fullName,
         skipAutoLogin = false
       ) => {

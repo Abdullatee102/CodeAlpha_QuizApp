@@ -862,6 +862,7 @@ export const useQuizStore = create(
         }
       },
 
+      
       // =====================================================
       // FETCH QUESTIONS
       // =====================================================
@@ -869,50 +870,38 @@ export const useQuizStore = create(
       fetchQuestions: async (
         courseId,
         type = 'cbt',
-        courseCode = null
         courseCode = null,
         level = null
       ) => {
-        const normalizedType =
-          String(
-            type || 'cbt'
-          ).toLowerCase();
+        const normalizedType = String(type || 'cbt').toLowerCase();
 
         set({
           isLoading: true,
-
           error: null,
-
-          currentQuizType:
-            normalizedType,
-
+          currentQuizType: normalizedType,
           answers: [],
-
           serverGrading: null,
-
-          theoryGrading:
-            createTheoryGradingState(),
+          theoryGrading: createTheoryGradingState(),
         });
 
         try {
-          const response =
-            await api.get(
           let response;
+
+          // Mixed-faculty practice quiz
           if (courseId === 'mixed' || courseCode === 'MIXED') {
             response = await api.get('/auth/questions/mixed', {
               params: {
                 type: normalizedType,
-                ...(level ? { level } : {}),
+                ...(level ? { level: Number(level) } : {}),
                 limit: 30,
               },
             });
           } else {
+            // Regular course quiz
             response = await api.get(
               `/auth/courses/${courseId}/questions`,
               {
                 params: {
-                  type:
-                    normalizedType,
                   type: normalizedType,
                 },
               }
@@ -925,106 +914,59 @@ export const useQuizStore = create(
             response.data ||
             [];
 
-          /*
-           * The backend deliberately does NOT send
-           * correctAnswer anymore.
-           */
-          const fetchedQuestions =
-            JSON.parse(
-              JSON.stringify(
-                rawQuestions
-              )
-            );
+          const fetchedQuestions = Array.isArray(rawQuestions)
+            ? JSON.parse(JSON.stringify(rawQuestions))
+            : [];
 
-          if (
-            fetchedQuestions.length >
-            0
-          ) {
-            const totalQuestions =
-              fetchedQuestions.length;
-
+          if (fetchedQuestions.length > 0) {
             set({
-              questions:
-                fetchedQuestions,
-
-              currentQuestionIndex:
-                0,
-
+              questions: fetchedQuestions,
+              currentQuestionIndex: 0,
               score: 0,
-
               isLoading: false,
-
-              currentCourseId:
-                courseId,
-
-              currentCategory:
-                String(
-                  courseCode ||
-                    courseId
-                ).toLowerCase(),
-
-              currentQuizType:
-                normalizedType,
-
+              currentCourseId: courseId,
+              currentCategory: String(courseCode || courseId).toLowerCase(),
+              currentQuizType: normalizedType,
               activeSessionId:
                 response.data?.attemptId ||
                 `${courseId}_${normalizedType}_${Date.now()}`,
-
-              currentAttemptId:
-                response.data?.attemptId ||
-                null,
-
+              currentAttemptId: response.data?.attemptId || null,
               isFinished: false,
-
               answers: [],
-
               serverGrading: null,
-
-              theoryGrading:
-                createTheoryGradingState(),
-
-              results:
-                createResultsState(),
+              theoryGrading: createTheoryGradingState(),
+              results: createResultsState(),
             });
 
             return {
               success: true,
-
-              count:
-                fetchedQuestions.length,
-
-              totalQuestions,
+              count: fetchedQuestions.length,
+              totalQuestions: fetchedQuestions.length,
             };
           }
 
           set({
             isLoading: false,
-
             questions: [],
           });
 
           return {
             success: false,
             count: 0,
+            message: 'No questions are available for this assessment.',
           };
         } catch (err) {
-          const formatted =
-            formatAxiosError(err);
+          const formatted = formatAxiosError(err);
 
           set({
             isLoading: false,
-
-            error:
-              formatted.message,
-
+            error: formatted.message,
             questions: [],
           });
 
           return {
             success: false,
-
-            error:
-              formatted.message,
+            error: formatted.message,
           };
         }
       },

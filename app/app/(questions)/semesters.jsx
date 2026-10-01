@@ -29,7 +29,7 @@ const SEMESTERS = [
     subtitle: 'Alpha academic session courses',
     value: 'harmattan',
     icon: 'weather-sunset',
-    color: '#D97706', // Warm Amber
+    color: '#D97706',
   },
   {
     id: 'second',
@@ -38,12 +38,14 @@ const SEMESTERS = [
     subtitle: 'Beta academic session courses',
     value: 'rain',
     icon: 'weather-pouring',
-    color: '#0284C7', // Sky Blue
+    color: '#0284C7',
   },
 ];
 
 export default function SemestersScreen() {
   const router = useRouter();
+
+  const params = useLocalSearchParams();
 
   const {
     departmentId,
@@ -54,8 +56,7 @@ export default function SemestersScreen() {
     facultyCode,
     level,
     isMixed,
-  } = useLocalSearchParams();
-
+  } = params;
 
   const { theme } = useThemeStore();
 
@@ -70,7 +71,8 @@ export default function SemestersScreen() {
         facultyName,
         facultyCode,
         level,
-        isMixed: isMixed || (facultyId === 'mixed' ? 'true' : 'false'),
+        isMixed:
+          isMixed || (facultyId === 'mixed' ? 'true' : 'false'),
         semester: semester.value,
       },
     });
@@ -105,15 +107,23 @@ export default function SemestersScreen() {
         </View>
 
         <View style={styles.semesterInfo}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+            }}
+          >
             <Text
               style={[
                 styles.semesterTitle,
-                { color: theme.text },
+                {
+                  color: theme.text,
+                },
               ]}
             >
               {item.name}
             </Text>
+
             <View
               style={{
                 marginLeft: 8,
@@ -138,7 +148,9 @@ export default function SemestersScreen() {
           <Text
             style={[
               styles.semesterSubtitle,
-              { color: theme.textSecondary, marginTop: 4 },
+              {
+                color: theme.textSecondary,
+              },
             ]}
           >
             {item.subtitle}
@@ -168,6 +180,7 @@ export default function SemestersScreen() {
         <TouchableOpacity
           onPress={() => router.back()}
           style={styles.backButton}
+          activeOpacity={0.7}
         >
           <Ionicons
             name="arrow-back"
@@ -180,7 +193,9 @@ export default function SemestersScreen() {
           <Text
             style={[
               styles.headerTitle,
-              { color: theme.text },
+              {
+                color: theme.text,
+              },
             ]}
           >
             Select Semester
@@ -189,7 +204,9 @@ export default function SemestersScreen() {
           <Text
             style={[
               styles.headerSubtitle,
-              { color: theme.textSecondary },
+              {
+                color: theme.textSecondary,
+              },
             ]}
             numberOfLines={1}
           >
@@ -227,7 +244,9 @@ export default function SemestersScreen() {
           <Text
             style={[
               styles.departmentName,
-              { color: theme.text },
+              {
+                color: theme.text,
+              },
             ]}
             numberOfLines={2}
           >
@@ -237,7 +256,9 @@ export default function SemestersScreen() {
           <Text
             style={[
               styles.selectionDetails,
-              { color: theme.textSecondary },
+              {
+                color: theme.textSecondary,
+              },
             ]}
           >
             {departmentCode} | {level} Level
@@ -250,7 +271,9 @@ export default function SemestersScreen() {
         <Text
           style={[
             styles.sectionTitle,
-            { color: theme.text },
+            {
+              color: theme.text,
+            },
           ]}
         >
           Choose your semester

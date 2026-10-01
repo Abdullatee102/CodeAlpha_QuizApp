@@ -17,6 +17,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Modal,
 } from 'react-native';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -27,7 +28,10 @@ import {
   useNavigation,
 } from 'expo-router';
 
-import { Ionicons } from '@expo/vector-icons';
+import {
+  Ionicons,
+  MaterialCommunityIcons,
+} from '@expo/vector-icons';
 
 import { Colors } from '../../constants/colors';
 
@@ -210,6 +214,11 @@ export default function QuizScreen() {
     setIsResultShown,
   ] = useState(false);
 
+  const [
+    showFairPlayModal,
+    setShowFairPlayModal,
+  ] = useState(false);
+
   /*
    * =========================================================
    * GLOBAL ASSESSMENT TIMER
@@ -325,230 +334,183 @@ export default function QuizScreen() {
     let isMounted = true;
 
     const initializeQuiz =
-      async () => {
-        /*
-         * Always abandon any previous quiz session before
-         * initializing this one.
-         */
-        abandonQuiz();
+  async () => {
+    /*
+     * Always abandon any previous quiz session before
+     * initializing this one.
+     */
+    abandonQuiz();
 
-        setIsStarted(false);
+    setIsStarted(false);
+    setIsPreparing(true);
+    setNoCourse(false);
+    setNoQuestions(false);
+    setSelectedOption(null);
+    setTheoryAnswer('');
+    setIsAnswered(false);
+    setIsReviewing(false);
+    setIsEditingReview(false);
+    setIsSubmittingFinalQuiz(false);
+    setIsResultShown(false);
+    setReviewDrafts({});
 
-        setIsPreparing(true);
+    /*
+     * Reset the local assessment timer before loading
+     * the new assessment.
+     */
+    setAssessmentTimeLeft(0);
 
-        setNoCourse(false);
+    hasSubmittedQuiz.current = false;
+    hasHandledTimeExpiry.current = false;
+    pendingQuizDataRef.current = null;
 
-        setNoQuestions(false);
-
-        setSelectedOption(null);
-
-        setTheoryAnswer('');
-
-        setIsAnswered(false);
-
-        setIsReviewing(false);
-
-        setIsEditingReview(false);
-
-        setIsSubmittingFinalQuiz(
-          false
-        );
-
-        setIsResultShown(false);
-
-        setReviewDrafts({});
-
-        /*
-         * Reset the local assessment timer before loading
-         * the new assessment.
-         */
-        setAssessmentTimeLeft(0);
-
-        hasSubmittedQuiz.current =
-          false;
-
-        hasHandledTimeExpiry.current =
-          false;
-
-        pendingQuizDataRef.current =
-          null;
-
-        if (!resolvedCourseId) {
-          if (isMounted) {
-            setIsLoading(false);
-
-            setIsPreparing(false);
-
-            setNoCourse(true);
-          }
-
-          return;
-        }
-
-        if (
-          resolvedQuizType !==
-            'cbt' &&
-          resolvedQuizType !==
-            'theory'
-        ) {
-          if (isMounted) {
-            setIsLoading(false);
-
-            setIsPreparing(false);
-
-            setNoQuestions(true);
-          }
-
-          return;
-        }
-
-        setIsLoading(true);
-
-        let res = {
-          success: false,
-        };
-
-        try {
-          const timeoutPromise =
-            new Promise(
-              (_, reject) =>
-                setTimeout(
-                  () =>
-                    reject(
-                      new Error(
-                        'Network timeout'
-                      )
-                    ),
-                  10000
-                )
-            );
-
-          res =
-            await Promise.race([
-              fetchQuestions(
-                resolvedCourseId,
-                resolvedQuizType,
-                Array.isArray(
-                  courseCode
-                )
-                  ? courseCode[0]
-                  : courseCode
-              ),
-
-              timeoutPromise,
-            ]);
-        } catch (err) {
-          console.warn(
-            'Fetch questions timed out or failed:',
-            err
-          );
-        }
-
-        if (!isMounted) {
-          return;
-        }
-
-        const currentQuestions =
-          useQuizStore.getState()
-            .questions;
-
-        const finalQuestionsCount =
-          currentQuestions.length;
-
-        if (
-          res?.success &&
-          finalQuestionsCount > 0
-        ) {
-          setIsLoading(false);
-
-          /*
-           * =====================================================
-           * IMPORTANT:
-           *
-           * Calculate the TOTAL assessment time from the actual
-           * number of questions returned by the server.
-           *
-           * CBT:
-           *   5 questions Ã— 30 seconds = 150 seconds = 02:30
-           *
-           * THEORY:
-           *   5 questions Ã— 100 seconds = 500 seconds = 08:20
-           * =====================================================
-           */
-          const totalAssessmentSeconds =
-            getTotalAssessmentSeconds(
-              finalQuestionsCount
-            );
-
-          /*
-           * Initialize the local global timer.
-           *
-           * The timer will NOT start counting down yet.
-           * It starts only after the user presses
-           * "I Understand, Start".
-           */
-          setAssessmentTimeLeft(
-            totalAssessmentSeconds
-          );
-
-          /*
-           * Keep preparation visible underneath
-           * the Fair Play alert.
-           */
-          setIsPreparing(true);
-
-          initializationTimeoutRef.current =
-            setTimeout(() => {
-              if (!isMounted) {
-                return;
-              }
-
-              const currentState =
-                useQuizStore.getState();
-
-              const questionCount =
-                currentState.questions
-                  .length;
-
-              const totalSeconds =
-                getTotalAssessmentSeconds(
-                  questionCount
-                );
-
-              setShowFairPlayModal(true);
-        return;
+    if (!resolvedCourseId) {
+      if (isMounted) {
+        setIsLoading(false);
+        setIsPreparing(false);
+        setNoCourse(true);
       }
 
-      Alert.alert(
-        'Quiz Completed!',
-        `Score: ${finalScore}%\n\nPoints: ${scorePoints}/${totalQuestions * 10}\n\nCorrect: ${correctCount}/${totalQuestions}\n\nWrong: ${wrongCount}`,
-        [
-          {
-            text:
-              'Share Report',
-            onPress: () =>
-              handleDownloadReport(),
-          },
-          {
-            text: 'Done',
-            onPress: () => {
-              abandonQuiz();
-              router.replace(
-                '/(main)'
-              );
-            },
-          },
-        ],
-        {
-          cancelable:
-            false,
-        }
-      );
+      return;
+    }
+
+    if (
+      resolvedQuizType !== 'cbt' &&
+      resolvedQuizType !== 'theory'
+    ) {
+      if (isMounted) {
+        setIsLoading(false);
+        setIsPreparing(false);
+        setNoQuestions(true);
+      }
+
+      return;
+    }
+
+    setIsLoading(true);
+
+    let res = {
+      success: false,
     };
+
+    try {
+      const timeoutPromise =
+        new Promise((_, reject) =>
+          setTimeout(
+            () =>
+              reject(
+                new Error(
+                  'Network timeout'
+                )
+              ),
+            10000
+          )
+        );
+
+      res = await Promise.race([
+        fetchQuestions(
+          resolvedCourseId,
+          resolvedQuizType,
+          Array.isArray(courseCode)
+            ? courseCode[0]
+            : courseCode
+        ),
+        timeoutPromise,
+      ]);
+    } catch (err) {
+      console.warn(
+        'Fetch questions timed out or failed:',
+        err
+      );
+    }
+
+    if (!isMounted) {
+      return;
+    }
+
+    const currentQuestions =
+      useQuizStore.getState().questions;
+
+    const finalQuestionsCount =
+      currentQuestions.length;
+
+    if (
+      res?.success &&
+      finalQuestionsCount > 0
+    ) {
+      setIsLoading(false);
+
+      /*
+       * Calculate the TOTAL assessment time from
+       * the actual number of questions returned.
+       */
+      const totalAssessmentSeconds =
+        getTotalAssessmentSeconds(
+          finalQuestionsCount
+        );
+
+      /*
+       * Initialize the local global timer.
+       *
+       * The timer does NOT start counting down yet.
+       * It starts only after the user presses
+       * "I Understand, Start".
+       */
+      setAssessmentTimeLeft(
+        totalAssessmentSeconds
+      );
+
+      /*
+       * Keep preparation visible underneath
+       * the Fair Play modal.
+       */
+      setIsPreparing(true);
+
+      initializationTimeoutRef.current =
+        setTimeout(() => {
+          if (!isMounted) {
+            return;
+          }
+
+          const currentState =
+            useQuizStore.getState();
+
+          const questionCount =
+            currentState.questions.length;
+
+          const totalSeconds =
+            getTotalAssessmentSeconds(
+              questionCount
+            );
+
+          setAssessmentTimeLeft(
+            totalSeconds
+          );
+
+          setShowFairPlayModal(true);
+        }, 300);
+    } else {
+      setIsLoading(false);
+      setIsPreparing(false);
+      setNoQuestions(true);
+    }
+  };
+
+  initializeQuiz();
+
+  return () => {
+    isMounted = false;
+    if (initializationTimeoutRef.current) {
+      clearTimeout(initializationTimeoutRef.current);
+    }
+  };
+}, [resolvedCourseId, resolvedQuizType]);
+
 
   // =========================================================
   // SHOW RESULT ONCE
   // =========================================================
+
 
   useEffect(() => {
     if (

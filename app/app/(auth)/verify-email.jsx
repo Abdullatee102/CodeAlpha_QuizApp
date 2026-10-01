@@ -100,7 +100,6 @@ export default function VerifyEmail() {
     const res = await verifyOTP(
       otpCode,
       identifier,
-      fullName
       fullName,
       isPasswordResetFlow
     );
