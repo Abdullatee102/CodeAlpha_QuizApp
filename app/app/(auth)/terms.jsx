@@ -16,7 +16,7 @@ import { useRouter } from 'expo-router';
 
 import { useThemeStore } from '../../store/themeStore';
 
-export default function TermsScreen() {
+export default function Terms() {
   const router = useRouter();
   const { theme } = useThemeStore();
 

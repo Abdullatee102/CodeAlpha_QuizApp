@@ -223,7 +223,7 @@ export default function EditProfileScreen() {
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
             <MaterialCommunityIcons name="arrow-left" size={24} color={theme.text} />
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: theme.text }]}>Edit Profile</Text>
+          <Text style={[styles.headerTitle, { color: theme.primary }]}>Edit Profile</Text>
           <View style={{ width: 24 }} />
         </View>
 

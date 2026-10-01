@@ -83,3 +83,12 @@ export function useAddSupportMessageMutation() {
     },
   });
 }
+
+export function useAskAIAssistantMutation() {
+  return useMutation({
+    mutationFn: async ({ message }) => {
+      const response = await api.post('/support/ai-assistant', { message });
+      return response.data?.data;
+    }
+  });
+}

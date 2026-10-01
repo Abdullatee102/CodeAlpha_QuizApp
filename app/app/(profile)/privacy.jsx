@@ -86,7 +86,7 @@ export default function PrivacyScreen() {
           style={[
             styles.sectionTitle,
             {
-              color: theme.primary,
+              color: theme.text,
             },
           ]}
         >
@@ -112,7 +112,7 @@ export default function PrivacyScreen() {
           style={[
             styles.sectionTitle,
             {
-              color: theme.primary,
+              color: theme.text,
             },
           ]}
         >
@@ -138,7 +138,7 @@ export default function PrivacyScreen() {
           style={[
             styles.sectionTitle,
             {
-              color: theme.primary,
+              color: theme.text,
             },
           ]}
         >
@@ -166,7 +166,7 @@ export default function PrivacyScreen() {
           style={[
             styles.sectionTitle,
             {
-              color: theme.primary,
+              color: theme.text,
             },
           ]}
         >
@@ -192,7 +192,7 @@ export default function PrivacyScreen() {
           style={[
             styles.sectionTitle,
             {
-              color: theme.primary,
+              color: theme.text,
             },
           ]}
         >
@@ -217,7 +217,7 @@ export default function PrivacyScreen() {
           style={[
             styles.sectionTitle,
             {
-              color: theme.primary,
+              color: theme.text,
             },
           ]}
         >
@@ -244,7 +244,7 @@ export default function PrivacyScreen() {
           style={[
             styles.sectionTitle,
             {
-              color: theme.primary,
+              color: theme.text,
             },
           ]}
         >

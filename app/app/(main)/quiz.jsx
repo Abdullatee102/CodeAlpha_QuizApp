@@ -516,7 +516,7 @@ export default function QuizScreen() {
                 );
 
               Alert.alert(
-                'Fair Play Rules ðŸ›¡ï¸',
+                'Fair Play Rules ???|',
 
                 `${
                   isTheory
@@ -1946,7 +1946,7 @@ export default function QuizScreen() {
               )
                 ? courseCode[0]
                 : courseCode
-            } â€¢ ${resolvedQuizType.toUpperCase()}`,
+            } | ${resolvedQuizType.toUpperCase()}`,
 
           /*
            * finalScore represents POINTS.
@@ -2071,10 +2071,10 @@ export default function QuizScreen() {
         let theoryMessage = `Percentage: ${finalScore}%\nPoints: ${scorePoints} / ${maxScore}\nQuestions Evaluated: ${totalQuestions}`;
 
         if (matched.length > 0) {
-          theoryMessage += `\n\nâœ“ Matched Rubric Concepts (${matched.length}):\nâ€¢ ${matched.slice(0, 6).join('\nâ€¢ ')}`;
+          theoryMessage += `\n\nâœ“ Matched Rubric Concepts (${matched.length}):\n| ${matched.slice(0, 6).join('\n| ')}`;
         }
         if (missing.length > 0) {
-          theoryMessage += `\n\nâœ— Missing Rubric Concepts (${missing.length}):\nâ€¢ ${missing.slice(0, 6).join('\nâ€¢ ')}`;
+          theoryMessage += `\n\nâœ— Missing Rubric Concepts (${missing.length}):\n| ${missing.slice(0, 6).join('\n| ')}`;
         }
         if (feedback) {
           theoryMessage += `\n\nRubric Feedback:\n${feedback}`;
@@ -2222,7 +2222,7 @@ export default function QuizScreen() {
                 },
               ]}
             >
-              {Array.isArray(courseCode) ? courseCode[0] : courseCode || 'Assessment'} â€¢{' '}
+              {Array.isArray(courseCode) ? courseCode[0] : courseCode || 'Assessment'} |{' '}
               {resolvedQuizType.toUpperCase()}
             </Text>
 
@@ -2609,7 +2609,7 @@ export default function QuizScreen() {
             : isLoading
               ? 'Please wait while your assessment is prepared.'
               : questions.length > 0
-                ? `${questions.length} questions â€¢ ${secondsPerQuestion} seconds per question â€¢ ${formatDuration(
+                ? `${questions.length} questions | ${secondsPerQuestion} seconds per question | ${formatDuration(
                     getTotalAssessmentSeconds(
                       questions.length
                     )
@@ -2859,7 +2859,7 @@ export default function QuizScreen() {
               )
                 ? courseCode[0]
                 : courseCode}{' '}
-              â€¢{' '}
+              |{' '}
               {resolvedQuizType.toUpperCase()}
             </Text>
 
@@ -2889,7 +2889,7 @@ export default function QuizScreen() {
                 },
               ]}
             >
-              {level} Level â€¢{' '}
+              {level} Level |{' '}
               {semester}{' '}
               Semester
             </Text>
@@ -3651,7 +3651,7 @@ export default function QuizScreen() {
               )
                 ? courseCode[0]
                 : courseCode}{' '}
-              â€¢{' '}
+              |{' '}
               {resolvedQuizType.toUpperCase()}
             </Text>
 
@@ -4077,7 +4077,7 @@ export default function QuizScreen() {
                   ]}
                 >
                   {assessmentTimeExpired
-                    ? 'Time expired â€¢ answers locked'
+                    ? 'Time expired | answers locked'
                     : `${formatDuration(
                         assessmentTimeLeft
                       )} remaining`}

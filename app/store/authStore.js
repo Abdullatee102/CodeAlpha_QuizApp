@@ -1828,6 +1828,31 @@ export const useAuthStore = create(
       },
 
       // =====================================================
+      // FETCH FACULTIES & DEPARTMENTS
+      // =====================================================
+
+      fetchFaculties: async () => {
+        try {
+          const res = await api.get('/auth/faculties');
+          return res.data?.data || [];
+        } catch (err) {
+          console.warn('[AUTH] Failed to fetch faculties:', err);
+          return [];
+        }
+      },
+
+      fetchDepartments: async (facultyId) => {
+        if (!facultyId) return [];
+        try {
+          const res = await api.get(`/auth/faculties/${facultyId}/departments`);
+          return res.data?.data || [];
+        } catch (err) {
+          console.warn('[AUTH] Failed to fetch departments:', err);
+          return [];
+        }
+      },
+
+      // =====================================================
       // DELETE ACCOUNT
       // =====================================================
 

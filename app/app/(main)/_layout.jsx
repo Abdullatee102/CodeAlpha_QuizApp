@@ -91,13 +91,6 @@ export default function TabsLayout() {
         }}
       />
 
-      {/* History remains fully accessible via router.push('/history') and Profile, but is removed from bottom tab bar */}
-      <Tabs.Screen
-        name="history"
-        options={{
-          href: null,
-        }}
-      />
     </Tabs>
   );
 }

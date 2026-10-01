@@ -52,8 +52,10 @@ export default function ProfileScreen() {
       if (item.percentage !== undefined && item.percentage !== null) {
         return Number(item.percentage);
       }
+
       const totalQ = Number(item.totalQuestions || 0);
       const score = Number(item.score || 0);
+
       return totalQ > 0 ? (score / (totalQ * 10)) * 100 : 0;
     });
 
@@ -68,28 +70,41 @@ export default function ProfileScreen() {
           .map((h) => {
             const raw = h.createdAt || h.date || h.timestamp;
             if (!raw) return null;
+
             const d = new Date(raw);
-            return isNaN(d.getTime()) ? null : d.toISOString().split('T')[0];
+            return isNaN(d.getTime())
+              ? null
+              : d.toISOString().split('T')[0];
           })
           .filter(Boolean)
       ),
     ].sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
 
     let calculatedStreak = 0;
+
     if (uniqueDates.length > 0) {
       const todayStr = new Date().toISOString().split('T')[0];
+
       const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
+
       const yesterdayStr = yesterday.toISOString().split('T')[0];
 
-      if (uniqueDates[0] === todayStr || uniqueDates[0] === yesterdayStr) {
+      if (
+        uniqueDates[0] === todayStr ||
+        uniqueDates[0] === yesterdayStr
+      ) {
         calculatedStreak = 1;
+
         for (let i = 1; i < uniqueDates.length; i++) {
           const prev = new Date(uniqueDates[i - 1]);
           const curr = new Date(uniqueDates[i]);
+
           const diffDays = Math.round(
-            (prev.getTime() - curr.getTime()) / (1000 * 60 * 60 * 24)
+            (prev.getTime() - curr.getTime()) /
+              (1000 * 60 * 60 * 24)
           );
+
           if (diffDays === 1) {
             calculatedStreak++;
           } else {
@@ -124,12 +139,15 @@ export default function ProfileScreen() {
     profile?.faculty && typeof profile.faculty === 'object'
       ? profile.faculty
       : null;
+
   const facultyName =
     facultyObj?.name ||
     (typeof profile?.faculty === 'string' ? profile.faculty : null) ||
     profile?.facultyName ||
     null;
+
   const facultyCode = facultyObj?.code || profile?.facultyCode || null;
+
   const displayFaculty = facultyName
     ? facultyCode && !facultyName.includes(facultyCode)
       ? `${facultyName} (${facultyCode})`
@@ -140,12 +158,18 @@ export default function ProfileScreen() {
     profile?.department && typeof profile.department === 'object'
       ? profile.department
       : null;
+
   const departmentName =
     departmentObj?.name ||
-    (typeof profile?.department === 'string' ? profile.department : null) ||
+    (typeof profile?.department === 'string'
+      ? profile.department
+      : null) ||
     profile?.departmentName ||
     null;
-  const departmentCode = departmentObj?.code || profile?.departmentCode || null;
+
+  const departmentCode =
+    departmentObj?.code || profile?.departmentCode || null;
+
   const displayDepartment = departmentName
     ? departmentCode && !departmentName.includes(departmentCode)
       ? `${departmentName} (${departmentCode})`
@@ -155,7 +179,9 @@ export default function ProfileScreen() {
   const studentLevel = profile?.level ? Number(profile.level) : null;
 
   const pickImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    const { status } =
+      await ImagePicker.requestMediaLibraryPermissionsAsync();
+
     if (status !== 'granted') {
       Alert.alert(
         'Permission Required',
@@ -165,7 +191,7 @@ export default function ProfileScreen() {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.7,
@@ -174,11 +200,24 @@ export default function ProfileScreen() {
     if (!result.canceled && result.assets[0]?.uri) {
       try {
         setUploading(true);
-        await updateProfile({ photoURL: result.assets[0].uri });
-        queryClient.invalidateQueries({ queryKey: ['profile'] });
-        Alert.alert('Success', 'Profile photo updated successfully!');
+
+        await updateProfile({
+          photoURL: result.assets[0].uri,
+        });
+
+        queryClient.invalidateQueries({
+          queryKey: ['profile'],
+        });
+
+        Alert.alert(
+          'Success',
+          'Profile photo updated successfully!'
+        );
       } catch (err) {
-        Alert.alert('Upload Failed', err?.message || 'Could not update photo.');
+        Alert.alert(
+          'Upload Failed',
+          err?.message || 'Could not update photo.'
+        );
       } finally {
         setUploading(false);
       }
@@ -187,35 +226,75 @@ export default function ProfileScreen() {
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '';
+
     const date = new Date(dateStr);
+
     if (isNaN(date.getTime())) return '';
-    return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+
+    return date.toLocaleDateString([], {
+      month: 'short',
+      day: 'numeric',
+    });
   };
 
   return (
     <SafeAreaView
-      style={[styles.container, { backgroundColor: theme.background }]}
+      style={[
+        styles.container,
+        { backgroundColor: theme.background },
+      ]}
       edges={['top', 'left', 'right']}
     >
       {/* Top Header with Profile title & Settings / Edit Icons */}
       <View style={styles.topBar}>
-        <Text style={[styles.screenTitle, { color: theme.text }]}>
+        <Text
+          style={[
+            styles.screenTitle,
+            { color: theme.text },
+          ]}
+        >
           Scholar Profile
         </Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 8,
+          }}
+        >
           <TouchableOpacity
             onPress={() => router.push('/edit-profile')}
-            style={[styles.settingsButton, { backgroundColor: `${theme.primary}12` }]}
+            style={[
+              styles.settingsButton,
+              {
+                backgroundColor: `${theme.primary}12`,
+              },
+            ]}
             activeOpacity={0.7}
           >
-            <Ionicons name="pencil" size={18} color={theme.primary} />
+            <Ionicons
+              name="pencil"
+              size={18}
+              color={theme.primary}
+            />
           </TouchableOpacity>
+
           <TouchableOpacity
             onPress={() => router.push('/settings')}
-            style={[styles.settingsButton, { backgroundColor: `${theme.primary}12` }]}
+            style={[
+              styles.settingsButton,
+              {
+                backgroundColor: `${theme.primary}12`,
+              },
+            ]}
             activeOpacity={0.7}
           >
-            <Ionicons name="settings-outline" size={20} color={theme.primary} />
+            <Ionicons
+              name="settings-outline"
+              size={20}
+              color={theme.primary}
+            />
           </TouchableOpacity>
         </View>
       </View>
@@ -234,19 +313,29 @@ export default function ProfileScreen() {
             style={styles.avatarWrapper}
           >
             {profileImage ? (
-              <Image source={{ uri: profileImage }} style={styles.avatar} />
+              <Image
+                source={{ uri: profileImage }}
+                style={styles.avatar}
+              />
             ) : (
               <View
                 style={[
                   styles.avatar,
                   styles.initialAvatar,
                   {
-                    backgroundColor: isDarkMode ? '#1E293B' : '#EEF2FF',
+                    backgroundColor: isDarkMode
+                      ? '#1E293B'
+                      : '#EEF2FF',
                     borderColor: theme.primary,
                   },
                 ]}
               >
-                <Text style={[styles.initialText, { color: theme.primary }]}>
+                <Text
+                  style={[
+                    styles.initialText,
+                    { color: theme.primary },
+                  ]}
+                >
                   {userInitial}
                 </Text>
               </View>
@@ -255,29 +344,57 @@ export default function ProfileScreen() {
             <View
               style={[
                 styles.cameraBadge,
-                { backgroundColor: theme.primary, borderColor: theme.background },
+                {
+                  backgroundColor: theme.primary,
+                  borderColor: theme.background,
+                },
               ]}
             >
               {uploading ? (
-                <ActivityIndicator size="small" color="#fff" />
+                <ActivityIndicator
+                  size="small"
+                  color="#fff"
+                />
               ) : (
-                <Ionicons name="camera" size={14} color="#fff" />
+                <Ionicons
+                  name="camera"
+                  size={14}
+                  color="#fff"
+                />
               )}
             </View>
           </TouchableOpacity>
 
-          <Text style={[styles.userName, { color: theme.text }]} numberOfLines={1}>
-            {profile?.fullName || user?.fullName || 'LAUTECH Scholar'}
+          <Text
+            style={[
+              styles.userName,
+              { color: theme.text },
+            ]}
+            numberOfLines={1}
+          >
+            {profile?.fullName ||
+              user?.fullName ||
+              'LAUTECH Scholar'}
           </Text>
 
           {profile?.email ? (
-            <Text style={[styles.userEmail, { color: theme.textSecondary }]}>
+            <Text
+              style={[
+                styles.userEmail,
+                { color: theme.textSecondary },
+              ]}
+            >
               {profile.email}
             </Text>
           ) : null}
 
           {profile?.bio ? (
-            <Text style={[styles.userBio, { color: theme.textSecondary }]}>
+            <Text
+              style={[
+                styles.userBio,
+                { color: theme.textSecondary },
+              ]}
+            >
               {profile.bio}
             </Text>
           ) : null}
@@ -287,18 +404,56 @@ export default function ProfileScreen() {
             2. ACADEMIC INFORMATION (Truthful State)
             ===================================================== */}
         <View style={styles.sectionBlock}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <Text style={[styles.sectionTitle, { color: theme.text, marginBottom: 0 }]}>
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: 12,
+              minWidth: 0,
+            }}
+          >
+            <Text
+              style={[
+                styles.sectionTitle,
+                {
+                  color: theme.text,
+                  marginBottom: 0,
+                  flexShrink: 1,
+                },
+              ]}
+            >
               Academic Information
             </Text>
+
             <TouchableOpacity
               onPress={() => router.push('/edit-profile')}
               activeOpacity={0.7}
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 4,
+                flexShrink: 0,
+              }}
             >
-              <Ionicons name="create-outline" size={16} color={theme.primary} />
-              <Text style={{ fontFamily: 'Ubuntu-Medium', fontSize: 13, color: theme.primary }}>
-                {displayFaculty || displayDepartment || studentLevel ? 'Edit' : 'Configure'}
+              <Ionicons
+                name="create-outline"
+                size={16}
+                color={theme.primary}
+              />
+
+              <Text
+                style={{
+                  fontFamily: 'Ubuntu-Medium',
+                  fontSize: 13,
+                  color: theme.primary,
+                }}
+              >
+                {displayFaculty ||
+                displayDepartment ||
+                studentLevel
+                  ? 'Edit'
+                  : 'Configure'}
               </Text>
             </TouchableOpacity>
           </View>
@@ -306,17 +461,24 @@ export default function ProfileScreen() {
           <View
             style={[
               styles.academicCard,
-              { backgroundColor: theme.card, borderColor: theme.border },
+              {
+                backgroundColor: theme.card,
+                borderColor: theme.border,
+              },
             ]}
           >
-            {displayFaculty || displayDepartment || studentLevel ? (
+            {displayFaculty ||
+            displayDepartment ||
+            studentLevel ? (
               <View style={styles.academicRowList}>
                 {displayFaculty && (
                   <View style={styles.academicItem}>
                     <View
                       style={[
                         styles.academicIconBox,
-                        { backgroundColor: `${theme.primary}14` },
+                        {
+                          backgroundColor: `${theme.primary}14`,
+                        },
                       ]}
                     >
                       <MaterialCommunityIcons
@@ -325,17 +487,24 @@ export default function ProfileScreen() {
                         color={theme.primary}
                       />
                     </View>
+
                     <View style={styles.academicTextContent}>
                       <Text
                         style={[
                           styles.academicLabel,
-                          { color: theme.textSecondary },
+                          {
+                            color: theme.textSecondary,
+                          },
                         ]}
                       >
                         Faculty
                       </Text>
+
                       <Text
-                        style={[styles.academicValue, { color: theme.text }]}
+                        style={[
+                          styles.academicValue,
+                          { color: theme.text },
+                        ]}
                       >
                         {displayFaculty}
                       </Text>
@@ -348,7 +517,9 @@ export default function ProfileScreen() {
                     <View
                       style={[
                         styles.academicIconBox,
-                        { backgroundColor: `${theme.primary}14` },
+                        {
+                          backgroundColor: `${theme.primary}14`,
+                        },
                       ]}
                     >
                       <MaterialCommunityIcons
@@ -357,17 +528,24 @@ export default function ProfileScreen() {
                         color={theme.primary}
                       />
                     </View>
+
                     <View style={styles.academicTextContent}>
                       <Text
                         style={[
                           styles.academicLabel,
-                          { color: theme.textSecondary },
+                          {
+                            color: theme.textSecondary,
+                          },
                         ]}
                       >
                         Department / Programme
                       </Text>
+
                       <Text
-                        style={[styles.academicValue, { color: theme.text }]}
+                        style={[
+                          styles.academicValue,
+                          { color: theme.text },
+                        ]}
                       >
                         {displayDepartment}
                       </Text>
@@ -380,7 +558,9 @@ export default function ProfileScreen() {
                     <View
                       style={[
                         styles.academicIconBox,
-                        { backgroundColor: `${theme.primary}14` },
+                        {
+                          backgroundColor: `${theme.primary}14`,
+                        },
                       ]}
                     >
                       <MaterialCommunityIcons
@@ -389,17 +569,24 @@ export default function ProfileScreen() {
                         color={theme.primary}
                       />
                     </View>
+
                     <View style={styles.academicTextContent}>
                       <Text
                         style={[
                           styles.academicLabel,
-                          { color: theme.textSecondary },
+                          {
+                            color: theme.textSecondary,
+                          },
                         ]}
                       >
                         Academic Level
                       </Text>
+
                       <Text
-                        style={[styles.academicValue, { color: theme.text }]}
+                        style={[
+                          styles.academicValue,
+                          { color: theme.text },
+                        ]}
                       >
                         {studentLevel} Level
                       </Text>
@@ -416,7 +603,9 @@ export default function ProfileScreen() {
                 <View
                   style={[
                     styles.unconfiguredIconBox,
-                    { backgroundColor: `${theme.primary}15` },
+                    {
+                      backgroundColor: `${theme.primary}15`,
+                    },
                   ]}
                 >
                   <MaterialCommunityIcons
@@ -425,20 +614,39 @@ export default function ProfileScreen() {
                     color={theme.primary}
                   />
                 </View>
-                <View style={{ flex: 1, marginLeft: 12 }}>
-                  <Text style={[styles.unconfiguredTitle, { color: theme.text }]}>
+
+                <View
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    marginLeft: 12,
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.unconfiguredTitle,
+                      { color: theme.text },
+                    ]}
+                  >
                     Academic Profile Not Configured
                   </Text>
+
                   <Text
                     style={[
                       styles.unconfiguredDesc,
                       { color: theme.textSecondary },
                     ]}
                   >
-                    Tap here to select your faculty, department, and level for personalized courses.
+                    Tap here to select your faculty, department,
+                    and level for personalized courses.
                   </Text>
                 </View>
-                <Ionicons name="chevron-forward" size={18} color={theme.primary} />
+
+                <Ionicons
+                  name="chevron-forward"
+                  size={18}
+                  color={theme.primary}
+                />
               </TouchableOpacity>
             )}
           </View>
@@ -448,78 +656,157 @@ export default function ProfileScreen() {
             3. QUIZ OVERVIEW (Real Calculated Metrics)
             ===================================================== */}
         <View style={styles.sectionBlock}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>
+          <Text
+            style={[
+              styles.sectionTitle,
+              { color: theme.text },
+            ]}
+          >
             Quiz Overview
           </Text>
 
           <View
             style={[
               styles.metricsGrid,
-              { backgroundColor: theme.card, borderColor: theme.border },
+              {
+                backgroundColor: theme.card,
+                borderColor: theme.border,
+              },
             ]}
           >
             <View style={styles.metricBox}>
               <View
                 style={[
                   styles.metricIconWrap,
-                  { backgroundColor: `${theme.primary}18` },
+                  {
+                    backgroundColor: `${theme.primary}18`,
+                  },
                 ]}
               >
-                <Ionicons name="book-outline" size={18} color={theme.primary} />
+                <Ionicons
+                  name="book-outline"
+                  size={18}
+                  color={theme.primary}
+                />
               </View>
-              <Text style={[styles.metricNumber, { color: theme.text }]}>
+
+              <Text
+                style={[
+                  styles.metricNumber,
+                  { color: theme.text },
+                ]}
+              >
                 {totalQuizzes}
               </Text>
-              <Text style={[styles.metricLabel, { color: theme.textSecondary }]}>
+
+              <Text
+                style={[
+                  styles.metricLabel,
+                  { color: theme.textSecondary },
+                ]}
+              >
                 Quizzes Taken
               </Text>
             </View>
 
-            <View style={[styles.metricDivider, { backgroundColor: theme.border }]} />
+            <View
+              style={[
+                styles.metricDivider,
+                { backgroundColor: theme.border },
+              ]}
+            />
 
             <View style={styles.metricBox}>
               <View
                 style={[
                   styles.metricIconWrap,
-                  { backgroundColor: '#05966918' },
+                  {
+                    backgroundColor: '#05966918',
+                  },
                 ]}
               >
-                <Ionicons name="trending-up" size={18} color="#059669" />
+                <Ionicons
+                  name="trending-up"
+                  size={18}
+                  color="#059669"
+                />
               </View>
-              <Text style={[styles.metricNumber, { color: theme.text }]}>
+
+              <Text
+                style={[
+                  styles.metricNumber,
+                  { color: theme.text },
+                ]}
+              >
                 {averageScore}%
               </Text>
-              <Text style={[styles.metricLabel, { color: theme.textSecondary }]}>
+
+              <Text
+                style={[
+                  styles.metricLabel,
+                  { color: theme.textSecondary },
+                ]}
+              >
                 Average Score
               </Text>
             </View>
 
-            <View style={[styles.metricDivider, { backgroundColor: theme.border }]} />
+            <View
+              style={[
+                styles.metricDivider,
+                { backgroundColor: theme.border },
+              ]}
+            />
 
             <View style={styles.metricBox}>
               <View
                 style={[
                   styles.metricIconWrap,
-                  { backgroundColor: '#EAB30818' },
+                  {
+                    backgroundColor: '#EAB30818',
+                  },
                 ]}
               >
-                <Ionicons name="trophy-outline" size={18} color="#D97706" />
+                <Ionicons
+                  name="trophy-outline"
+                  size={18}
+                  color="#D97706"
+                />
               </View>
-              <Text style={[styles.metricNumber, { color: theme.text }]}>
+
+              <Text
+                style={[
+                  styles.metricNumber,
+                  { color: theme.text },
+                ]}
+              >
                 {bestScore}%
               </Text>
-              <Text style={[styles.metricLabel, { color: theme.textSecondary }]}>
+
+              <Text
+                style={[
+                  styles.metricLabel,
+                  { color: theme.textSecondary },
+                ]}
+              >
                 Best Score
               </Text>
             </View>
 
-            <View style={[styles.metricDivider, { backgroundColor: theme.border }]} />
+            <View
+              style={[
+                styles.metricDivider,
+                { backgroundColor: theme.border },
+              ]}
+            />
 
             <View style={styles.metricBox}>
               <View
                 style={[
                   styles.metricIconWrap,
-                  { backgroundColor: '#DC262618' },
+                  {
+                    backgroundColor: '#DC262618',
+                  },
                 ]}
               >
                 <MaterialCommunityIcons
@@ -528,10 +815,22 @@ export default function ProfileScreen() {
                   color="#DC2626"
                 />
               </View>
-              <Text style={[styles.metricNumber, { color: theme.text }]}>
+
+              <Text
+                style={[
+                  styles.metricNumber,
+                  { color: theme.text },
+                ]}
+              >
                 {streak}
               </Text>
-              <Text style={[styles.metricLabel, { color: theme.textSecondary }]}>
+
+              <Text
+                style={[
+                  styles.metricLabel,
+                  { color: theme.textSecondary },
+                ]}
+              >
                 Day Streak
               </Text>
             </View>
@@ -543,11 +842,28 @@ export default function ProfileScreen() {
             ===================================================== */}
         <View style={styles.sectionBlock}>
           <View style={styles.sectionHeaderRow}>
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>
+            <Text
+              style={[
+                styles.sectionTitle,
+                {
+                  color: theme.text,
+                  flexShrink: 1,
+                },
+              ]}
+            >
               Achievements
             </Text>
-            <TouchableOpacity onPress={() => router.push('/achievements')}>
-              <Text style={[styles.viewAllText, { color: theme.primary }]}>
+
+            <TouchableOpacity
+              onPress={() => router.push('/achievements')}
+              style={styles.headerAction}
+            >
+              <Text
+                style={[
+                  styles.viewAllText,
+                  { color: theme.primary },
+                ]}
+              >
                 View All ({achievements.length})
               </Text>
             </TouchableOpacity>
@@ -557,7 +873,10 @@ export default function ProfileScreen() {
             <View
               style={[
                 styles.emptySectionCard,
-                { backgroundColor: theme.card, borderColor: theme.border },
+                {
+                  backgroundColor: theme.card,
+                  borderColor: theme.border,
+                },
               ]}
             >
               <MaterialCommunityIcons
@@ -565,8 +884,15 @@ export default function ProfileScreen() {
                 size={30}
                 color={theme.textSecondary}
               />
-              <Text style={[styles.emptySectionText, { color: theme.textSecondary }]}>
-                Complete quizzes and score well to unlock academic badges.
+
+              <Text
+                style={[
+                  styles.emptySectionText,
+                  { color: theme.textSecondary },
+                ]}
+              >
+                Complete quizzes and score well to unlock
+                academic badges.
               </Text>
             </View>
           ) : (
@@ -580,13 +906,18 @@ export default function ProfileScreen() {
                   key={ach.id || ach.achievementKey}
                   style={[
                     styles.achievementBadge,
-                    { backgroundColor: theme.card, borderColor: theme.border },
+                    {
+                      backgroundColor: theme.card,
+                      borderColor: theme.border,
+                    },
                   ]}
                 >
                   <View
                     style={[
                       styles.badgeIconBox,
-                      { backgroundColor: '#F59E0B20' },
+                      {
+                        backgroundColor: '#F59E0B20',
+                      },
                     ]}
                   >
                     <MaterialCommunityIcons
@@ -595,8 +926,12 @@ export default function ProfileScreen() {
                       color="#D97706"
                     />
                   </View>
+
                   <Text
-                    style={[styles.badgeTitle, { color: theme.text }]}
+                    style={[
+                      styles.badgeTitle,
+                      { color: theme.text },
+                    ]}
                     numberOfLines={1}
                   >
                     {ach.title}
@@ -612,11 +947,28 @@ export default function ProfileScreen() {
             ===================================================== */}
         <View style={styles.sectionBlock}>
           <View style={styles.sectionHeaderRow}>
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>
+            <Text
+              style={[
+                styles.sectionTitle,
+                {
+                  color: theme.text,
+                  flexShrink: 1,
+                },
+              ]}
+            >
               Recent Activity
             </Text>
-            <TouchableOpacity onPress={() => router.push('/history')}>
-              <Text style={[styles.viewAllText, { color: theme.primary }]}>
+
+            <TouchableOpacity
+              onPress={() => router.push('/(profile)/history')}
+              style={styles.headerAction}
+            >
+              <Text
+                style={[
+                  styles.viewAllText,
+                  { color: theme.primary },
+                ]}
+              >
                 Full History →
               </Text>
             </TouchableOpacity>
@@ -626,7 +978,10 @@ export default function ProfileScreen() {
             <View
               style={[
                 styles.emptySectionCard,
-                { backgroundColor: theme.card, borderColor: theme.border },
+                {
+                  backgroundColor: theme.card,
+                  borderColor: theme.border,
+                },
               ]}
             >
               <MaterialCommunityIcons
@@ -634,29 +989,62 @@ export default function ProfileScreen() {
                 size={30}
                 color={theme.textSecondary}
               />
-              <Text style={[styles.emptySectionText, { color: theme.textSecondary }]}>
-                No completed assessments yet. Start a quiz to track your performance history.
+
+              <Text
+                style={[
+                  styles.emptySectionText,
+                  { color: theme.textSecondary },
+                ]}
+              >
+                No completed assessments yet. Start a quiz to
+                track your performance history.
               </Text>
             </View>
           ) : (
             <View style={styles.historyList}>
               {history.slice(0, 3).map((item) => {
-                const isCbt = (item.quizType || 'cbt') === 'cbt';
+                const isCbt =
+                  (item.quizType || 'cbt') === 'cbt';
+
                 const percent = Math.round(
                   item.percentage ??
                     (item.totalQuestions > 0
-                      ? (item.score / (item.totalQuestions * 10)) * 100
+                      ? (item.score /
+                          (item.totalQuestions * 10)) *
+                        100
                       : 0)
                 );
 
                 return (
-                  <View
+                  <TouchableOpacity
                     key={item.id}
+                    activeOpacity={0.7}
+                    onPress={() => {
+                      router.push({
+                        pathname: '/(profile)/quiz-review',
+                        params: {
+                          historyId: item.id || '',
+                          courseId: item.courseId || '',
+                          courseCode: item.courseCode || item.category || 'Assessment',
+                          courseTitle: item.courseTitle || item.courseName || 'Assessment',
+                          quizType: item.quizType || 'cbt',
+                          score: String(item.score || 0),
+                          percentage: String(percent),
+                          correctAnswers: String(item.correctAnswers ?? item.correct ?? 0),
+                          totalQuestions: String(item.totalQuestions || 0),
+                          createdAt: item.createdAt || '',
+                        },
+                      });
+                    }}
                     style={[
                       styles.historyItemCard,
-                      { backgroundColor: theme.card, borderColor: theme.border },
+                      {
+                        backgroundColor: theme.card,
+                        borderColor: theme.border,
+                      },
                     ]}
                   >
+                    {/* Assessment type icon */}
                     <View
                       style={[
                         styles.historyIconBox,
@@ -668,20 +1056,34 @@ export default function ProfileScreen() {
                       ]}
                     >
                       <MaterialCommunityIcons
-                        name={isCbt ? 'checkbox-marked-circle-outline' : 'text-box-outline'}
+                        name={
+                          isCbt
+                            ? 'checkbox-marked-circle-outline'
+                            : 'text-box-outline'
+                        }
                         size={22}
-                        color={isCbt ? '#2563EB' : '#7C3AED'}
+                        color={
+                          isCbt ? '#2563EB' : '#7C3AED'
+                        }
                       />
                     </View>
 
+                    {/* Course information */}
                     <View style={styles.historyDetails}>
                       <View style={styles.historyTitleRow}>
                         <Text
-                          style={[styles.historyCourseCode, { color: theme.text }]}
+                          style={[
+                            styles.historyCourseCode,
+                            { color: theme.text },
+                          ]}
                           numberOfLines={1}
+                          ellipsizeMode="tail"
                         >
-                          {item.courseCode || item.category || 'Assessment'}
+                          {item.courseCode ||
+                            item.category ||
+                            'Assessment'}
                         </Text>
+
                         <View
                           style={[
                             styles.typeBadge,
@@ -696,7 +1098,9 @@ export default function ProfileScreen() {
                             style={[
                               styles.typeBadgeText,
                               {
-                                color: isCbt ? '#2563EB' : '#7C3AED',
+                                color: isCbt
+                                  ? '#2563EB'
+                                  : '#7C3AED',
                               },
                             ]}
                           >
@@ -706,13 +1110,25 @@ export default function ProfileScreen() {
                       </View>
 
                       <Text
-                        style={[styles.historyCourseTitle, { color: theme.textSecondary }]}
+                        style={[
+                          styles.historyCourseTitle,
+                          {
+                            color: theme.textSecondary,
+                          },
+                        ]}
                         numberOfLines={1}
+                        ellipsizeMode="tail"
                       >
-                        {item.courseTitle || 'Course Assessment'} • {formatDate(item.createdAt || item.date)}
+                        {item.courseTitle ||
+                          'Course Assessment'}{' '}
+                        •{' '}
+                        {formatDate(
+                          item.createdAt || item.date
+                        )}
                       </Text>
                     </View>
 
+                    {/* Score */}
                     <View style={styles.historyScoreBox}>
                       <Text
                         style={[
@@ -729,16 +1145,20 @@ export default function ProfileScreen() {
                       >
                         {percent}%
                       </Text>
+
                       <Text
                         style={[
                           styles.historyFraction,
-                          { color: theme.textSecondary },
+                          {
+                            color: theme.textSecondary,
+                          },
                         ]}
                       >
-                        {item.correctAnswers ?? 0}/{item.totalQuestions ?? 0}
+                        {item.correctAnswers ?? 0}/
+                        {item.totalQuestions ?? 0}
                       </Text>
                     </View>
-                  </View>
+                  </TouchableOpacity>
                 );
               })}
             </View>
@@ -748,15 +1168,28 @@ export default function ProfileScreen() {
         {/* =====================================================
             6. SECONDARY NAVIGATION / SUPPORT LINKS
             ===================================================== */}
-        <View style={[styles.sectionBlock, { marginBottom: 30 }]}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>
+        <View
+          style={[
+            styles.sectionBlock,
+            { marginBottom: 30 },
+          ]}
+        >
+          <Text
+            style={[
+              styles.sectionTitle,
+              { color: theme.text },
+            ]}
+          >
             Scholar Resources
           </Text>
 
           <View
             style={[
               styles.menuContainer,
-              { backgroundColor: theme.card, borderColor: theme.border },
+              {
+                backgroundColor: theme.card,
+                borderColor: theme.border,
+              },
             ]}
           >
             <TouchableOpacity
@@ -767,7 +1200,9 @@ export default function ProfileScreen() {
               <View
                 style={[
                   styles.menuIconWrap,
-                  { backgroundColor: `${theme.primary}15` },
+                  {
+                    backgroundColor: `${theme.primary}15`,
+                  },
                 ]}
               >
                 <MaterialCommunityIcons
@@ -776,16 +1211,27 @@ export default function ProfileScreen() {
                   color={theme.primary}
                 />
               </View>
+
               <View style={styles.menuInfo}>
-                <Text style={[styles.menuTitle, { color: theme.text }]}>
+                <Text
+                  style={[
+                    styles.menuTitle,
+                    { color: theme.text },
+                  ]}
+                >
                   Academic Discussions
                 </Text>
+
                 <Text
-                  style={[styles.menuSubtitle, { color: theme.textSecondary }]}
+                  style={[
+                    styles.menuSubtitle,
+                    { color: theme.textSecondary },
+                  ]}
                 >
                   Join student forums for your faculty and level
                 </Text>
               </View>
+
               <Ionicons
                 name="chevron-forward"
                 size={18}
@@ -793,7 +1239,12 @@ export default function ProfileScreen() {
               />
             </TouchableOpacity>
 
-            <View style={[styles.menuDivider, { backgroundColor: theme.border }]} />
+            <View
+              style={[
+                styles.menuDivider,
+                { backgroundColor: theme.border },
+              ]}
+            />
 
             <TouchableOpacity
               style={styles.menuRow}
@@ -803,7 +1254,9 @@ export default function ProfileScreen() {
               <View
                 style={[
                   styles.menuIconWrap,
-                  { backgroundColor: '#05966915' },
+                  {
+                    backgroundColor: '#05966915',
+                  },
                 ]}
               >
                 <Ionicons
@@ -812,16 +1265,115 @@ export default function ProfileScreen() {
                   color="#059669"
                 />
               </View>
+
               <View style={styles.menuInfo}>
-                <Text style={[styles.menuTitle, { color: theme.text }]}>
+                <Text
+                  style={[
+                    styles.menuTitle,
+                    { color: theme.text },
+                  ]}
+                >
                   Help & Support Center
                 </Text>
+
                 <Text
-                  style={[styles.menuSubtitle, { color: theme.textSecondary }]}
+                  style={[
+                    styles.menuSubtitle,
+                    { color: theme.textSecondary },
+                  ]}
                 >
                   FAQs, exam guidelines, and support
                 </Text>
               </View>
+
+              <Ionicons
+                name="chevron-forward"
+                size={18}
+                color={theme.textSecondary}
+              />
+            </TouchableOpacity>
+
+            <View
+              style={[
+                styles.menuDivider,
+                { backgroundColor: theme.border },
+              ]}
+            />
+
+            {/* SCHOLARSHIPS, ORGANISATIONS & TUTORIALS (COMING SOON) */}
+            <TouchableOpacity
+              style={styles.menuRow}
+              onPress={() => router.push('/opportunities')}
+              activeOpacity={0.7}
+            >
+              <View
+                style={[
+                  styles.menuIconWrap,
+                  {
+                    backgroundColor: '#F59E0B18',
+                  },
+                ]}
+              >
+                <MaterialCommunityIcons
+                  name="school-outline"
+                  size={20}
+                  color="#F59E0B"
+                />
+              </View>
+
+              <View style={styles.menuInfo}>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 6,
+                    minWidth: 0,
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.menuTitle,
+                      {
+                        color: theme.text,
+                        flexShrink: 1,
+                      },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    Scholarships & Opportunities
+                  </Text>
+
+                  <View
+                    style={{
+                      backgroundColor: '#F59E0B',
+                      paddingHorizontal: 6,
+                      paddingVertical: 2,
+                      borderRadius: 4,
+                      flexShrink: 0,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: '#FFFFFF',
+                        fontFamily: 'Ubuntu-Bold',
+                        fontSize: 9,
+                      }}
+                    >
+                      COMING SOON
+                    </Text>
+                  </View>
+                </View>
+
+                <Text
+                  style={[
+                    styles.menuSubtitle,
+                    { color: theme.textSecondary },
+                  ]}
+                >
+                  Scholarships, student organisations & tutorials
+                </Text>
+              </View>
+
               <Ionicons
                 name="chevron-forward"
                 size={18}
@@ -839,6 +1391,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+
   topBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -847,44 +1400,55 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 12,
   },
+
   screenTitle: {
     fontSize: 22,
     fontFamily: 'Ubuntu-Bold',
     letterSpacing: -0.3,
+    flexShrink: 1,
   },
+
   settingsButton: {
     width: 38,
     height: 38,
     borderRadius: 19,
     justifyContent: 'center',
     alignItems: 'center',
+    flexShrink: 0,
   },
+
   scrollContent: {
     paddingHorizontal: 20,
     paddingBottom: 36,
   },
+
   headerSection: {
     alignItems: 'center',
     marginVertical: 12,
   },
+
   avatarWrapper: {
     position: 'relative',
     marginBottom: 12,
   },
+
   avatar: {
     width: 88,
     height: 88,
     borderRadius: 44,
   },
+
   initialAvatar: {
     borderWidth: 2,
     justifyContent: 'center',
     alignItems: 'center',
   },
+
   initialText: {
     fontSize: 34,
     fontFamily: 'Ubuntu-Bold',
   },
+
   cameraBadge: {
     position: 'absolute',
     bottom: 0,
@@ -896,21 +1460,27 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+
   userName: {
     fontSize: 19,
     fontFamily: 'Ubuntu-Bold',
     letterSpacing: -0.2,
+    maxWidth: '100%',
   },
+
   userHandle: {
     fontSize: 13,
     fontFamily: 'Ubuntu-Bold',
     marginTop: 2,
   },
+
   userEmail: {
     fontSize: 13,
     fontFamily: 'Ubuntu-Regular',
     marginTop: 2,
+    maxWidth: '100%',
   },
+
   userBio: {
     fontSize: 13,
     fontFamily: 'Ubuntu-Regular',
@@ -921,6 +1491,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     alignSelf: 'center',
   },
+
   editProfileBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -931,40 +1502,58 @@ const styles = StyleSheet.create({
     marginTop: 12,
     gap: 6,
   },
+
   editProfileText: {
     fontSize: 12,
     fontFamily: 'Ubuntu-Bold',
   },
+
   sectionBlock: {
     marginTop: 20,
+    minWidth: 0,
   },
+
   sectionTitle: {
     fontSize: 16,
     fontFamily: 'Ubuntu-Bold',
     marginBottom: 10,
   },
+
   sectionHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 10,
+    minWidth: 0,
   },
+
+  headerAction: {
+    flexShrink: 0,
+    marginLeft: 8,
+  },
+
   viewAllText: {
     fontSize: 12,
     fontFamily: 'Ubuntu-Bold',
+    flexShrink: 0,
   },
+
   academicCard: {
     padding: 16,
     borderRadius: 16,
     borderWidth: 1,
   },
+
   academicRowList: {
     gap: 14,
   },
+
   academicItem: {
     flexDirection: 'row',
     alignItems: 'flex-start',
+    minWidth: 0,
   },
+
   academicIconBox: {
     width: 34,
     height: 34,
@@ -972,11 +1561,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 2,
+    flexShrink: 0,
   },
+
   academicTextContent: {
     flex: 1,
+    minWidth: 0,
     marginLeft: 12,
   },
+
   academicLabel: {
     fontSize: 11,
     fontFamily: 'Ubuntu-Bold',
@@ -984,33 +1577,41 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     marginBottom: 2,
   },
+
   academicValue: {
     fontSize: 14,
     fontFamily: 'Ubuntu-Medium',
     lineHeight: 20,
     flexShrink: 1,
   },
+
   unconfiguredAcademic: {
     flexDirection: 'row',
     alignItems: 'center',
+    minWidth: 0,
   },
+
   unconfiguredIconBox: {
     width: 44,
     height: 44,
     borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
+    flexShrink: 0,
   },
+
   unconfiguredTitle: {
     fontSize: 14,
     fontFamily: 'Ubuntu-Bold',
   },
+
   unconfiguredDesc: {
     fontSize: 12,
     fontFamily: 'Ubuntu-Regular',
     marginTop: 2,
     lineHeight: 16,
   },
+
   metricsGrid: {
     flexDirection: 'row',
     borderRadius: 16,
@@ -1020,10 +1621,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-around',
   },
+
   metricBox: {
     flex: 1,
     alignItems: 'center',
+    minWidth: 0,
   },
+
   metricIconWrap: {
     width: 32,
     height: 32,
@@ -1032,23 +1636,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 6,
   },
+
   metricNumber: {
     fontSize: 16,
     fontFamily: 'Ubuntu-Bold',
   },
+
   metricLabel: {
     fontSize: 10,
     fontFamily: 'Ubuntu-Regular',
     marginTop: 2,
     textAlign: 'center',
   },
+
   metricDivider: {
     width: 1,
     height: 36,
+    flexShrink: 0,
   },
+
   achievementsScroll: {
     gap: 10,
   },
+
   achievementBadge: {
     width: 100,
     alignItems: 'center',
@@ -1056,6 +1666,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
   },
+
   badgeIconBox: {
     width: 44,
     height: 44,
@@ -1064,11 +1675,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
+
   badgeTitle: {
     fontSize: 11,
     fontFamily: 'Ubuntu-Bold',
     textAlign: 'center',
   },
+
   emptySectionCard: {
     padding: 20,
     borderRadius: 14,
@@ -1077,99 +1690,142 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
   },
+
   emptySectionText: {
     fontSize: 12,
     fontFamily: 'Ubuntu-Regular',
     textAlign: 'center',
     lineHeight: 18,
   },
+
   historyList: {
     gap: 8,
   },
+
+  /*
+   * Recent Activity responsive layout:
+   *
+   * Icon      | Course information        | Score
+   * 40x40     | flex: 1 / minWidth: 0    | fixed
+   *
+   * On narrow screens the course text can shrink/truncate
+   * instead of pushing the score outside the card.
+   */
   historyItemCard: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 12,
     borderRadius: 14,
     borderWidth: 1,
+    minWidth: 0,
   },
+
   historyIconBox: {
     width: 40,
     height: 40,
     borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
+    flexShrink: 0,
   },
+
   historyDetails: {
     flex: 1,
+    minWidth: 0,
     marginLeft: 12,
     marginRight: 8,
   },
+
   historyTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    minWidth: 0,
   },
+
   historyCourseCode: {
+    flex: 1,
+    minWidth: 0,
     fontSize: 13,
     fontFamily: 'Ubuntu-Bold',
     marginRight: 6,
   },
+
   typeBadge: {
+    flexShrink: 0,
     paddingHorizontal: 5,
-    paddingVertical: 1,
+    paddingVertical: 2,
     borderRadius: 4,
   },
+
   typeBadgeText: {
     fontSize: 9,
     fontFamily: 'Ubuntu-Bold',
   },
+
   historyCourseTitle: {
     fontSize: 12,
     fontFamily: 'Ubuntu-Regular',
-    marginTop: 2,
+    marginTop: 3,
+    flexShrink: 1,
   },
+
   historyScoreBox: {
+    flexShrink: 0,
+    minWidth: 44,
     alignItems: 'flex-end',
+    justifyContent: 'center',
   },
+
   historyPercent: {
     fontSize: 15,
     fontFamily: 'Ubuntu-Bold',
   },
+
   historyFraction: {
     fontSize: 10,
     fontFamily: 'Ubuntu-Regular',
     marginTop: 1,
   },
+
   menuContainer: {
     borderRadius: 16,
     borderWidth: 1,
     overflow: 'hidden',
   },
+
   menuRow: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 14,
+    minWidth: 0,
   },
+
   menuIconWrap: {
     width: 36,
     height: 36,
     borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
+    flexShrink: 0,
   },
+
   menuInfo: {
     flex: 1,
+    minWidth: 0,
     marginLeft: 12,
   },
+
   menuTitle: {
     fontSize: 13,
     fontFamily: 'Ubuntu-Bold',
   },
+
   menuSubtitle: {
     fontSize: 11,
     fontFamily: 'Ubuntu-Regular',
     marginTop: 2,
   },
+
   menuDivider: {
     height: 1,
     marginLeft: 62,

@@ -16,7 +16,7 @@ import { useRouter } from 'expo-router';
 
 import { useThemeStore } from '../../store/themeStore';
 
-export default function TermsScreen() {
+export default function Privacy() {
   const router = useRouter();
   const { theme } = useThemeStore();
 
@@ -55,7 +55,7 @@ export default function TermsScreen() {
             },
           ]}
         >
-          Terms of Service
+          Privacy Policy
         </Text>
 
         <Text
@@ -66,7 +66,7 @@ export default function TermsScreen() {
             },
           ]}
         >
-          Effective: September 2026
+          Last Updated: September 2026
         </Text>
 
         <Text
@@ -77,9 +77,9 @@ export default function TermsScreen() {
             },
           ]}
         >
-          These Terms of Service govern your use of the Brain
-          Buzz application. By creating an account or using
-          Brain Buzz, you agree to comply with these terms.
+          This Privacy Policy explains how Brain Buzz collects,
+          uses, stores, and protects information when you use
+          our application.
         </Text>
 
         <Text
@@ -90,7 +90,7 @@ export default function TermsScreen() {
             },
           ]}
         >
-          1. Acceptance of Terms
+          1. Data Collection
         </Text>
 
         <Text
@@ -101,11 +101,11 @@ export default function TermsScreen() {
             },
           ]}
         >
-          By creating an account or using Brain Buzz, you
-          acknowledge that you have read, understood, and agreed
-          to these Terms of Service and our Privacy Policy. If
-          you do not agree with these terms, you should not create
-          or use an account.
+          We collect information necessary to provide and
+          improve Brain Buzz services. This may include your
+          name, username, contact information, profile details,
+          quiz results, scores, academic progress, and
+          information related to your use of the application.
         </Text>
 
         <Text
@@ -116,7 +116,7 @@ export default function TermsScreen() {
             },
           ]}
         >
-          2. Eligibility and Account Information
+          2. How We Use Your Information
         </Text>
 
         <Text
@@ -127,11 +127,11 @@ export default function TermsScreen() {
             },
           ]}
         >
-          You are responsible for providing accurate information
-          when creating your Brain Buzz account and for keeping
-          your account credentials secure. You should not
-          impersonate another person or create an account using
-          information that belongs to someone else.
+          Your information may be used to create and manage
+          your account, provide quiz and learning features,
+          track academic progress, calculate achievements,
+          maintain leaderboards, provide support, improve the
+          application, and protect the security of our services.
         </Text>
 
         <Text
@@ -142,7 +142,7 @@ export default function TermsScreen() {
             },
           ]}
         >
-          3. Academic Integrity
+          3. Biometric Data
         </Text>
 
         <Text
@@ -153,10 +153,13 @@ export default function TermsScreen() {
             },
           ]}
         >
-          Brain Buzz is designed as a learning and assessment
-          aid. Users are encouraged to answer questions honestly
-          so that quiz results accurately reflect their knowledge
-          and progress.
+          Brain Buzz does not store your actual fingerprint,
+          face, or other biometric information. When biometric
+          authentication is enabled, Brain Buzz relies on the
+          authentication mechanisms provided by your device
+          operating system. Your biometric data remains under
+          the control of your device&apos;s secure authentication
+          system.
         </Text>
 
         <Text
@@ -167,7 +170,7 @@ export default function TermsScreen() {
             },
           ]}
         >
-          4. Prohibited Use
+          4. Notifications
         </Text>
 
         <Text
@@ -178,11 +181,11 @@ export default function TermsScreen() {
             },
           ]}
         >
-          Users must not attempt to scrape or copy protected
-          question content, bypass application security
-          mechanisms, manipulate quiz results, interfere with
-          leaderboard scores, gain unauthorized access to
-          accounts or services, or otherwise abuse Brain Buzz.
+          If you enable push notifications, Brain Buzz may
+          store your device&apos;s push notification token so that
+          we can deliver relevant notifications to you. You can
+          disable push notifications through your device or
+          application settings.
         </Text>
 
         <Text
@@ -193,7 +196,7 @@ export default function TermsScreen() {
             },
           ]}
         >
-          5. Quiz Results and Leaderboards
+          5. Data Security
         </Text>
 
         <Text
@@ -204,11 +207,10 @@ export default function TermsScreen() {
             },
           ]}
         >
-          Quiz scores, achievements, rankings, and other
-          academic statistics are generated using the systems
-          provided by Brain Buzz. We may modify or correct
-          results when necessary to address technical errors,
-          abuse, or inaccurate data.
+          We take reasonable measures to protect information
+          associated with your account from unauthorized access,
+          alteration, disclosure, or destruction. However, no
+          internet-based service can guarantee absolute security.
         </Text>
 
         <Text
@@ -219,7 +221,7 @@ export default function TermsScreen() {
             },
           ]}
         >
-          6. Account Suspension or Termination
+          6. Account Deletion
         </Text>
 
         <Text
@@ -230,10 +232,12 @@ export default function TermsScreen() {
             },
           ]}
         >
-          We may suspend or terminate accounts that violate
-          these Terms of Service, abuse the application, attempt
-          to compromise its security, or otherwise engage in
-          activities that may harm Brain Buzz or its users.
+          You can request deletion of your Brain Buzz account.
+          When an account deletion request is processed, personal
+          information and associated account data will be deleted
+          or anonymized where appropriate, subject to any data
+          that we may be required to retain for legitimate legal,
+          security, or operational purposes.
         </Text>
 
         <Text
@@ -244,7 +248,7 @@ export default function TermsScreen() {
             },
           ]}
         >
-          7. Service Availability
+          7. Changes to This Policy
         </Text>
 
         <Text
@@ -255,35 +259,10 @@ export default function TermsScreen() {
             },
           ]}
         >
-          We aim to keep Brain Buzz available and reliable, but
-          we cannot guarantee that the application will always
-          be available, uninterrupted, or free from technical
-          issues.
-        </Text>
-
-        <Text
-          style={[
-            styles.sectionTitle,
-            {
-              color: theme.text,
-            },
-          ]}
-        >
-          8. Changes to These Terms
-        </Text>
-
-        <Text
-          style={[
-            styles.body,
-            {
-              color: theme.textSecondary,
-            },
-          ]}
-        >
-          We may update these Terms of Service when necessary.
-          Continued use of Brain Buzz after an updated version
-          becomes effective means that you accept the revised
-          terms.
+          We may update this Privacy Policy from time to time.
+          When important changes are made, we will take
+          reasonable steps to notify users through the
+          application or other appropriate channels.
         </Text>
       </ScrollView>
     </SafeAreaView>

@@ -190,7 +190,7 @@ export default function SemestersScreen() {
             ]}
             numberOfLines={1}
           >
-            {departmentName} • {level} Level
+            {departmentName} | {level} Level
           </Text>
         </View>
       </View>
@@ -237,7 +237,7 @@ export default function SemestersScreen() {
               { color: theme.textSecondary },
             ]}
           >
-            {departmentCode} • {level} Level
+            {departmentCode} | {level} Level
           </Text>
         </View>
       </View>

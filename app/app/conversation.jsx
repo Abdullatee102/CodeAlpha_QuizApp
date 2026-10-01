@@ -234,7 +234,7 @@ export default function ConversationScreen() {
               style={[styles.headerSubtitle, { color: theme.textSecondary }]}
               numberOfLines={1}
             >
-              {code ? `${code} • ` : ''}Open Academic Forum
+              {code ? `${code} | ` : ''}Open Academic Forum
             </Text>
           </View>
         </View>

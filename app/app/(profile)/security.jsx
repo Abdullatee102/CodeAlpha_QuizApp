@@ -97,7 +97,7 @@ export default function SecurityScreen() {
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color={theme.text} />
         </TouchableOpacity>
-        <Text style={[styles.title, { color: theme.text }]}>Security</Text>
+        <Text style={[styles.title, { color: theme.primary }]}>Security</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>

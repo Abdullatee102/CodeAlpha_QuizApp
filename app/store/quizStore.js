@@ -34,6 +34,8 @@ export const useQuizStore = create(
 
       activeSessionId: null,
 
+      currentAttemptId: null,
+
       questions: [],
 
       currentCourseId: null,
@@ -544,17 +546,81 @@ export const useQuizStore = create(
 
         /*
          * Save the exact server-generated history record
-         * locally for immediate UI updates.
+         * locally for immediate UI updates, including full review data.
          */
+        const reviewData = {
+          historyId: history?.id || `quiz_${Date.now()}`,
+          courseId: get().currentCourseId,
+          courseCode: get().currentCategory || 'Course',
+          quizType: get().currentQuizType || 'cbt',
+          score,
+          percentage,
+          correctAnswers,
+          totalQuestions,
+          wrongAnswers,
+          createdAt: history?.createdAt || new Date().toISOString(),
+          questions: (get().questions || []).map((q) => ({
+            id: q.id,
+            question: q.question,
+            options: q.options || [],
+            type: q.type,
+            difficulty: q.difficulty,
+          })),
+          answers: get().answers || [],
+          results: grading?.results || [],
+        };
+
+        try {
+          if (history?.id) {
+            mmkvStorage.setItem(
+              `quiz_review_${history.id}`,
+              JSON.stringify(reviewData)
+            );
+          }
+          mmkvStorage.setItem('quiz_review_latest', JSON.stringify(reviewData));
+        } catch (e) {
+          console.warn('[QUIZ REVIEW] Could not cache review data to MMKV:', e);
+        }
+
         if (history) {
           get().addQuizHistory({
             ...history,
-
+            reviewData,
             percentage:
               history.percentage ??
               percentage,
           });
         }
+      },
+
+      getQuizReview: (historyId) => {
+        if (!historyId) return null;
+        try {
+          const directJson = mmkvStorage.getItem(`quiz_review_${historyId}`);
+          if (directJson) {
+            return JSON.parse(directJson);
+          }
+        } catch (e) {
+          console.warn('[QUIZ REVIEW] Error reading MMKV for review:', e);
+        }
+
+        const { allTimeHistory } = get();
+        const found = allTimeHistory.find((item) => item.id === historyId);
+        if (found?.reviewData) {
+          return found.reviewData;
+        }
+
+        try {
+          const latestJson = mmkvStorage.getItem('quiz_review_latest');
+          if (latestJson) {
+            const parsed = JSON.parse(latestJson);
+            if (parsed.historyId === historyId) {
+              return parsed;
+            }
+          }
+        } catch (e) {}
+
+        return null;
       },
 
       // =====================================================
@@ -654,12 +720,27 @@ export const useQuizStore = create(
             response.data ||
             [];
 
-          const departmentsArray =
+          const rawList =
             Array.isArray(
               rawDepartments
             )
               ? rawDepartments
               : [];
+
+          const departmentsArray = [...rawList].sort((a, b) => {
+            const getPriority = (d) => {
+              const code = (d?.code || '').toUpperCase();
+              const name = (d?.name || '').toLowerCase();
+              if (code === 'CSC' || name.includes('computer science')) return 1;
+              if (code === 'CYB' || name.includes('cyber security') || name.includes('cybersecurity')) return 2;
+              if (code === 'INS' || name.includes('information systems') || name.includes('information system')) return 3;
+              return 100;
+            };
+            const pA = getPriority(a);
+            const pB = getPriority(b);
+            if (pA !== pB) return pA - pB;
+            return (a?.name || '').localeCompare(b?.name || '');
+          });
 
           set({
             departments:
@@ -871,7 +952,12 @@ export const useQuizStore = create(
                 normalizedType,
 
               activeSessionId:
+                response.data?.attemptId ||
                 `${courseId}_${normalizedType}_${Date.now()}`,
+
+              currentAttemptId:
+                response.data?.attemptId ||
+                null,
 
               isFinished: false,
 
@@ -1108,6 +1194,8 @@ export const useQuizStore = create(
       abandonQuiz: () => {
         set({
           activeSessionId: null,
+
+          currentAttemptId: null,
 
           questions: [],
 

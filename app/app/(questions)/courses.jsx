@@ -271,7 +271,7 @@ export default function CoursesScreen() {
               },
             ]}
           >
-            {item.level} Level •{' '}
+            {item.level} Level |{' '}
             {getSemesterName(
               item.semester
             )}
@@ -378,7 +378,7 @@ export default function CoursesScreen() {
             ]}
             numberOfLines={1}
           >
-            {departmentName} •{' '}
+            {departmentName} |{' '}
             {level} Level
           </Text>
         </View>
@@ -443,8 +443,8 @@ export default function CoursesScreen() {
               },
             ]}
           >
-            {departmentCode} •{' '}
-            {level} Level •{' '}
+            {departmentCode} |{' '}
+            {level} Level |{' '}
             {getSemesterName(
               semester
             )}

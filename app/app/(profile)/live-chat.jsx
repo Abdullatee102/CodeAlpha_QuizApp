@@ -253,9 +253,23 @@ export default function LiveChatScreen() {
               keyExtractor={(item) => String(item.id)}
               contentContainerStyle={styles.messagesList}
               onContentSizeChange={() => messagesListRef.current?.scrollToEnd({ animated: false })}
+              ListFooterComponent={() => {
+                const msgs = ticketDetails?.messages || [];
+                const lastMsg = msgs[msgs.length - 1];
+                const lastIsUser = lastMsg && (lastMsg.senderRole === 'user' || (String(lastMsg.senderId) === String(currentUserId) && lastMsg.senderRole !== 'ai_assistant'));
+                if (ticketDetails?.status === 'open' && lastIsUser) {
+                  return (
+                    <View style={{ paddingVertical: 12, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <ActivityIndicator size="small" color={theme.textSecondary} />
+                      <Text style={{ color: theme.textSecondary, fontFamily: 'Ubuntu-Regular', fontStyle: 'italic', fontSize: 13 }}>Support AI is typing...</Text>
+                    </View>
+                  );
+                }
+                return <View style={{ height: 10 }} />;
+              }}
               renderItem={({ item }) => {
-                const isUser = item.senderRole === 'user' || String(item.senderId) === String(currentUserId);
-                const isAssistant = item.senderRole === 'assistant' || item.senderRole === 'support';
+                const isUser = (item.senderRole === 'user' || String(item.senderId) === String(currentUserId)) && item.senderRole !== 'ai_assistant' && item.senderRole !== 'assistant' && item.senderRole !== 'support';
+                const isAssistant = item.senderRole === 'ai_assistant' || item.senderRole === 'assistant' || item.senderRole === 'support';
 
                 return (
                   <View style={[styles.messageRow, isUser ? styles.rowMe : styles.rowOther]}>
@@ -279,7 +293,7 @@ export default function LiveChatScreen() {
                     >
                       {!isUser && (
                         <Text style={[styles.senderLabel, { color: isAssistant ? '#818CF8' : theme.primary }]}>
-                          {isAssistant ? 'Support Assistant' : 'Support Team'}
+                          {isAssistant ? 'AI Support Assistant' : 'Support Team'}
                         </Text>
                       )}
                       <Text style={[styles.msgText, { color: isUser ? '#FFFFFF' : theme.text }]}>
@@ -460,11 +474,14 @@ export default function LiveChatScreen() {
         transparent={true}
         onRequestClose={() => setShowNewModal(false)}
       >
-        <SafeAreaView style={styles.modalBackdrop}>
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={[styles.modalCard, { backgroundColor: theme.card, borderColor: theme.border }]}
-          >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
+          style={{ flex: 1 }}
+        >
+          <SafeAreaView style={styles.modalBackdrop}>
+            <View
+              style={[styles.modalCard, { backgroundColor: theme.card, borderColor: theme.border }]}
+            >
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: theme.text }]}>New Support Request</Text>
               <TouchableOpacity onPress={() => setShowNewModal(false)}>
@@ -589,8 +606,9 @@ export default function LiveChatScreen() {
                 )}
               </TouchableOpacity>
             </ScrollView>
-          </KeyboardAvoidingView>
-        </SafeAreaView>
+            </View>
+          </SafeAreaView>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );
