@@ -45,7 +45,6 @@ const SEMESTERS = [
 export default function SemestersScreen() {
   const router = useRouter();
 
-  const params = useLocalSearchParams();
   const {
     departmentId,
     departmentName,
@@ -54,9 +53,9 @@ export default function SemestersScreen() {
     facultyName,
     facultyCode,
     level,
-  } = useLocalSearchParams();
     isMixed,
-  } = params;
+  } = useLocalSearchParams();
+
 
   const { theme } = useThemeStore();
 

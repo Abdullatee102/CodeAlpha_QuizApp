@@ -33,7 +33,6 @@ import { getCourseIcon } from '../../constants/academicIcons';
 export default function CoursesScreen() {
   const router = useRouter();
 
-  const searchParams = useLocalSearchParams();
   const {
     departmentId,
     departmentName,
@@ -43,9 +42,9 @@ export default function CoursesScreen() {
     facultyCode,
     level,
     semester,
-  } = useLocalSearchParams();
     isMixed,
-  } = searchParams;
+  } = useLocalSearchParams();
+
 
   const isMixedQuiz = isMixed === 'true' || facultyId === 'mixed';
 

@@ -58,7 +58,10 @@ export default function ConversationScreen() {
 
   const currentUserId = user?.id || user?.userId || profile?.id;
 
+
   // Extract active members from messages array
+
+
   const activeMembers = React.useMemo(() => {
     const memberMap = new Map();
     if (user) {
