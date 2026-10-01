@@ -465,6 +465,10 @@ export default function MessageScreen() {
                       style={[
                         styles.recentTime,
                         { color: theme.textSecondary },
+                        {
+                          color: chat.unreadCount > 0 ? theme.primary : theme.textSecondary,
+                          fontFamily: chat.unreadCount > 0 ? 'Ubuntu-Bold' : 'Ubuntu-Regular',
+                        },
                       ]}
                     >
                       {formatTimestamp(chat.lastMessage?.createdAt || chat.updatedAt)}
@@ -483,6 +487,43 @@ export default function MessageScreen() {
                       : ''}
                     {chat.lastMessage?.text || 'No messages yet'}
                   </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 }}>
+                    <Text
+                      style={[
+                        styles.recentMessageSnippet,
+                        {
+                          flex: 1,
+                          color: chat.unreadCount > 0 ? theme.text : theme.textSecondary,
+                          fontFamily: chat.unreadCount > 0 ? 'Ubuntu-Medium' : 'Ubuntu-Regular',
+                        },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {chat.lastMessage?.senderName
+                        ? `${chat.lastMessage.senderName.split(' ')[0]}: `
+                        : ''}
+                      {chat.lastMessage?.text || 'No messages yet'}
+                    </Text>
+
+                    {(chat.unreadCount > 0 || chat.hasUnread) && (
+                      <View
+                        style={{
+                          backgroundColor: '#059669',
+                          minWidth: 20,
+                          height: 20,
+                          borderRadius: 10,
+                          paddingHorizontal: 6,
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                          marginLeft: 8,
+                        }}
+                      >
+                        <Text style={{ color: '#FFFFFF', fontFamily: 'Ubuntu-Bold', fontSize: 10 }}>
+                          {chat.unreadCount > 99 ? '99+' : (chat.unreadCount || 1)}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
                 </View>
               </TouchableOpacity>
             ))}

@@ -33,6 +33,7 @@ import { getCourseIcon } from '../../constants/academicIcons';
 export default function CoursesScreen() {
   const router = useRouter();
 
+  const searchParams = useLocalSearchParams();
   const {
     departmentId,
     departmentName,
@@ -43,6 +44,10 @@ export default function CoursesScreen() {
     level,
     semester,
   } = useLocalSearchParams();
+    isMixed,
+  } = searchParams;
+
+  const isMixedQuiz = isMixed === 'true' || facultyId === 'mixed';
 
   const {
     courses,
@@ -133,6 +138,21 @@ export default function CoursesScreen() {
       },
     });
   };
+
+  const displayedCourses = React.useMemo(() => {
+    if (isMixedQuiz) {
+      return [
+        {
+          id: 'mixed',
+          title: `All Faculties ${level ? `${level}L ` : ''}Practice Quiz`,
+          code: 'MIXED',
+          description: 'Randomized questions across all LAUTECH faculties (Limit 30)',
+        },
+        ...(courses || []),
+      ];
+    }
+    return courses || [];
+  }, [isMixedQuiz, courses, level]);
 
   // =====================================================
   // SELECT COURSE
@@ -583,6 +603,7 @@ export default function CoursesScreen() {
         ) : (
           <FlatList
             data={courses}
+            data={displayedCourses}
             renderItem={
               renderCourse
             }

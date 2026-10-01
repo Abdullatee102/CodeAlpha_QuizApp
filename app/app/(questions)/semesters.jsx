@@ -45,6 +45,7 @@ const SEMESTERS = [
 export default function SemestersScreen() {
   const router = useRouter();
 
+  const params = useLocalSearchParams();
   const {
     departmentId,
     departmentName,
@@ -54,6 +55,8 @@ export default function SemestersScreen() {
     facultyCode,
     level,
   } = useLocalSearchParams();
+    isMixed,
+  } = params;
 
   const { theme } = useThemeStore();
 
@@ -68,6 +71,7 @@ export default function SemestersScreen() {
         facultyName,
         facultyCode,
         level,
+        isMixed: isMixed || (facultyId === 'mixed' ? 'true' : 'false'),
         semester: semester.value,
       },
     });

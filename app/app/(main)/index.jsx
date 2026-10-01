@@ -171,6 +171,19 @@ export default function HomeScreen() {
   const handleFacultyPress = (faculty) => {
     abandonQuiz();
 
+    if (faculty.code === 'MIXED' || faculty.id === 'mixed') {
+      router.push({
+        pathname: '/(questions)/levels',
+        params: {
+          isMixed: 'true',
+          facultyId: 'mixed',
+          facultyName: 'All Faculties Practice',
+          facultyCode: 'MIXED',
+        },
+      });
+      return;
+    }
+
     router.push({
       pathname: '/(questions)/departments',
       params: {
@@ -180,6 +193,20 @@ export default function HomeScreen() {
       },
     });
   };
+
+  const allFacultiesWithMixed = useMemo(() => {
+    const list = Array.isArray(faculties) ? [...faculties] : [];
+    const hasMixed = list.some((f) => f.id === 'mixed' || f.code === 'MIXED');
+    if (!hasMixed) {
+      list.push({
+        id: 'mixed',
+        name: 'All Faculties Practice',
+        code: 'MIXED',
+        description: 'Randomized questions across all LAUTECH faculties',
+      });
+    }
+    return list;
+  }, [faculties]);
 
   // =====================================================
   // FACULTY ITEM
@@ -213,6 +240,26 @@ export default function HomeScreen() {
             size={30}
             color={meta.color}
           />
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%', marginBottom: 12 }}>
+          <View
+            style={[
+              styles.iconBox,
+              {
+                backgroundColor: `${meta.color}18`,
+                marginBottom: 0,
+              },
+            ]}
+          >
+            <MaterialCommunityIcons
+              name={meta.icon}
+              size={26}
+              color={meta.color}
+            />
+          </View>
+
+          <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: `${meta.color}15`, justifyContent: 'center', alignItems: 'center' }}>
+            <Ionicons name="arrow-forward" size={13} color={meta.color} />
+          </View>
         </View>
 
         <Text
@@ -1026,6 +1073,7 @@ export default function HomeScreen() {
           ) : (
             <FlatList
               data={faculties}
+              data={allFacultiesWithMixed}
               renderItem={renderFaculty}
               keyExtractor={(item) => item.id}
               numColumns={2}

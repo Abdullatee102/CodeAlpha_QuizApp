@@ -26,6 +26,7 @@ const LEVELS = [100, 200, 300, 400, 500];
 export default function LevelsScreen() {
   const router = useRouter();
 
+  const params = useLocalSearchParams();
   const {
     departmentId,
     departmentName,
@@ -34,6 +35,8 @@ export default function LevelsScreen() {
     facultyName,
     facultyCode,
   } = useLocalSearchParams();
+    isMixed,
+  } = params;
 
   const { theme } = useThemeStore();
 
@@ -47,6 +50,7 @@ export default function LevelsScreen() {
         facultyId,
         facultyName,
         facultyCode,
+        isMixed: isMixed || (facultyId === 'mixed' ? 'true' : 'false'),
         level: String(level),
       },
     });

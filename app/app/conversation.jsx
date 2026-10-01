@@ -34,6 +34,8 @@ export default function ConversationScreen() {
 
   const { conversationId, title, code } = useLocalSearchParams();
   const [inputText, setInputText] = useState('');
+  const [showGroupInfoModal, setShowGroupInfoModal] = useState(false);
+  const [showMentionPicker, setShowMentionPicker] = useState(false);
   const flatListRef = useRef(null);
 
   const insets = useSafeAreaInsets();
@@ -55,6 +57,37 @@ export default function ConversationScreen() {
   }, []);
 
   const currentUserId = user?.id || user?.userId || profile?.id;
+
+  // Extract active members from messages array
+  const activeMembers = React.useMemo(() => {
+    const memberMap = new Map();
+    if (user) {
+      const myName = profile?.fullName || user?.displayName || user?.fullName || 'Scholar';
+      memberMap.set(currentUserId, { id: currentUserId, name: myName, username: profile?.username || 'me' });
+    }
+    messages.forEach((msg) => {
+      if (msg.senderId && msg.sender?.fullName) {
+        memberMap.set(msg.senderId, {
+          id: msg.senderId,
+          name: msg.sender.fullName,
+          username: msg.sender.username || msg.sender.fullName.split(' ')[0].toLowerCase(),
+          photoURL: msg.sender.photoURL,
+        });
+      }
+    });
+    return Array.from(memberMap.values());
+  }, [messages, user, profile, currentUserId]);
+
+  const handleMentionSelect = (member) => {
+    const tag = '@' + (member.username || member.name.split(' ')[0]);
+    if (inputText.endsWith('@')) {
+      setInputText((prev) => prev.slice(0, -1) + tag + ' ');
+    } else {
+      setInputText((prev) => (prev ? prev + ' ' + tag + ' ' : tag + ' '));
+    }
+    setShowMentionPicker(false);
+  };
+
 
   const {
     data: messages = [],
@@ -221,7 +254,7 @@ export default function ConversationScreen() {
           <Ionicons name="arrow-back" size={24} color={theme.text} />
         </TouchableOpacity>
 
-        <View style={styles.headerTitleContainer}>
+        <TouchableOpacity style={styles.headerTitleContainer} onPress={() => setShowGroupInfoModal(true)} activeOpacity={0.7}>
           <Text
             style={[styles.headerTitle, { color: theme.text }]}
             numberOfLines={1}
@@ -234,7 +267,7 @@ export default function ConversationScreen() {
               style={[styles.headerSubtitle, { color: theme.textSecondary }]}
               numberOfLines={1}
             >
-              {code ? `${code} | ` : ''}Open Academic Forum
+              {code ? `${code} • ` : ''}${activeMembers.length} Members • Open Academic Forum
             </Text>
           </View>
         </View>
@@ -315,6 +348,14 @@ export default function ConversationScreen() {
               },
             ]}
           >
+            
+            <TouchableOpacity
+              style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: theme.primary + '18', justifyContent: 'center', alignItems: 'center', marginRight: 6 }}
+              onPress={() => setShowMentionPicker(!showMentionPicker)}
+              activeOpacity={0.7}
+            >
+              <Text style={{ fontSize: 16, fontFamily: 'Ubuntu-Bold', color: theme.primary }}>@</Text>
+            </TouchableOpacity>
             <TextInput
               style={[
                 styles.composerInput,
@@ -354,6 +395,72 @@ export default function ConversationScreen() {
           </View>
         </View>
       </KeyboardAvoidingView>
+    
+      {/* GROUP INFO MODAL */}
+      <Modal
+        visible={showGroupInfoModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowGroupInfoModal(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
+          <View style={{ backgroundColor: theme.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: '80%', borderTopWidth: 1, borderTopColor: theme.border }}>
+            <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: theme.border, alignSelf: 'center', marginBottom: 16 }} />
+
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+              <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: theme.primary + '20', justifyContent: 'center', alignItems: 'center' }}>
+                <MaterialCommunityIcons name="forum" size={26} color={theme.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 18, fontFamily: 'Ubuntu-Bold', color: theme.text }}>{title || 'Discussion Forum'}</Text>
+                <Text style={{ fontSize: 12, fontFamily: 'Ubuntu-Regular', color: theme.textSecondary }}>{code ? code + ' • ' : ''}Academic Community</Text>
+              </View>
+              <TouchableOpacity onPress={() => setShowGroupInfoModal(false)}>
+                <Ionicons name="close-circle" size={24} color={theme.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={{ backgroundColor: isDarkMode ? '#1E293B' : '#F8FAFC', padding: 12, borderRadius: 12, marginBottom: 16, borderWidth: 1, borderColor: theme.border }}>
+              <Text style={{ fontSize: 12, fontFamily: 'Ubuntu-Medium', color: theme.primary, marginBottom: 4 }}>ABOUT THIS FORUM</Text>
+              <Text style={{ fontSize: 13, fontFamily: 'Ubuntu-Regular', color: theme.text, lineHeight: 18 }}>
+                Collaborate with LAUTECH scholars in {title || 'this academic channel'}. Discuss assignments, share past questions, and clarify lecture concepts together.
+              </Text>
+            </View>
+
+            <Text style={{ fontSize: 13, fontFamily: 'Ubuntu-Bold', color: theme.text, marginBottom: 10 }}>
+              ACTIVE MEMBERS ({activeMembers.length})
+            </Text>
+
+            <FlatList
+              data={activeMembers}
+              keyExtractor={(m) => m.id}
+              style={{ maxHeight: 220 }}
+              renderItem={({ item: m }) => (
+                <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: theme.border, gap: 10 }}>
+                  <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: theme.primary + '20', justifyContent: 'center', alignItems: 'center' }}>
+                    <Text style={{ fontSize: 13, fontFamily: 'Ubuntu-Bold', color: theme.primary }}>{m.name.charAt(0).toUpperCase()}</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 14, fontFamily: 'Ubuntu-Medium', color: theme.text }}>{m.name}</Text>
+                    <Text style={{ fontSize: 11, fontFamily: 'Ubuntu-Regular', color: theme.textSecondary }}>@{m.username}</Text>
+                  </View>
+                  <View style={{ backgroundColor: theme.primary + '15', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 }}>
+                    <Text style={{ fontSize: 10, fontFamily: 'Ubuntu-Bold', color: theme.primary }}>{m.id === currentUserId ? 'You' : 'Member'}</Text>
+                  </View>
+                </View>
+              )}
+            />
+
+            <TouchableOpacity
+              style={{ backgroundColor: theme.primary, paddingVertical: 14, borderRadius: 12, alignItems: 'center', marginTop: 16 }}
+              onPress={() => setShowGroupInfoModal(false)}
+            >
+              <Text style={{ color: '#FFFFFF', fontFamily: 'Ubuntu-Bold', fontSize: 14 }}>Close Forum Info</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
     </SafeAreaView>
   );
 }

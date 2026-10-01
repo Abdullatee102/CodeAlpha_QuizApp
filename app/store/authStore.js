@@ -931,6 +931,8 @@ export const useAuthStore = create(
         code,
         identifier,
         fullName
+        fullName,
+        skipAutoLogin = false
       ) => {
         set({
           isLoading: true,
@@ -963,6 +965,19 @@ export const useAuthStore = create(
               '/auth/verify-otp',
               payload
             );
+
+          if (skipAutoLogin) {
+            set({
+              isLoading: false,
+              error: null,
+            });
+
+            return {
+              success: true,
+              data:
+                response.data,
+            };
+          }
 
           const accessToken =
             response.data?.tokens

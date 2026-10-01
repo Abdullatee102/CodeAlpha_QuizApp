@@ -870,6 +870,8 @@ export const useQuizStore = create(
         courseId,
         type = 'cbt',
         courseCode = null
+        courseCode = null,
+        level = null
       ) => {
         const normalizedType =
           String(
@@ -895,14 +897,27 @@ export const useQuizStore = create(
         try {
           const response =
             await api.get(
+          let response;
+          if (courseId === 'mixed' || courseCode === 'MIXED') {
+            response = await api.get('/auth/questions/mixed', {
+              params: {
+                type: normalizedType,
+                ...(level ? { level } : {}),
+                limit: 30,
+              },
+            });
+          } else {
+            response = await api.get(
               `/auth/courses/${courseId}/questions`,
               {
                 params: {
                   type:
                     normalizedType,
+                  type: normalizedType,
                 },
               }
             );
+          }
 
           const rawQuestions =
             response.data?.data ||

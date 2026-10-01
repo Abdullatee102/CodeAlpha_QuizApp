@@ -101,6 +101,8 @@ export default function VerifyEmail() {
       otpCode,
       identifier,
       fullName
+      fullName,
+      isPasswordResetFlow
     );
 
     if (res?.success) {

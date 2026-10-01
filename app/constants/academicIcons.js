@@ -2,6 +2,12 @@
 // Meaningful icon and color palette system for LAUTECH Faculties and Departments
 
 export const FACULTY_ICONS = {
+  MIXED: {
+    icon: 'all-inclusive',
+    color: '#8B5CF6',
+    lightBg: '#F3E8FF',
+    family: 'All Faculties Practice',
+  },
   FCI: {
     icon: 'laptop',
     color: '#2563EB', // Tech Blue

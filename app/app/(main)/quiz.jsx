@@ -515,1591 +515,7 @@ export default function QuizScreen() {
                   questionCount
                 );
 
-              Alert.alert(
-                'Fair Play Rules ???|',
-
-                `${
-                  isTheory
-                    ? 'Theory Assessment'
-                    : 'Computer Based Test'
-                }\n\n` +
-                  `Questions: ${questionCount}\n` +
-                  `Time per question: ${secondsPerQuestion} seconds\n` +
-                  `Total assessment time: ${formatDuration(
-                    totalSeconds
-                  )}\n\n` +
-                  `1. Leaving this screen clears your progress.\n` +
-                  `2. Switching apps or minimizing terminates the assessment.\n` +
-                  `3. The timer is one continuous assessment timer.\n` +
-                  `4. You can move backward and forward between questions.\n` +
-                  `5. You can review and edit your answers before final submission.\n` +
-                  `6. Your assessment is graded securely by the server only after you submit.`,
-
-                [
-                  {
-                    text: 'Go Back',
-
-                    onPress: () => {
-                      abandonQuiz();
-
-                      setAssessmentTimeLeft(
-                        0
-                      );
-
-                      setIsStarted(
-                        false
-                      );
-
-                      router.back();
-                    },
-
-                    style: 'cancel',
-                  },
-
-                  {
-                    text:
-                      'I Understand, Start',
-
-                    onPress: () => {
-                      /*
-                       * The timer was already initialized with the
-                       * correct total duration above.
-                       *
-                       * Setting isStarted to true activates the
-                       * global timer effect.
-                       */
-                      hasHandledTimeExpiry.current =
-                        false;
-
-                      setIsPreparing(
-                        false
-                      );
-
-                      setIsStarted(
-                        true
-                      );
-                    },
-                  },
-                ],
-
-                {
-                  cancelable:
-                    false,
-                }
-              );
-            }, 300);
-        } else {
-          setIsLoading(false);
-
-          setIsPreparing(false);
-
-          setNoQuestions(true);
-        }
-      };
-
-    initializeQuiz();
-
-    return () => {
-      isMounted = false;
-
-      if (
-        initializationTimeoutRef.current
-      ) {
-        clearTimeout(
-          initializationTimeoutRef.current
-        );
-      }
-
-      abandonQuiz();
-    };
-  }, [
-    resolvedCourseId,
-    resolvedQuizType,
-  ]);
-
-  // =========================================================
-  // APP STATE / ANTI-MINIMIZE
-  // =========================================================
-
-  useEffect(() => {
-    const subscription =
-      AppState.addEventListener(
-        'change',
-        (nextAppState) => {
-          /*
-           * Only terminate while the user is actively answering.
-           *
-           * Review mode is intentionally allowed to continue.
-           */
-          if (
-            isStarted &&
-            !isFinished &&
-            !isReviewing &&
-            appState.current ===
-              'active' &&
-            nextAppState.match(
-              /inactive|background/
-            )
-          ) {
-            abandonQuiz();
-
-            setAssessmentTimeLeft(
-              0
-            );
-
-            setIsStarted(false);
-
-            setIsReviewing(false);
-
-            setIsEditingReview(false);
-
-            router.replace(
-              '/(main)'
-            );
-
-            setTimeout(() => {
-              Alert.alert(
-                'Terminated',
-                isTheory
-                  ? 'App minimized. Theory assessment progress cleared.'
-                  : 'App minimized. Quiz progress cleared.'
-              );
-            }, 100);
-          }
-
-          appState.current =
-            nextAppState;
-        }
-      );
-
-    return () =>
-      subscription.remove();
-  }, [
-    isStarted,
-    isFinished,
-    isReviewing,
-    isTheory,
-  ]);
-
-  // =========================================================
-  // NAVIGATION PROTECTION
-  // =========================================================
-
-  useEffect(() => {
-    const unsubscribe =
-      navigation.addListener(
-        'beforeRemove',
-        (e) => {
-          /*
-           * Once actual grading is happening, allow the
-           * navigation system to complete its existing action.
-           */
-          if (
-            isSubmittingFinalQuiz
-          ) {
-            return;
-          }
-
-          /*
-           * If result has already been shown, navigation is safe.
-           */
-          if (
-            isFinished &&
-            !isReviewing
-          ) {
-            return;
-          }
-
-          /*
-           * No active assessment.
-           */
-          if (
-            !isStarted &&
-            !isReviewing
-          ) {
-            return;
-          }
-
-          e.preventDefault();
-
-          Alert.alert(
-            isReviewing
-              ? 'Leave Assessment Review?'
-              : isTheory
-                ? 'Abandon Theory Assessment?'
-                : 'Abandon Quiz?',
-
-            isReviewing
-              ? 'Your answers have not been submitted yet. Leaving now will clear your progress.'
-              : 'Progress will be lost.',
-
-            [
-              {
-                text: 'Stay',
-
-                style: 'cancel',
-              },
-
-              {
-                text: 'Leave',
-
-                style:
-                  'destructive',
-
-                onPress: () => {
-                  abandonQuiz();
-
-                  setAssessmentTimeLeft(
-                    0
-                  );
-
-                  setIsStarted(
-                    false
-                  );
-
-                  setIsReviewing(
-                    false
-                  );
-
-                  setIsEditingReview(
-                    false
-                  );
-
-                  navigation.dispatch(
-                    e.data.action
-                  );
-                },
-              },
-            ]
-          );
-        }
-      );
-
-    return unsubscribe;
-  }, [
-    navigation,
-    isFinished,
-    isStarted,
-    isReviewing,
-    isTheory,
-    isSubmittingFinalQuiz,
-  ]);
-
-  // =========================================================
-  // GLOBAL ASSESSMENT TIMER
-  // =========================================================
-
-  useEffect(() => {
-    /*
-     * IMPORTANT:
-     *
-     * This is ONE GLOBAL ASSESSMENT TIMER.
-     *
-     * It runs:
-     *
-     *   active assessment -> YES
-     *   review            -> YES
-     *   answer selected   -> STILL YES
-     *   moving questions  -> STILL YES
-     *
-     * It does NOT reset for each question.
-     *
-     * It does NOT use quizStore's tick/timeLeft.
-     *
-     * The timer is controlled entirely by assessmentTimeLeft.
-     */
-    if (
-      (!isStarted &&
-        !isReviewing) ||
-      isSubmittingFinalQuiz ||
-      isResultShown
-    ) {
-      return;
-    }
-
-    /*
-     * Time has reached zero.
-     *
-     * Handle expiry exactly once.
-     */
-    if (
-      Number(assessmentTimeLeft) <=
-      0
-    ) {
-      if (
-        !hasHandledTimeExpiry.current
-      ) {
-        hasHandledTimeExpiry.current =
-          true;
-
-        handleTimeExpired();
-      }
-
-      return;
-    }
-
-    const timer =
-      setInterval(() => {
-        setAssessmentTimeLeft(
-          (previousTime) =>
-            Math.max(
-              0,
-              Number(
-                previousTime
-              ) - 1
-            )
-        );
-      }, 1000);
-
-    return () =>
-      clearInterval(timer);
-  }, [
-    assessmentTimeLeft,
-    isStarted,
-    isReviewing,
-    isSubmittingFinalQuiz,
-    isResultShown,
-  ]);
-
-  // =========================================================
-  // PROGRESS ANIMATION
-  // =========================================================
-
-  useEffect(() => {
-    if (
-      questions.length > 0
-    ) {
-      Animated.timing(
-        progressAnim,
-        {
-          toValue:
-            (currentQuestionIndex +
-              1) /
-            questions.length,
-
-          duration: 500,
-
-          useNativeDriver:
-            false,
-        }
-      ).start();
-    }
-  }, [
-    currentQuestionIndex,
-    questions.length,
-  ]);
-
-  // =========================================================
-  // LOAD CURRENT ANSWER
-  // =========================================================
-
-  useEffect(() => {
-    if (
-      questions.length === 0
-    ) {
-      return;
-    }
-
-    const currentQuestion =
-      questions[
-        currentQuestionIndex
-      ];
-
-    if (!currentQuestion) {
-      return;
-    }
-
-    const savedAnswer =
-      answers.find(
-        (item) =>
-          item.questionId ===
-          currentQuestion.id
-      )?.answer ?? '';
-
-    if (isTheory) {
-      setTheoryAnswer(
-        savedAnswer
-      );
-
-      setSelectedOption(
-        null
-      );
-    } else {
-      setSelectedOption(
-        savedAnswer || null
-      );
-
-      setTheoryAnswer('');
-    }
-
-    setIsAnswered(
-      Boolean(savedAnswer)
-    );
-
-    /*
-     * Initialize the review draft for theory questions
-     * without destroying an existing local draft.
-     */
-    if (
-      isReviewing &&
-      isTheory
-    ) {
-      setReviewDrafts(
-        (previous) => {
-          if (
-            Object.prototype.hasOwnProperty.call(
-              previous,
-              currentQuestion.id
-            )
-          ) {
-            return previous;
-          }
-
-          return {
-            ...previous,
-            [currentQuestion.id]:
-              savedAnswer,
-          };
-        }
-      );
-    }
-  }, [
-    currentQuestionIndex,
-    questions,
-    answers,
-    isTheory,
-    isReviewing,
-  ]);
-
-  // =========================================================
-  // INITIALIZE REVIEW DRAFTS
-  // =========================================================
-
-  useEffect(() => {
-    if (
-      !isReviewing ||
-      questions.length === 0
-    ) {
-      return;
-    }
-
-    const drafts = {};
-
-    questions.forEach(
-      (question) => {
-        const savedAnswer =
-          answers.find(
-            (item) =>
-              item.questionId ===
-              question.id
-          )?.answer ?? '';
-
-        drafts[question.id] =
-          savedAnswer;
-      }
-    );
-
-    setReviewDrafts(
-      drafts
-    );
-  }, [
-    isReviewing,
-    questions.length,
-  ]);
-
-  // =========================================================
-  // BUILD CURRENT QUIZ DATA
-  // =========================================================
-
-  const buildCurrentQuizData =
-    () => {
-      const state =
-        useQuizStore.getState();
-
-      return {
-        courseId:
-          state.currentCourseId ||
-          resolvedCourseId,
-
-        category:
-          state.currentCategory ||
-          (Array.isArray(
-            courseCode
-          )
-            ? courseCode[0]
-            : courseCode) ||
-          'General',
-
-        quizType:
-          state.currentQuizType ||
-          resolvedQuizType,
-
-        answers:
-          state.answers,
-
-        totalQuestions:
-          state.questions.length,
-      };
-    };
-
-  // =========================================================
-  // SAVE CURRENT THEORY ANSWER
-  // =========================================================
-
-  const saveCurrentTheoryAnswer =
-    async () => {
-      if (!isTheory) {
-        return true;
-      }
-
-      const currentQuestion =
-        useQuizStore.getState()
-          .questions[
-          useQuizStore.getState()
-            .currentQuestionIndex
-        ];
-
-      if (!currentQuestion) {
-        return true;
-      }
-
-      const result =
-        await submitAnswer(
-          theoryAnswer.trim()
-        );
-
-      return (
-        result?.success !== false
-      );
-    };
-
-  // =========================================================
-  // SAVE ALL REVIEW THEORY DRAFTS
-  // =========================================================
-
-  const saveAllReviewDrafts =
-    async () => {
-      if (!isTheory) {
-        return true;
-      }
-
-      const state =
-        useQuizStore.getState();
-
-      const originalIndex =
-        state.currentQuestionIndex;
-
-      try {
-        for (
-          let index = 0;
-          index <
-          state.questions.length;
-          index++
-        ) {
-          const question =
-            state.questions[
-              index
-            ];
-
-          const draft =
-            reviewDrafts[
-              question.id
-            ];
-
-          /*
-           * Only save questions that have a local draft.
-           */
-          if (
-            draft === undefined
-          ) {
-            continue;
-          }
-
-          setQuestionIndex(
-            index
-          );
-
-          const result =
-            await submitAnswer(
-              String(
-                draft ?? ''
-              ).trim()
-            );
-
-          if (
-            !result?.success
-          ) {
-            setQuestionIndex(
-              originalIndex
-            );
-
-            return false;
-          }
-        }
-
-        setQuestionIndex(
-          Math.min(
-            originalIndex,
-            state.questions.length -
-              1
-          )
-        );
-
-        return true;
-      } catch (error) {
-        console.error(
-          'Saving review drafts failed:',
-          error
-        );
-
-        setQuestionIndex(
-          Math.min(
-            originalIndex,
-            state.questions.length -
-              1
-          )
-        );
-
-        return false;
-      }
-    };
-
-  // =========================================================
-  // TIME EXPIRED
-  // =========================================================
-
-  const handleTimeExpired =
-    async () => {
-      if (
-        hasSubmittedQuiz.current ||
-        isSubmittingFinalQuiz
-      ) {
-        return;
-      }
-
-      /*
-       * If theory review contains unsaved text, attempt to save
-       * the drafts before locking the review.
-       */
-      if (isReviewing) {
-        await saveAllReviewDrafts();
-      } else if (isTheory) {
-        await saveCurrentTheoryAnswer();
-      }
-
-      const latestData =
-        buildCurrentQuizData();
-
-      pendingQuizDataRef.current =
-        latestData;
-
-      /*
-       * Keep the timer at exactly 00:00.
-       */
-      setAssessmentTimeLeft(0);
-
-      setIsStarted(false);
-
-      setIsReviewing(true);
-
-      setIsEditingReview(false);
-
-      Alert.alert(
-        'Time Elapsed â°',
-        'Your assessment time has ended. Your answers are now read-only. Review your answers, then submit the assessment when you are ready.',
-        [
-          {
-            text: 'Review Answers',
-            onPress: () => {
-              setQuestionIndex(0);
-            },
-          },
-        ],
-        {
-          cancelable:
-            false,
-        }
-      );
-    };
-
-  // =========================================================
-  // CBT ANSWER
-  // =========================================================
-
-  const handleOptionPress =
-    async (option) => {
-      /*
-       * Once time has reached zero, the review is read-only.
-       */
-      if (
-        Number(
-          assessmentTimeLeft
-        ) <= 0 ||
-        isSubmittingFinalQuiz
-      ) {
-        return;
-      }
-
-      setSelectedOption(
-        option
-      );
-
-      setIsAnswered(true);
-
-      const result =
-        await submitAnswer(
-          option
-        );
-
-      if (
-        !result?.success
-      ) {
-        setIsAnswered(false);
-
-        return;
-      }
-
-      /*
-       * IMPORTANT:
-       *
-       * Do NOT automatically move to the next question.
-       *
-       * The user controls navigation using Previous/Next.
-       */
-      pendingQuizDataRef.current =
-        buildCurrentQuizData();
-    };
-
-  // =========================================================
-  // THEORY ANSWER
-  // =========================================================
-
-  const handleTheorySubmit =
-    async () => {
-      if (
-        Number(
-          assessmentTimeLeft
-        ) <= 0 ||
-        isSubmittingFinalQuiz
-      ) {
-        return;
-      }
-
-      const trimmedAnswer =
-        theoryAnswer.trim();
-
-      /*
-       * Empty answers are allowed.
-       * This makes it possible to skip a question and continue.
-       */
-      setIsAnswered(
-        Boolean(trimmedAnswer)
-      );
-
-      const result =
-        await submitAnswer(
-          trimmedAnswer
-        );
-
-      if (
-        !result?.success
-      ) {
-        setIsAnswered(false);
-
-        return;
-      }
-
-      pendingQuizDataRef.current =
-        buildCurrentQuizData();
-    };
-
-  // =========================================================
-  // NORMAL PREVIOUS
-  // =========================================================
-
-  const handlePrevious =
-    () => {
-      if (
-        isSubmittingFinalQuiz ||
-        questions.length === 0
-      ) {
-        return;
-      }
-
-      if (
-        currentQuestionIndex <=
-        0
-      ) {
-        return;
-      }
-
-      /*
-       * If the current theory answer has been typed but not saved,
-       * save it before moving away.
-       */
-      if (
-        isTheory &&
-        theoryAnswer.trim()
-      ) {
-        saveCurrentTheoryAnswer();
-      }
-
-      setIsEditingReview(
-        false
-      );
-
-      previousQuestion();
-    };
-
-  // =========================================================
-  // NORMAL NEXT
-  // =========================================================
-
-  const handleNext =
-    async () => {
-      if (
-        isSubmittingFinalQuiz ||
-        questions.length === 0
-      ) {
-        return;
-      }
-
-      /*
-       * If there is text in a theory answer that has not yet been
-       * saved, save it before moving forward.
-       */
-      if (
-        isTheory &&
-        theoryAnswer.trim()
-      ) {
-        const saved =
-          await saveCurrentTheoryAnswer();
-
-        if (!saved) {
-          Alert.alert(
-            'Save Failed',
-            'Your current answer could not be saved. Please try again.'
-          );
-
-          return;
-        }
-      }
-
-      /*
-       * LAST QUESTION
-       *
-       * Next becomes Review & Submit.
-       *
-       * Absolutely NO grading happens here.
-       */
-      if (
-        currentQuestionIndex >=
-        questions.length - 1
-      ) {
-        startReview();
-
-        return;
-      }
-
-      setSelectedOption(
-        null
-      );
-
-      setTheoryAnswer('');
-
-      setIsAnswered(false);
-
-      setIsEditingReview(
-        false
-      );
-
-      nextQuestion();
-    };
-
-  // =========================================================
-  // START REVIEW
-  // =========================================================
-
-  const startReview =
-    async () => {
-      /*
-       * Save any current theory text first.
-       */
-      if (
-        isTheory &&
-        theoryAnswer.trim()
-      ) {
-        await saveCurrentTheoryAnswer();
-      }
-
-      const latestData =
-        buildCurrentQuizData();
-
-      pendingQuizDataRef.current =
-        latestData;
-
-      setIsReviewing(true);
-
-      setIsEditingReview(
-        false
-      );
-
-      /*
-       * IMPORTANT:
-       *
-       * Do NOT reset assessmentTimeLeft.
-       *
-       * The same global timer continues during review.
-       */
-      setIsStarted(false);
-
-      /*
-       * Start the vertical review from Q1.
-       */
-      setQuestionIndex(0);
-    };
-
-  // =========================================================
-  // REVIEW QUESTION SELECT
-  // =========================================================
-
-  const handleReviewQuestionPress =
-    (index) => {
-      if (
-        index < 0 ||
-        index >= questions.length
-      ) {
-        return;
-      }
-
-      setIsEditingReview(
-        false
-      );
-
-      setQuestionIndex(
-        index
-      );
-    };
-
-  // =========================================================
-  // REVIEW CBT ANSWER
-  // =========================================================
-
-  const handleReviewOptionPress =
-    async (
-      questionIndex,
-      option
-    ) => {
-      if (
-        Number(
-          assessmentTimeLeft
-        ) <= 0 ||
-        isSubmittingFinalQuiz
-      ) {
-        return;
-      }
-
-      /*
-       * Move the store temporarily to the question being edited.
-       */
-      setQuestionIndex(
-        questionIndex
-      );
-
-      const result =
-        await submitAnswer(
-          option
-        );
-
-      if (
-        !result?.success
-      ) {
-        Alert.alert(
-          'Save Failed',
-          'The answer could not be updated.'
-        );
-
-        return;
-      }
-
-      setSelectedOption(
-        option
-      );
-
-      setIsAnswered(true);
-
-      pendingQuizDataRef.current =
-        buildCurrentQuizData();
-    };
-
-  // =========================================================
-  // REVIEW THEORY TEXT CHANGE
-  // =========================================================
-
-  const handleReviewTheoryChange =
-    (
-      questionId,
-      text
-    ) => {
-      if (
-        Number(
-          assessmentTimeLeft
-        ) <= 0
-      ) {
-        return;
-      }
-
-      setReviewDrafts(
-        (previous) => ({
-          ...previous,
-          [questionId]:
-            text,
-        })
-      );
-    };
-
-  // =========================================================
-  // SAVE REVIEW THEORY ANSWER
-  // =========================================================
-
-  const handleSaveReviewTheory =
-    async (
-      questionIndex,
-      questionId
-    ) => {
-      if (
-        Number(
-          assessmentTimeLeft
-        ) <= 0 ||
-        isSubmittingFinalQuiz
-      ) {
-        return;
-      }
-
-      const draft =
-        reviewDrafts[
-          questionId
-        ] ?? '';
-
-      /*
-       * Move the store to the question being edited.
-       */
-      setQuestionIndex(
-        questionIndex
-      );
-
-      const result =
-        await submitAnswer(
-          draft.trim()
-        );
-
-      if (
-        !result?.success
-      ) {
-        Alert.alert(
-          'Save Failed',
-          'The answer could not be updated.'
-        );
-
-        return;
-      }
-
-      pendingQuizDataRef.current =
-        buildCurrentQuizData();
-
-      setIsAnswered(
-        Boolean(
-          draft.trim()
-        )
-      );
-
-      Alert.alert(
-        'Answer Updated',
-        `Your answer for Question ${
-          questionIndex + 1
-        } has been saved.`
-      );
-    };
-
-  // =========================================================
-  // CONFIRM FINAL SUBMISSION
-  // =========================================================
-
-  const handleSubmitAssessment =
-    async () => {
-      if (
-        isSubmittingFinalQuiz ||
-        hasSubmittedQuiz.current
-      ) {
-        return;
-      }
-
-      /*
-       * Save any currently edited theory answers before showing
-       * the confirmation alert.
-       */
-      if (isTheory) {
-        const saved =
-          await saveAllReviewDrafts();
-
-        if (!saved) {
-          Alert.alert(
-            'Save Failed',
-            'Some answers could not be saved. Please try again before submitting.'
-          );
-
-          return;
-        }
-      }
-
-      const latestState =
-        useQuizStore.getState();
-
-      const latestAnswers =
-        latestState.answers;
-
-      /*
-       * Make sure the payload always uses the latest edited answers.
-       */
-      const finalQuizData = {
-        courseId:
-          latestState.currentCourseId ||
-          resolvedCourseId,
-
-        category:
-          latestState.currentCategory ||
-          (Array.isArray(
-            courseCode
-          )
-            ? courseCode[0]
-            : courseCode) ||
-          'General',
-
-        quizType:
-          latestState.currentQuizType ||
-          resolvedQuizType,
-
-        answers:
-          latestAnswers,
-
-        totalQuestions:
-          latestState.questions.length,
-      };
-
-      pendingQuizDataRef.current =
-        finalQuizData;
-
-      Alert.alert(
-        'Submit Assessment?',
-
-        'Once submitted, your answers will be graded by the server and you will not be able to edit them again.',
-
-        [
-          {
-            text: 'Continue Reviewing',
-
-            style: 'cancel',
-          },
-
-          {
-            text: 'Submit Assessment',
-
-            onPress: async () => {
-              await submitFinalQuiz(
-                finalQuizData
-              );
-            },
-          },
-        ]
-      );
-    };
-
-  // =========================================================
-  // FINAL SUBMISSION
-  // =========================================================
-
-  const submitFinalQuiz =
-    async (
-      quizData
-    ) => {
-      if (
-        hasSubmittedQuiz.current ||
-        !quizData
-      ) {
-        return false;
-      }
-
-      const finalQuizData = {
-        courseId:
-          quizData.courseId ||
-          resolvedCourseId,
-
-        category:
-          quizData.category ||
-          (Array.isArray(
-            courseCode
-          )
-            ? courseCode[0]
-            : courseCode) ||
-          'General',
-
-        quizType:
-          quizData.quizType ||
-          resolvedQuizType,
-
-        answers:
-          quizData.answers || [],
-      };
-
-      console.log(
-        '===================================='
-      );
-
-      console.log(
-        '[QUIZ SUBMIT] Final payload:',
-        JSON.stringify(
-          finalQuizData,
-          null,
-          2
-        )
-      );
-
-      console.log(
-        '===================================='
-      );
-
-      /*
-       * This is the ONLY point where the assessment becomes
-       * officially submitted.
-       */
-      hasSubmittedQuiz.current =
-        true;
-
-      setIsSubmittingFinalQuiz(
-        true
-      );
-
-      try {
-        const response =
-          await submitQuiz(
-            finalQuizData
-          );
-
-        console.log(
-          '[QUIZ SUBMIT] Raw mutation response:',
-          JSON.stringify(
-            response,
-            null,
-            2
-          )
-        );
-
-        /*
-         * Normalize both possible mutation response shapes.
-         */
-        const backendResult =
-          response?.data?.grading
-            ? response.data
-            : response;
-
-        console.log(
-          '[QUIZ SUBMIT] Normalized backend result:',
-          JSON.stringify(
-            backendResult,
-            null,
-            2
-          )
-        );
-
-        const grading =
-          backendResult?.grading;
-
-        const history =
-          backendResult?.data;
-
-        console.log(
-          '[QUIZ SUBMIT] Grading:',
-          JSON.stringify(
-            grading,
-            null,
-            2
-          )
-        );
-
-        console.log(
-          '[QUIZ SUBMIT] History:',
-          JSON.stringify(
-            history,
-            null,
-            2
-          )
-        );
-
-        if (!grading) {
-          throw new Error(
-            'The server did not return quiz grading results.'
-          );
-        }
-
-        /*
-         * Store server grading result.
-         */
-        applyServerGrading({
-          grading,
-          data: history,
-        });
-
-        setIsSubmittingFinalQuiz(
-          false
-        );
-
-        setIsStarted(false);
-
-        setIsPreparing(false);
-
-        setIsReviewing(false);
-
-        setIsEditingReview(
-          false
-        );
-
-        /*
-         * Sync profile/achievements after successful submission.
-         */
-        try {
-          await fetchProfile();
-        } catch (
-          profileError
-        ) {
-          console.error(
-            'Profile sync error after quiz submission:',
-            profileError
-          );
-        }
-
-        console.log(
-          '[QUIZ SUBMIT] Quiz submitted and processed successfully.'
-        );
-
-        return true;
-      } catch (error) {
-        hasSubmittedQuiz.current =
-          false;
-
-        setIsSubmittingFinalQuiz(
-          false
-        );
-
-        console.error(
-          '[QUIZ SUBMIT] Quiz submission failed:',
-          error
-        );
-
-        Alert.alert(
-          'Submission Failed',
-
-          'Your assessment could not be submitted. Please check your connection and try again.'
-        );
-
-        return false;
-      }
-    };
-
-  // =========================================================
-  // DOWNLOAD REPORT
-  // =========================================================
-
-  const handleDownloadReport =
-    async () => {
-      const grading =
-        useQuizStore.getState()
-          .serverGrading;
-
-      const correctCount =
-        Number(
-          grading?.correctAnswers ||
-            0
-        );
-
-      const totalQuestions =
-        Number(
-          grading?.totalQuestions ||
-            questions.length
-        );
-
-      const scorePoints =
-        Number(
-          grading?.score || 0
-        );
-
-      const percentage =
-        Number(
-          grading?.percentage || 0
-        );
-
-      const htmlContent =
-        quizReportHTML({
-          categoryTitle:
-            `${
-              Array.isArray(
-                courseCode
-              )
-                ? courseCode[0]
-                : courseCode
-            } | ${resolvedQuizType.toUpperCase()}`,
-
-          /*
-           * finalScore represents POINTS.
-           * percentage is passed separately.
-           */
-          finalScore:
-            scorePoints,
-
-          percentage,
-
-          correctCount,
-
-          totalQuestions,
-
-          profile,
-
-          user,
-        });
-
-      try {
-        const { uri } =
-          await Print.printToFileAsync(
-            {
-              html:
-                htmlContent,
-            }
-          );
-
-        await Sharing.shareAsync(
-          uri,
-          {
-            UTI: '.pdf',
-
-            mimeType:
-              'application/pdf',
-          }
-        );
-      } catch (error) {
-        console.error(
-          'PDF generation or sharing failed:',
-          error
-        );
-
-        Alert.alert(
-          'Error',
-
-          'Could not generate report file.'
-        );
-      }
-    };
-
-  // =========================================================
-  // FINISH QUIZ / RESULT
-  // =========================================================
-
-  const finishQuiz =
-    async () => {
-      const grading =
-        useQuizStore.getState()
-          .serverGrading;
-
-      if (!grading) {
-        Alert.alert(
-          'Result Unavailable',
-
-          'The server has not returned the grading result yet.'
-        );
-
-        return;
-      }
-
-      const finalScore =
-        Number(
-          grading.percentage ?? 0
-        );
-
-      const scorePoints =
-        Number(
-          grading.score ?? 0
-        );
-
-      const correctCount =
-        Number(
-          grading.correctAnswers ??
-            0
-        );
-
-      const totalQuestions =
-        Number(
-          grading.totalQuestions ??
-            questions.length
-        );
-
-      const wrongCount =
-        Number(
-          grading.wrongAnswers ??
-            Math.max(
-              0,
-              totalQuestions -
-                correctCount
-            )
-        );
-
-      setIsResultShown(
-        true
-      );
-
-      if (isTheory) {
-        const maxScore = Number(grading.maxScore ?? (totalQuestions * 10));
-        const details = Array.isArray(grading.details) ? grading.details : [];
-        // Aggregate matched and missing concepts from details if not at root
-        const matched = Array.isArray(grading.matchedConcepts) && grading.matchedConcepts.length > 0
-          ? grading.matchedConcepts
-          : details.flatMap((d) => d.matchedConcepts || []).filter(Boolean);
-
-        const missing = Array.isArray(grading.missingConcepts) && grading.missingConcepts.length > 0
-          ? grading.missingConcepts
-          : details.flatMap((d) => d.missingConcepts || []).filter(Boolean);
-
-        const feedback = grading.feedback || details.map((d) => d.feedback).filter(Boolean).join('\n') || '';
-
-        let theoryMessage = `Percentage: ${finalScore}%\nPoints: ${scorePoints} / ${maxScore}\nQuestions Evaluated: ${totalQuestions}`;
-
-        if (matched.length > 0) {
-          theoryMessage += `\n\nâœ“ Matched Rubric Concepts (${matched.length}):\n| ${matched.slice(0, 6).join('\n| ')}`;
-        }
-        if (missing.length > 0) {
-          theoryMessage += `\n\nâœ— Missing Rubric Concepts (${missing.length}):\n| ${missing.slice(0, 6).join('\n| ')}`;
-        }
-        if (feedback) {
-          theoryMessage += `\n\nRubric Feedback:\n${feedback}`;
-        }
-
-        Alert.alert(
-          'Theory Assessment Evaluation',
-          theoryMessage,
-          [
-            {
-              text: 'Share Report',
-              onPress: () => handleDownloadReport(),
-            },
-            {
-              text: 'Done',
-              onPress: () => {
-                abandonQuiz();
-                router.replace('/(main)');
-              },
-            },
-          ],
-          {
-            cancelable: false,
-          }
-        );
+              setShowFairPlayModal(true);
         return;
       }
 
@@ -4175,7 +2591,126 @@ export default function QuizScreen() {
             </View>
           )}
         </KeyboardAvoidingView>
-      </SafeAreaView>
+      
+      {/* FAIR PLAY RULES CUSTOM MODAL */}
+      <Modal
+        visible={showFairPlayModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {}}
+      >
+        <View style={styles.rulesOverlay}>
+          <View style={[styles.rulesCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
+            <View style={[styles.rulesHeaderIconBox, { backgroundColor: '#05966918' }]}>
+              <Ionicons name="shield-checkmark" size={32} color="#059669" />
+            </View>
+
+            <Text style={[styles.rulesModalTitle, { color: theme.text }]}>
+              Fair Play Rules
+            </Text>
+
+            <View style={[styles.rulesTypeBadge, { backgroundColor: isTheory ? '#7C3AED15' : '#2563EB15' }]}>
+              <Text style={[styles.rulesTypeBadgeText, { color: isTheory ? '#7C3AED' : '#2563EB' }]}>
+                {isTheory ? 'Theory Assessment' : 'Computer Based Test (CBT)'}
+              </Text>
+            </View>
+
+            <View style={[styles.rulesMetaRow, { backgroundColor: isDarkMode ? '#1E293B' : '#F8FAFC', borderColor: theme.border }]}>
+              <View style={styles.rulesMetaItem}>
+                <Text style={[styles.rulesMetaValue, { color: theme.text }]}>{questions.length}</Text>
+                <Text style={[styles.rulesMetaLabel, { color: theme.textSecondary }]}>Questions</Text>
+              </View>
+              <View style={[styles.rulesMetaDivider, { backgroundColor: theme.border }]} />
+              <View style={styles.rulesMetaItem}>
+                <Text style={[styles.rulesMetaValue, { color: theme.text }]}>{secondsPerQuestion}s</Text>
+                <Text style={[styles.rulesMetaLabel, { color: theme.textSecondary }]}>per Question</Text>
+              </View>
+              <View style={[styles.rulesMetaDivider, { backgroundColor: theme.border }]} />
+              <View style={styles.rulesMetaItem}>
+                <Text style={[styles.rulesMetaValue, { color: theme.text }]}>{formatDuration(getTotalAssessmentSeconds(questions.length))}</Text>
+                <Text style={[styles.rulesMetaLabel, { color: theme.textSecondary }]}>Total Time</Text>
+              </View>
+            </View>
+
+            <ScrollView style={{ maxHeight: 220, marginVertical: 12 }} showsVerticalScrollIndicator={false}>
+              <View style={styles.rulesList}>
+                <View style={styles.ruleRow}>
+                  <View style={[styles.ruleIconWrap, { backgroundColor: '#EF444415' }]}>
+                    <MaterialCommunityIcons name="exit-to-app" size={16} color="#EF4444" />
+                  </View>
+                  <Text style={[styles.ruleText, { color: theme.text }]}>Leaving this screen clears your progress.</Text>
+                </View>
+
+                <View style={styles.ruleRow}>
+                  <View style={[styles.ruleIconWrap, { backgroundColor: '#F59E0B15' }]}>
+                    <MaterialCommunityIcons name="cellphone-off" size={16} color="#F59E0B" />
+                  </View>
+                  <Text style={[styles.ruleText, { color: theme.text }]}>Switching apps or minimizing terminates assessment.</Text>
+                </View>
+
+                <View style={styles.ruleRow}>
+                  <View style={[styles.ruleIconWrap, { backgroundColor: '#3B82F615' }]}>
+                    <Ionicons name="timer-outline" size={16} color="#3B82F6" />
+                  </View>
+                  <Text style={[styles.ruleText, { color: theme.text }]}>The timer is one continuous assessment timer.</Text>
+                </View>
+
+                <View style={styles.ruleRow}>
+                  <View style={[styles.ruleIconWrap, { backgroundColor: '#8B5CF615' }]}>
+                    <Ionicons name="swap-horizontal" size={16} color="#8B5CF6" />
+                  </View>
+                  <Text style={[styles.ruleText, { color: theme.text }]}>Move backward and forward between questions freely.</Text>
+                </View>
+
+                <View style={styles.ruleRow}>
+                  <View style={[styles.ruleIconWrap, { backgroundColor: '#10B98115' }]}>
+                    <MaterialCommunityIcons name="clipboard-check-outline" size={16} color="#10B981" />
+                  </View>
+                  <Text style={[styles.ruleText, { color: theme.text }]}>Review and edit your answers before final submission.</Text>
+                </View>
+
+                <View style={styles.ruleRow}>
+                  <View style={[styles.ruleIconWrap, { backgroundColor: '#6366F115' }]}>
+                    <MaterialCommunityIcons name="shield-lock-outline" size={16} color="#6366F1" />
+                  </View>
+                  <Text style={[styles.ruleText, { color: theme.text }]}>Graded securely by the server after submission.</Text>
+                </View>
+              </View>
+            </ScrollView>
+
+            <View style={styles.rulesActionRow}>
+              <TouchableOpacity
+                style={[styles.rulesBackBtn, { borderColor: theme.border }]}
+                onPress={() => {
+                  setShowFairPlayModal(false);
+                  abandonQuiz();
+                  setAssessmentTimeLeft(0);
+                  setIsStarted(false);
+                  router.back();
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.rulesBackBtnText, { color: theme.textSecondary }]}>Go Back</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.rulesStartBtn, { backgroundColor: theme.primary }]}
+                onPress={() => {
+                  setShowFairPlayModal(false);
+                  hasHandledTimeExpiry.current = false;
+                  setIsPreparing(false);
+                  setIsStarted(true);
+                }}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.rulesStartBtnText}>I Understand, Start</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+</SafeAreaView>
     );
   }
 
@@ -5185,4 +3720,120 @@ const styles =
       fontFamily: 'Ubuntu-Bold',
       fontSize: 15,
     },
-  });
+  
+    rulesOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.65)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: 20,
+    },
+    rulesCard: {
+      width: '100%',
+      maxWidth: 400,
+      borderRadius: 20,
+      borderWidth: 1,
+      padding: 20,
+      alignItems: 'center',
+    },
+    rulesHeaderIconBox: {
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 10,
+    },
+    rulesModalTitle: {
+      fontSize: 18,
+      fontFamily: 'Ubuntu-Bold',
+      marginBottom: 4,
+    },
+    rulesTypeBadge: {
+      paddingHorizontal: 10,
+      paddingVertical: 3,
+      borderRadius: 6,
+      marginBottom: 14,
+    },
+    rulesTypeBadgeText: {
+      fontSize: 11,
+      fontFamily: 'Ubuntu-Bold',
+    },
+    rulesMetaRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-around',
+      width: '100%',
+      paddingVertical: 10,
+      paddingHorizontal: 8,
+      borderRadius: 12,
+      borderWidth: 1,
+      marginBottom: 8,
+    },
+    rulesMetaItem: {
+      alignItems: 'center',
+    },
+    rulesMetaValue: {
+      fontSize: 14,
+      fontFamily: 'Ubuntu-Bold',
+    },
+    rulesMetaLabel: {
+      fontSize: 10,
+      fontFamily: 'Ubuntu-Regular',
+      marginTop: 2,
+    },
+    rulesMetaDivider: {
+      width: 1,
+      height: 24,
+    },
+    rulesList: {
+      gap: 10,
+    },
+    ruleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    ruleIconWrap: {
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    ruleText: {
+      flex: 1,
+      fontSize: 12,
+      fontFamily: 'Ubuntu-Regular',
+      lineHeight: 16,
+    },
+    rulesActionRow: {
+      flexDirection: 'row',
+      gap: 10,
+      marginTop: 14,
+      width: '100%',
+    },
+    rulesBackBtn: {
+      flex: 1,
+      paddingVertical: 12,
+      borderRadius: 12,
+      borderWidth: 1,
+      alignItems: 'center',
+    },
+    rulesBackBtnText: {
+      fontSize: 13,
+      fontFamily: 'Ubuntu-Medium',
+    },
+    rulesStartBtn: {
+      flex: 1.4,
+      paddingVertical: 12,
+      borderRadius: 12,
+      alignItems: 'center',
+    },
+    rulesStartBtnText: {
+      color: '#FFFFFF',
+      fontSize: 13,
+      fontFamily: 'Ubuntu-Bold',
+    },
+
+});
