@@ -13,7 +13,6 @@ import {
   Platform,
 } from 'react-native';
 
-
 import { useRouter } from 'expo-router';
 
 import {
@@ -137,265 +136,265 @@ export default function ChangePasswordScreen() {
             style={styles.backBtn}
             activeOpacity={0.7}
           >
-          <Ionicons
-            name="arrow-back"
-            size={24}
-            color={theme.text}
-          />
-        </TouchableOpacity>
+            <Ionicons
+              name="arrow-back"
+              size={24}
+              color={theme.text}
+            />
+          </TouchableOpacity>
 
-        <View
-          style={[
-            styles.iconCircle,
-            {
-              backgroundColor:
-                theme.primary + '15',
-            },
-          ]}
-        >
-          <MaterialCommunityIcons
-            name="lock-reset"
-            size={60}
-            color={theme.primary}
-          />
-        </View>
-
-        <Text
-          style={[
-            GlobalStyles.headerTitle,
-            {
-              textAlign: 'center',
-              color: theme.primary,
-            },
-          ]}
-        >
-          Change Password
-        </Text>
-
-        <Text
-          style={[
-            GlobalStyles.subtitle,
-            {
-              textAlign: 'center',
-              marginTop: 10,
-              color:
-                theme.textSecondary,
-            },
-          ]}
-        >
-          Enter your current password and a
-          secure new password below.
-        </Text>
-
-        <View
-          style={styles.formSection}
-        >
-          {/* Current Password */}
           <View
             style={[
-              styles.passwordContainer,
+              styles.iconCircle,
               {
                 backgroundColor:
-                  theme.card,
-                borderColor:
-                  theme.border,
+                  theme.primary + '15',
               },
             ]}
           >
-            <TextInput
-              placeholder="Current Password"
-              placeholderTextColor={
-                theme.textSecondary
-              }
-              secureTextEntry={
-                !showCurrent
-              }
-              style={[
-                styles.passwordInput,
-                {
-                  color: theme.text,
-                },
-              ]}
-              value={currentPassword}
-              onChangeText={
-                setCurrentPassword
-              }
-              autoCapitalize="none"
-              autoCorrect={false}
+            <MaterialCommunityIcons
+              name="lock-reset"
+              size={60}
+              color={theme.primary}
             />
-
-            <TouchableOpacity
-              onPress={() =>
-                setShowCurrent(
-                  !showCurrent
-                )
-              }
-              style={styles.eyeIcon}
-              activeOpacity={0.7}
-            >
-              <Ionicons
-                name={
-                  showCurrent
-                    ? 'eye-off-outline'
-                    : 'eye-outline'
-                }
-                size={22}
-                color={
-                  theme.textSecondary
-                }
-              />
-            </TouchableOpacity>
           </View>
 
-          {/* New Password */}
-          <View
+          <Text
             style={[
-              styles.passwordContainer,
+              GlobalStyles.headerTitle,
               {
-                backgroundColor:
-                  theme.card,
-                borderColor:
-                  theme.border,
+                textAlign: 'center',
+                color: theme.primary,
               },
             ]}
           >
-            <TextInput
-              placeholder="New Password"
-              placeholderTextColor={
-                theme.textSecondary
-              }
-              secureTextEntry={
-                !showNew
-              }
-              style={[
-                styles.passwordInput,
-                {
-                  color: theme.text,
-                },
-              ]}
-              value={newPassword}
-              onChangeText={setNewPassword}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
+            Change Password
+          </Text>
 
-            <TouchableOpacity
-              onPress={() =>
-                setShowNew(
-                  !showNew
-                )
-              }
-              style={styles.eyeIcon}
-              activeOpacity={0.7}
-            >
-              <Ionicons
-                name={
-                  showNew
-                    ? 'eye-off-outline'
-                    : 'eye-outline'
-                }
-                size={22}
-                color={
-                  theme.textSecondary
-                }
-              />
-            </TouchableOpacity>
-          </View>
-
-          {/* Confirm New Password */}
-          <View
+          <Text
             style={[
-              styles.passwordContainer,
+              GlobalStyles.subtitle,
               {
-                backgroundColor:
-                  theme.card,
-                borderColor:
-                  theme.border,
-              },
-            ]}
-          >
-            <TextInput
-              placeholder="Confirm New Password"
-              placeholderTextColor={
-                theme.textSecondary
-              }
-              secureTextEntry={
-                !showConfirm
-              }
-              style={[
-                styles.passwordInput,
-                {
-                  color: theme.text,
-                },
-              ]}
-              value={confirmPassword}
-              onChangeText={
-                setConfirmPassword
-              }
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-
-            <TouchableOpacity
-              onPress={() =>
-                setShowConfirm(
-                  !showConfirm
-                )
-              }
-              style={styles.eyeIcon}
-              activeOpacity={0.7}
-            >
-              <Ionicons
-                name={
-                  showConfirm
-                    ? 'eye-off-outline'
-                    : 'eye-outline'
-                }
-                size={22}
-                color={
-                  theme.textSecondary
-                }
-              />
-            </TouchableOpacity>
-          </View>
-
-          <TouchableOpacity
-            style={[
-              GlobalStyles.primaryBtn,
-              {
-                backgroundColor:
-                  theme.primary,
+                textAlign: 'center',
                 marginTop: 10,
+                color:
+                  theme.textSecondary,
               },
-              isLoading &&
-                styles.disabledButton,
             ]}
-            onPress={
-              handleChangePassword
-            }
-            disabled={isLoading}
-            activeOpacity={0.8}
           >
-            {isLoading ? (
-              <ActivityIndicator
-                color={Colors.white}
-              />
-            ) : (
-              <Text
+            Enter your current password and a
+            secure new password below.
+          </Text>
+
+          <View
+            style={styles.formSection}
+          >
+            {/* Current Password */}
+            <View
+              style={[
+                styles.passwordContainer,
+                {
+                  backgroundColor:
+                    theme.card,
+                  borderColor:
+                    theme.border,
+                },
+              ]}
+            >
+              <TextInput
+                placeholder="Current Password"
+                placeholderTextColor={
+                  theme.textSecondary
+                }
+                secureTextEntry={
+                  !showCurrent
+                }
                 style={[
-                  GlobalStyles.btnText,
+                  styles.passwordInput,
                   {
-                    color:
-                      Colors.white,
+                    color: theme.text,
                   },
                 ]}
+                value={currentPassword}
+                onChangeText={
+                  setCurrentPassword
+                }
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+
+              <TouchableOpacity
+                onPress={() =>
+                  setShowCurrent(
+                    !showCurrent
+                  )
+                }
+                style={styles.eyeIcon}
+                activeOpacity={0.7}
               >
-                Update Password
-              </Text>
-            )}
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
+                <Ionicons
+                  name={
+                    showCurrent
+                      ? 'eye-off-outline'
+                      : 'eye-outline'
+                  }
+                  size={22}
+                  color={
+                    theme.textSecondary
+                  }
+                />
+              </TouchableOpacity>
+            </View>
+
+            {/* New Password */}
+            <View
+              style={[
+                styles.passwordContainer,
+                {
+                  backgroundColor:
+                    theme.card,
+                  borderColor:
+                    theme.border,
+                },
+              ]}
+            >
+              <TextInput
+                placeholder="New Password"
+                placeholderTextColor={
+                  theme.textSecondary
+                }
+                secureTextEntry={
+                  !showNew
+                }
+                style={[
+                  styles.passwordInput,
+                  {
+                    color: theme.text,
+                  },
+                ]}
+                value={newPassword}
+                onChangeText={setNewPassword}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+
+              <TouchableOpacity
+                onPress={() =>
+                  setShowNew(
+                    !showNew
+                  )
+                }
+                style={styles.eyeIcon}
+                activeOpacity={0.7}
+              >
+                <Ionicons
+                  name={
+                    showNew
+                      ? 'eye-off-outline'
+                      : 'eye-outline'
+                  }
+                  size={22}
+                  color={
+                    theme.textSecondary
+                  }
+                />
+              </TouchableOpacity>
+            </View>
+
+            {/* Confirm New Password */}
+            <View
+              style={[
+                styles.passwordContainer,
+                {
+                  backgroundColor:
+                    theme.card,
+                  borderColor:
+                    theme.border,
+                },
+              ]}
+            >
+              <TextInput
+                placeholder="Confirm New Password"
+                placeholderTextColor={
+                  theme.textSecondary
+                }
+                secureTextEntry={
+                  !showConfirm
+                }
+                style={[
+                  styles.passwordInput,
+                  {
+                    color: theme.text,
+                  },
+                ]}
+                value={confirmPassword}
+                onChangeText={
+                  setConfirmPassword
+                }
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+
+              <TouchableOpacity
+                onPress={() =>
+                  setShowConfirm(
+                    !showConfirm
+                  )
+                }
+                style={styles.eyeIcon}
+                activeOpacity={0.7}
+              >
+                <Ionicons
+                  name={
+                    showConfirm
+                      ? 'eye-off-outline'
+                      : 'eye-outline'
+                  }
+                  size={22}
+                  color={
+                    theme.textSecondary
+                  }
+                />
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              style={[
+                GlobalStyles.primaryBtn,
+                {
+                  backgroundColor:
+                    theme.primary,
+                  marginTop: 10,
+                },
+                isLoading &&
+                  styles.disabledButton,
+              ]}
+              onPress={
+                handleChangePassword
+              }
+              disabled={isLoading}
+              activeOpacity={0.8}
+            >
+              {isLoading ? (
+                <ActivityIndicator
+                  color={Colors.white}
+                />
+              ) : (
+                <Text
+                  style={[
+                    GlobalStyles.btnText,
+                    {
+                      color:
+                        Colors.white,
+                    },
+                  ]}
+                >
+                  Update Password
+                </Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

@@ -77,6 +77,8 @@ export default function SettingsScreen() {
   // LOGOUT
   // =========================================================
 
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
   const handleLogout = () => {
     Alert.alert(
       'Log Out',
@@ -92,56 +94,23 @@ export default function SettingsScreen() {
           style: 'destructive',
 
           onPress: async () => {
+            setIsLoggingOut(true);
             try {
-              /*
-               * authStore.logout() already:
-               *
-               * 1. Unregisters push notifications.
-               * 2. Logs out from the backend.
-               * 3. Signs out from Firebase.
-               * 4. Removes auth tokens.
-               * 5. Calls quizStore.clearUserSession().
-               * 6. Clears authStore user/session state.
-               */
-
-              const result =
-                await logout();
-
-              /*
-               * Clear all TanStack Query
-               * server-state cache so another
-               * session cannot receive stale
-               * data from this account.
-               */
-
+              const result = await logout();
               queryClient.clear();
 
-              if (
-                result?.success === false
-              ) {
+              if (result?.success === false) {
                 console.warn(
                   '[SETTINGS] Logout completed locally, but server logout reported an error:',
                   result.error
                 );
               }
 
-              router.replace(
-                '/(auth)/sign-in'
-              );
+              router.replace('/(auth)/sign-in');
             } catch (error) {
-              console.error(
-                '[SETTINGS] Logout failed:',
-                error
-              );
-
-              /*
-               * Even if something unexpected
-               * happens, clear the React Query
-               * cache before returning to auth.
-               */
-
+              console.error('[SETTINGS] Logout failed:', error);
               queryClient.clear();
-
+              setIsLoggingOut(false);
               Alert.alert(
                 'Logout Error',
                 'Something went wrong while logging out. Please try again.'
@@ -571,22 +540,26 @@ export default function SettingsScreen() {
                 theme.card,
               borderColor:
                 Colors.error,
-              opacity: isLoading
+              opacity: (isLoading || isLoggingOut)
                 ? 0.6
                 : 1,
             },
           ]}
           onPress={handleLogout}
           activeOpacity={0.7}
-          disabled={isLoading}
+          disabled={isLoading || isLoggingOut}
         >
-          <Ionicons
-            name="log-out-outline"
-            size={22}
-            color={
-              Colors.error
-            }
-          />
+          {isLoggingOut ? (
+            <ActivityIndicator size="small" color={Colors.error} />
+          ) : (
+            <Ionicons
+              name="log-out-outline"
+              size={22}
+              color={
+                Colors.error
+              }
+            />
+          )}
 
           <Text
             style={[
@@ -597,7 +570,7 @@ export default function SettingsScreen() {
               },
             ]}
           >
-            Log Out
+            {isLoggingOut ? 'Logging Out...' : 'Log Out'}
           </Text>
         </TouchableOpacity>
 
