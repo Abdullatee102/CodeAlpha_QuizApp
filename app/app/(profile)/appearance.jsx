@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
+  ActivityIndicator,
 } from 'react-native';
 
 import {
@@ -32,6 +33,17 @@ export default function AppearanceScreen() {
     theme,
   } = useThemeStore();
 
+  const [switchingKey, setSwitchingKey] = useState(null);
+
+  const handleSelectOption = (key) => {
+    if (appearance === key || switchingKey) return;
+    setSwitchingKey(key);
+    setTimeout(() => {
+      setAppearance(key);
+      setSwitchingKey(null);
+    }, 400);
+  };
+
   const options = [
     {
       key: 'system',
@@ -55,17 +67,6 @@ export default function AppearanceScreen() {
       icon: 'moon-outline',
     },
   ];
-
-  const [switchingKey, setSwitchingKey] = React.useState(null);
-
-  const handleSelectOption = (key) => {
-    if (appearance === key || switchingKey) return;
-    setSwitchingKey(key);
-    setTimeout(() => {
-      setAppearance(key);
-      setSwitchingKey(null);
-    }, 250);
-  };
 
   return (
     <SafeAreaView
@@ -142,7 +143,8 @@ export default function AppearanceScreen() {
               const selected =
                 appearance ===
                 option.key;
-              const isSwitching = switchingKey === option.key;
+              const isSwitching =
+                switchingKey === option.key;
 
               return (
                 <TouchableOpacity
@@ -152,8 +154,10 @@ export default function AppearanceScreen() {
                   activeOpacity={
                     0.7
                   }
-                  onPress={() => handleSelectOption(option.key)}
-                  disabled={switchingKey !== null}
+                  disabled={isSwitching || Boolean(switchingKey)}
+                  onPress={() =>
+                    handleSelectOption(option.key)
+                  }
                   style={[
                     styles.option,
                     {
@@ -165,6 +169,9 @@ export default function AppearanceScreen() {
                           1
                           ? 0
                           : 1,
+                      backgroundColor: isSwitching
+                        ? `${theme.primary}0D`
+                        : 'transparent',
                     },
                   ]}
                 >
@@ -178,7 +185,7 @@ export default function AppearanceScreen() {
                         styles.iconContainer,
                         {
                           backgroundColor:
-                            selected
+                            selected || isSwitching
                               ? `${theme.primary}18`
                               : `${theme.textSecondary}10`,
                         },
@@ -247,7 +254,9 @@ export default function AppearanceScreen() {
                       },
                     ]}
                   >
-                    {(selected || isSwitching) && (
+                    {isSwitching ? (
+                      <ActivityIndicator size="small" color={theme.primary} />
+                    ) : selected ? (
                       <View
                         style={[
                           styles.radioInner,
@@ -257,7 +266,7 @@ export default function AppearanceScreen() {
                           },
                         ]}
                       />
-                    )}
+                    ) : null}
                   </View>
                 </TouchableOpacity>
               );
@@ -267,7 +276,6 @@ export default function AppearanceScreen() {
       </View>
     </SafeAreaView>
   );
-
 }
 
 const styles =

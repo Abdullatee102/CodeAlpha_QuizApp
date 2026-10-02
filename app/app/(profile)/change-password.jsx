@@ -132,12 +132,11 @@ export default function ChangePasswordScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backBtn}
-          activeOpacity={0.7}
-        >
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backBtn}
+            activeOpacity={0.7}
+          >
           <Ionicons
             name="arrow-back"
             size={24}
@@ -397,9 +396,8 @@ export default function ChangePasswordScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
-    </KeyboardAvoidingView>
-  </SafeAreaView>
-
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 

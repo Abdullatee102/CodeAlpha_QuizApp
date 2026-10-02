@@ -21,10 +21,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 
-import * as Notifications from 'expo-notifications';
 import { useThemeStore } from '../store/themeStore';
 import { useAuthStore } from '../store/authStore';
-
 
 import {
   useConversationMessagesQuery,
@@ -289,24 +287,7 @@ export default function ConversationScreen() {
 
   /*
    * ------------------------------------------------------------
-   * MARK CONVERSATION AS READ ON OPEN
-   * ------------------------------------------------------------
-   */
-  useEffect(() => {
-    if (!conversationId) return;
-    queryClient.setQueryData(['recentConversations'], (oldChats = []) => {
-      if (!Array.isArray(oldChats)) return oldChats;
-      return oldChats.map((chat) =>
-        String(chat.id) === String(conversationId)
-          ? { ...chat, unreadCount: 0, hasUnread: false }
-          : chat
-      );
-    });
-  }, [conversationId, queryClient]);
-
-  /*
-   * ------------------------------------------------------------
-   * SOCKET.IO REAL-TIME SUBSCRIPTION & @MENTION NOTIFICATION
+   * SOCKET.IO REAL-TIME SUBSCRIPTION
    * ------------------------------------------------------------
    */
 
@@ -328,30 +309,6 @@ export default function ConversationScreen() {
           String(conversationId)
       ) {
         return;
-      }
-
-      // Check if logged-in user is tagged via @mention
-      const senderId = String(newMessage.senderId || '');
-      if (senderId !== String(currentUserId)) {
-        const myUsername = (profile?.username || user?.username || '').toLowerCase();
-        const myFirstName = (profile?.fullName || user?.fullName || '').split(' ')[0].toLowerCase();
-        const msgText = (newMessage.text || '').toLowerCase();
-
-        const isTagged =
-          (myUsername && msgText.includes(`@${myUsername}`)) ||
-          (myFirstName && msgText.includes(`@${myFirstName}`));
-
-        if (isTagged) {
-          const senderName = newMessage.sender?.fullName || 'A scholar';
-          Notifications.scheduleNotificationAsync({
-            content: {
-              title: `🏷️ You were tagged by ${senderName}`,
-              body: newMessage.text,
-              data: { conversationId },
-            },
-            trigger: null,
-          }).catch(() => {});
-        }
       }
 
       queryClient.setQueryData(
@@ -390,7 +347,6 @@ export default function ConversationScreen() {
         'new_message',
         handleNewMessage
       );
-
 
       socketService.leaveConversation(
         conversationId
