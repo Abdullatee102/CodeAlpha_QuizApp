@@ -9,7 +9,10 @@ import {
   ActivityIndicator,
   Alert,
   ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
+
 
 import { useRouter } from 'expo-router';
 
@@ -116,13 +119,20 @@ export default function ChangePasswordScreen() {
         },
       ]}
     >
-      <ScrollView
-        contentContainerStyle={
-          styles.container
-        }
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
+        <ScrollView
+          contentContainerStyle={[
+            styles.container,
+            { paddingBottom: 60 },
+          ]}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+
         <TouchableOpacity
           onPress={() => router.back()}
           style={styles.backBtn}
@@ -387,7 +397,9 @@ export default function ChangePasswordScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </KeyboardAvoidingView>
+  </SafeAreaView>
+
   );
 }
 

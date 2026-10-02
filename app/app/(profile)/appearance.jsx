@@ -56,6 +56,17 @@ export default function AppearanceScreen() {
     },
   ];
 
+  const [switchingKey, setSwitchingKey] = React.useState(null);
+
+  const handleSelectOption = (key) => {
+    if (appearance === key || switchingKey) return;
+    setSwitchingKey(key);
+    setTimeout(() => {
+      setAppearance(key);
+      setSwitchingKey(null);
+    }, 250);
+  };
+
   return (
     <SafeAreaView
       style={[
@@ -131,6 +142,7 @@ export default function AppearanceScreen() {
               const selected =
                 appearance ===
                 option.key;
+              const isSwitching = switchingKey === option.key;
 
               return (
                 <TouchableOpacity
@@ -140,11 +152,8 @@ export default function AppearanceScreen() {
                   activeOpacity={
                     0.7
                   }
-                  onPress={() =>
-                    setAppearance(
-                      option.key
-                    )
-                  }
+                  onPress={() => handleSelectOption(option.key)}
+                  disabled={switchingKey !== null}
                   style={[
                     styles.option,
                     {
@@ -175,17 +184,21 @@ export default function AppearanceScreen() {
                         },
                       ]}
                     >
-                      <Ionicons
-                        name={
-                          option.icon
-                        }
-                        size={22}
-                        color={
-                          selected
-                            ? theme.primary
-                            : theme.textSecondary
-                        }
-                      />
+                      {isSwitching ? (
+                        <ActivityIndicator size="small" color={theme.primary} />
+                      ) : (
+                        <Ionicons
+                          name={
+                            option.icon
+                          }
+                          size={22}
+                          color={
+                            selected
+                              ? theme.primary
+                              : theme.textSecondary
+                          }
+                        />
+                      )}
                     </View>
 
                     <View
@@ -228,13 +241,13 @@ export default function AppearanceScreen() {
                       styles.radio,
                       {
                         borderColor:
-                          selected
+                          selected || isSwitching
                             ? theme.primary
                             : theme.border,
                       },
                     ]}
                   >
-                    {selected && (
+                    {(selected || isSwitching) && (
                       <View
                         style={[
                           styles.radioInner,
@@ -254,6 +267,7 @@ export default function AppearanceScreen() {
       </View>
     </SafeAreaView>
   );
+
 }
 
 const styles =
