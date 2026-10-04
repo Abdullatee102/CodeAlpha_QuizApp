@@ -1,6 +1,6 @@
 // src/app/(main)/settings.jsx
 
-import React from 'react';
+import React, { useState } from 'react';
 
 import {
   View,
@@ -9,19 +9,12 @@ import {
   TouchableOpacity,
   Alert,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 
 import {
   useRouter,
 } from 'expo-router';
-
-import {
-  Ionicons,
-} from '@expo/vector-icons';
-
-import {
-  SafeAreaView,
-} from 'react-native-safe-area-context';
 
 import {
   useQueryClient,
@@ -36,6 +29,14 @@ import {
 } from '../store/themeStore';
 
 import {
+  Ionicons,
+} from '@expo/vector-icons';
+
+import {
+  SafeAreaView,
+} from 'react-native-safe-area-context';
+
+import {
   Colors,
 } from '../constants/colors';
 
@@ -47,13 +48,17 @@ export default function SettingsScreen() {
 
   const {
     logout,
-    isLoading,
   } = useAuthStore();
 
   const {
     theme,
     appearance,
   } = useThemeStore();
+
+  const [
+    isLoggingOut,
+    setIsLoggingOut,
+  ] = useState(false);
 
   // =========================================================
   // APPEARANCE LABEL
@@ -77,9 +82,11 @@ export default function SettingsScreen() {
   // LOGOUT
   // =========================================================
 
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
-
   const handleLogout = () => {
+    if (isLoggingOut) {
+      return;
+    }
+
     Alert.alert(
       'Log Out',
       'Are you sure you want to log out?',
@@ -93,29 +100,74 @@ export default function SettingsScreen() {
           text: 'Log Out',
           style: 'destructive',
 
-          onPress: async () => {
+          onPress: () => {
+            /*
+             * Set the local loading state first.
+             *
+             * This makes the Settings screen immediately
+             * show the logout loading state instead of
+             * relying on authStore.isLoading.
+             */
             setIsLoggingOut(true);
-            try {
-              const result = await logout();
-              queryClient.clear();
 
-              if (result?.success === false) {
-                console.warn(
-                  '[SETTINGS] Logout completed locally, but server logout reported an error:',
-                  result.error
+            /*
+             * Give React a render cycle to display:
+             *
+             *   spinner + "Logging out..."
+             *
+             * before the logout operation starts.
+             */
+            setTimeout(async () => {
+              try {
+                /*
+                 * authStore.logout() handles the actual
+                 * authentication/session cleanup.
+                 */
+                const result =
+                  await logout();
+
+                /*
+                 * Clear all TanStack Query server-state
+                 * cache so another session cannot receive
+                 * stale data from this account.
+                 */
+                queryClient.clear();
+
+                if (
+                  result?.success === false
+                ) {
+                  console.warn(
+                    '[SETTINGS] Logout completed locally, but server logout reported an error:',
+                    result.error
+                  );
+                }
+
+                /*
+                 * Return to the authentication flow.
+                 */
+                router.replace(
+                  '/(auth)/sign-in'
+                );
+              } catch (error) {
+                console.error(
+                  '[SETTINGS] Logout failed:',
+                  error
+                );
+
+                /*
+                 * Always clear the React Query cache even
+                 * if an unexpected error occurs.
+                 */
+                queryClient.clear();
+
+                setIsLoggingOut(false);
+
+                Alert.alert(
+                  'Logout Error',
+                  'Something went wrong while logging out. Please try again.'
                 );
               }
-
-              router.replace('/(auth)/sign-in');
-            } catch (error) {
-              console.error('[SETTINGS] Logout failed:', error);
-              queryClient.clear();
-              setIsLoggingOut(false);
-              Alert.alert(
-                'Logout Error',
-                'Something went wrong while logging out. Please try again.'
-              );
-            }
+            }, 50);
           },
         },
       ]
@@ -145,6 +197,7 @@ export default function SettingsScreen() {
           onPress={() => router.back()}
           style={styles.backButton}
           activeOpacity={0.7}
+          disabled={isLoggingOut}
         >
           <Ionicons
             name="arrow-back"
@@ -428,7 +481,6 @@ export default function SettingsScreen() {
               )
             }
           />
-
         </View>
 
         {/* =====================================================
@@ -469,6 +521,7 @@ export default function SettingsScreen() {
               )
             }
             activeOpacity={0.65}
+            disabled={isLoggingOut}
           >
             <View
               style={[
@@ -540,17 +593,22 @@ export default function SettingsScreen() {
                 theme.card,
               borderColor:
                 Colors.error,
-              opacity: (isLoading || isLoggingOut)
+              opacity: isLoggingOut
                 ? 0.6
                 : 1,
             },
           ]}
           onPress={handleLogout}
           activeOpacity={0.7}
-          disabled={isLoading || isLoggingOut}
+          disabled={isLoggingOut}
         >
           {isLoggingOut ? (
-            <ActivityIndicator size="small" color={Colors.error} />
+            <ActivityIndicator
+              size="small"
+              color={
+                Colors.error
+              }
+            />
           ) : (
             <Ionicons
               name="log-out-outline"
@@ -570,7 +628,9 @@ export default function SettingsScreen() {
               },
             ]}
           >
-            {isLoggingOut ? 'Logging Out...' : 'Log Out'}
+            {isLoggingOut
+              ? 'Logging out...'
+              : 'Log Out'}
           </Text>
         </TouchableOpacity>
 

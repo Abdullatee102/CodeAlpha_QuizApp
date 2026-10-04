@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React from 'react';
 
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
-  ActivityIndicator,
+  Switch,
+  Platform,
 } from 'react-native';
 
 import {
@@ -31,18 +32,8 @@ export default function AppearanceScreen() {
     appearance,
     setAppearance,
     theme,
+    isDarkMode,
   } = useThemeStore();
-
-  const [switchingKey, setSwitchingKey] = useState(null);
-
-  const handleSelectOption = (key) => {
-    if (appearance === key || switchingKey) return;
-    setSwitchingKey(key);
-    setTimeout(() => {
-      setAppearance(key);
-      setSwitchingKey(null);
-    }, 400);
-  };
 
   const options = [
     {
@@ -143,8 +134,6 @@ export default function AppearanceScreen() {
               const selected =
                 appearance ===
                 option.key;
-              const isSwitching =
-                switchingKey === option.key;
 
               return (
                 <TouchableOpacity
@@ -154,9 +143,10 @@ export default function AppearanceScreen() {
                   activeOpacity={
                     0.7
                   }
-                  disabled={isSwitching || Boolean(switchingKey)}
                   onPress={() =>
-                    handleSelectOption(option.key)
+                    setAppearance(
+                      option.key
+                    )
                   }
                   style={[
                     styles.option,
@@ -169,9 +159,6 @@ export default function AppearanceScreen() {
                           1
                           ? 0
                           : 1,
-                      backgroundColor: isSwitching
-                        ? `${theme.primary}0D`
-                        : 'transparent',
                     },
                   ]}
                 >
@@ -185,27 +172,23 @@ export default function AppearanceScreen() {
                         styles.iconContainer,
                         {
                           backgroundColor:
-                            selected || isSwitching
+                            selected
                               ? `${theme.primary}18`
                               : `${theme.textSecondary}10`,
                         },
                       ]}
                     >
-                      {isSwitching ? (
-                        <ActivityIndicator size="small" color={theme.primary} />
-                      ) : (
-                        <Ionicons
-                          name={
-                            option.icon
-                          }
-                          size={22}
-                          color={
-                            selected
-                              ? theme.primary
-                              : theme.textSecondary
-                          }
-                        />
-                      )}
+                      <Ionicons
+                        name={
+                          option.icon
+                        }
+                        size={22}
+                        color={
+                          selected
+                            ? theme.primary
+                            : theme.textSecondary
+                        }
+                      />
                     </View>
 
                     <View
@@ -243,31 +226,37 @@ export default function AppearanceScreen() {
                     </View>
                   </View>
 
-                  <View
-                    style={[
-                      styles.radio,
-                      {
-                        borderColor:
-                          selected || isSwitching
-                            ? theme.primary
-                            : theme.border,
-                      },
-                    ]}
-                  >
-                    {isSwitching ? (
-                      <ActivityIndicator size="small" color={theme.primary} />
-                    ) : selected ? (
-                      <View
-                        style={[
-                          styles.radioInner,
-                          {
-                            backgroundColor:
-                              theme.primary,
-                          },
-                        ]}
-                      />
-                    ) : null}
-                  </View>
+                  <Switch
+                    value={
+                      selected
+                    }
+                    onValueChange={() =>
+                      setAppearance(
+                        option.key
+                      )
+                    }
+                    trackColor={{
+                      false:
+                        isDarkMode
+                          ? '#333'
+                          : '#eee',
+                      true:
+                        theme.primary,
+                    }}
+                    thumbColor={
+                      Platform.OS ===
+                      'android'
+                        ? selected
+                          ? theme.primary
+                          : '#ccc'
+                        : undefined
+                    }
+                    ios_backgroundColor={
+                      isDarkMode
+                        ? '#333'
+                        : '#eee'
+                    }
+                  />
                 </TouchableOpacity>
               );
             }
@@ -389,23 +378,5 @@ const styles =
         'Ubuntu-Regular',
       fontSize: 12,
       marginTop: 4,
-    },
-
-    radio: {
-      width: 22,
-      height: 22,
-      borderRadius: 11,
-      borderWidth: 2,
-      alignItems:
-        'center',
-      justifyContent:
-        'center',
-      marginLeft: 12,
-    },
-
-    radioInner: {
-      width: 12,
-      height: 12,
-      borderRadius: 6,
     },
   });

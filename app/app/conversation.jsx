@@ -16,18 +16,30 @@ import {
   Modal,
 } from 'react-native';
 
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
+
+import {
+  useLocalSearchParams,
+  useRouter,
+} from 'expo-router';
+
+import {
+  Ionicons,
+  MaterialCommunityIcons,
+} from '@expo/vector-icons';
+
 import { useQueryClient } from '@tanstack/react-query';
 
-import * as Notifications from 'expo-notifications';
 import { useThemeStore } from '../store/themeStore';
 import { useAuthStore } from '../store/authStore';
 
 import {
   useConversationMessagesQuery,
   useSendMessageMutation,
+  useMarkConversationReadMutation,
 } from '../hooks/useMessagesQuery';
 
 import { socketService } from '../services/socket';
@@ -41,13 +53,20 @@ export default function ConversationScreen() {
   const user = useAuthStore((state) => state.user);
   const profile = useAuthStore((state) => state.profile);
 
-  const { conversationId, title, code } = useLocalSearchParams();
+  const {
+    conversationId,
+    title,
+    code,
+  } = useLocalSearchParams();
 
   const [inputText, setInputText] = useState('');
-  const [showGroupInfoModal, setShowGroupInfoModal] = useState(false);
-  const [showMentionPicker, setShowMentionPicker] = useState(false);
+  const [showGroupInfoModal, setShowGroupInfoModal] =
+    useState(false);
+  const [showMentionPicker, setShowMentionPicker] =
+    useState(false);
 
-  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const [isKeyboardVisible, setIsKeyboardVisible] =
+    useState(false);
 
   const flatListRef = useRef(null);
   const inputRef = useRef(null);
@@ -60,6 +79,29 @@ export default function ConversationScreen() {
     profile?.id ||
     null;
 
+  const currentUsername =
+    profile?.username ||
+    user?.username ||
+    null;
+
+  const personalMentionRegex = useMemo(() => {
+    if (!currentUsername) {
+      return null;
+    }
+
+    const escapedUsername = String(
+      currentUsername
+    ).replace(
+      /[.*+?^${}()|[\]\\]/g,
+      '\\$&'
+    );
+
+    return new RegExp(
+      `(?:^|\\s)@${escapedUsername}(?=$|\\s|[.,!?;:(){}\\]])`,
+      'i'
+    );
+  }, [currentUsername]);
+
   /*
    * ------------------------------------------------------------
    * KEYBOARD VISIBILITY
@@ -68,18 +110,28 @@ export default function ConversationScreen() {
 
   useEffect(() => {
     const showEvent =
-      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+      Platform.OS === 'ios'
+        ? 'keyboardWillShow'
+        : 'keyboardDidShow';
 
     const hideEvent =
-      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+      Platform.OS === 'ios'
+        ? 'keyboardWillHide'
+        : 'keyboardDidHide';
 
-    const showSub = Keyboard.addListener(showEvent, () => {
-      setIsKeyboardVisible(true);
-    });
+    const showSub = Keyboard.addListener(
+      showEvent,
+      () => {
+        setIsKeyboardVisible(true);
+      }
+    );
 
-    const hideSub = Keyboard.addListener(hideEvent, () => {
-      setIsKeyboardVisible(false);
-    });
+    const hideSub = Keyboard.addListener(
+      hideEvent,
+      () => {
+        setIsKeyboardVisible(false);
+      }
+    );
 
     return () => {
       showSub.remove();
@@ -103,6 +155,33 @@ export default function ConversationScreen() {
     mutateAsync: sendMessage,
     isPending: isSending,
   } = useSendMessageMutation();
+
+  /*
+   * ------------------------------------------------------------
+   * MARK CONVERSATION AS READ
+   *
+   * Whenever this screen is opened for a valid conversation,
+   * notify the backend that the current user has read it.
+   *
+   * The mutation also clears the unread state from the
+   * recentConversations React Query cache immediately.
+   * ------------------------------------------------------------
+   */
+
+  const {
+    mutate: markConversationAsRead,
+  } = useMarkConversationReadMutation();
+
+  useEffect(() => {
+    if (!conversationId) {
+      return;
+    }
+
+    markConversationAsRead(String(conversationId));
+  }, [
+    conversationId,
+    markConversationAsRead,
+  ]);
 
   /*
    * ------------------------------------------------------------
@@ -193,7 +272,9 @@ export default function ConversationScreen() {
    */
 
   const mentionSearch = useMemo(() => {
-    const match = inputText.match(/(?:^|\s)@([^\s@]*)$/);
+    const match = inputText.match(
+      /(?:^|\s)@([^\s@]*)$/
+    );
 
     if (!match) {
       return null;
@@ -212,8 +293,13 @@ export default function ConversationScreen() {
     }
 
     return activeMembers.filter((member) => {
-      const name = String(member.name || '').toLowerCase();
-      const username = String(member.username || '').toLowerCase();
+      const name = String(
+        member.name || ''
+      ).toLowerCase();
+
+      const username = String(
+        member.username || ''
+      ).toLowerCase();
 
       return (
         name.includes(mentionSearch) ||
@@ -254,17 +340,21 @@ export default function ConversationScreen() {
         'user'
       );
 
-    const match = inputText.match(/(?:^|\s)@([^\s@]*)$/);
+    const match = inputText.match(
+      /(?:^|\s)@([^\s@]*)$/
+    );
 
     if (match) {
       const startIndex =
-        inputText.length - match[0].length;
+        inputText.length -
+        match[0].length;
 
       const prefix =
         inputText.slice(0, startIndex);
 
       const separator =
-        prefix.length > 0 && !prefix.endsWith(' ')
+        prefix.length > 0 &&
+        !prefix.endsWith(' ')
           ? ' '
           : '';
 
@@ -288,24 +378,7 @@ export default function ConversationScreen() {
 
   /*
    * ------------------------------------------------------------
-   * MARK CONVERSATION AS READ ON OPEN
-   * ------------------------------------------------------------
-   */
-  useEffect(() => {
-    if (!conversationId) return;
-    queryClient.setQueryData(['recentConversations'], (oldChats = []) => {
-      if (!Array.isArray(oldChats)) return oldChats;
-      return oldChats.map((chat) =>
-        String(chat.id) === String(conversationId)
-          ? { ...chat, unreadCount: 0, hasUnread: false }
-          : chat
-      );
-    });
-  }, [conversationId, queryClient]);
-
-  /*
-   * ------------------------------------------------------------
-   * SOCKET.IO REAL-TIME SUBSCRIPTION & MENTIONS
+   * SOCKET.IO REAL-TIME SUBSCRIPTION
    * ------------------------------------------------------------
    */
 
@@ -329,36 +402,13 @@ export default function ConversationScreen() {
         return;
       }
 
-      // Check if logged-in user is tagged via @mention
-      const senderId = String(newMessage.senderId || '');
-      if (senderId !== String(currentUserId)) {
-        const myUsername = (profile?.username || user?.username || '').toLowerCase();
-        const myFirstName = (profile?.fullName || user?.fullName || '').split(' ')[0].toLowerCase();
-        const msgText = (newMessage.text || '').toLowerCase();
-
-        const isTagged =
-          (myUsername && msgText.includes(`@${myUsername}`)) ||
-          (myFirstName && msgText.includes(`@${myFirstName}`));
-
-        if (isTagged) {
-          const senderName = newMessage.sender?.fullName || 'A scholar';
-          Notifications.scheduleNotificationAsync({
-            content: {
-              title: `🏷️ You were tagged by ${senderName}`,
-              body: newMessage.text,
-              data: { conversationId },
-            },
-            trigger: null,
-          }).catch(() => {});
-        }
-      }
-
       queryClient.setQueryData(
         ['messages', conversationId],
         (oldMessages = []) => {
           const exists = oldMessages.some(
             (message) =>
-              message.id === newMessage.id
+              message.id ===
+              newMessage.id
           );
 
           if (exists) {
@@ -370,6 +420,18 @@ export default function ConversationScreen() {
             newMessage,
           ];
         }
+      );
+
+      /*
+       * Because the conversation is currently open,
+       * a newly received message is immediately considered
+       * read after updating the message list.
+       *
+       * This keeps the backend read state synchronized
+       * while the user is actively viewing the conversation.
+       */
+      markConversationAsRead(
+        String(conversationId)
       );
 
       setTimeout(() => {
@@ -397,6 +459,7 @@ export default function ConversationScreen() {
   }, [
     conversationId,
     queryClient,
+    markConversationAsRead,
   ]);
 
   /*
@@ -406,7 +469,8 @@ export default function ConversationScreen() {
    */
 
   const handleSend = async () => {
-    const textToSend = inputText.trim();
+    const textToSend =
+      inputText.trim();
 
     if (
       !textToSend ||
@@ -424,6 +488,14 @@ export default function ConversationScreen() {
         conversationId,
         text: textToSend,
       });
+
+      /*
+       * The conversation is already open, so sending a message
+       * means the current user is actively viewing the thread.
+       */
+      markConversationAsRead(
+        String(conversationId)
+      );
 
       setTimeout(() => {
         flatListRef.current?.scrollToEnd({
@@ -447,7 +519,9 @@ export default function ConversationScreen() {
    * ------------------------------------------------------------
    */
 
-  const formatMessageTime = (dateStr) => {
+  const formatMessageTime = (
+    dateStr
+  ) => {
     if (!dateStr) {
       return '';
     }
@@ -487,6 +561,12 @@ export default function ConversationScreen() {
         .charAt(0)
         .toUpperCase();
 
+    const isPersonalMention =
+      !isMe &&
+      !!personalMentionRegex?.test(
+        String(item?.text || '')
+      );
+
     return (
       <View
         style={[
@@ -512,7 +592,9 @@ export default function ConversationScreen() {
                   uri:
                     item.sender.photoURL,
                 }}
-                style={styles.avatarImg}
+                style={
+                  styles.avatarImg
+                }
               />
             ) : (
               <Text
@@ -547,8 +629,12 @@ export default function ConversationScreen() {
                     backgroundColor:
                       theme.card,
                     borderColor:
-                      theme.border,
+                      isPersonalMention
+                        ? theme.primary
+                        : theme.border,
                   },
+                  isPersonalMention &&
+                    styles.mentionBubble,
                 ],
           ]}
         >
@@ -565,6 +651,26 @@ export default function ConversationScreen() {
             >
               {senderName}
             </Text>
+          )}
+
+          {isPersonalMention && (
+            <View
+              style={[
+                styles.mentionMarker,
+                {
+                  backgroundColor: `${theme.primary}15`,
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.mentionMarkerText,
+                  { color: theme.primary },
+                ]}
+              >
+                @ Mentioned you
+              </Text>
+            </View>
           )}
 
           <Text
@@ -614,7 +720,8 @@ export default function ConversationScreen() {
     }
 
     if (
-      filteredMentionMembers.length === 0
+      filteredMentionMembers.length ===
+      0
     ) {
       return (
         <View
@@ -629,13 +736,16 @@ export default function ConversationScreen() {
           ]}
         >
           <View
-            style={styles.mentionHeader}
+            style={
+              styles.mentionHeader
+            }
           >
             <Text
               style={[
                 styles.mentionHeaderText,
                 {
-                  color: theme.text,
+                  color:
+                    theme.text,
                 },
               ]}
             >
@@ -644,7 +754,9 @@ export default function ConversationScreen() {
 
             <TouchableOpacity
               onPress={() =>
-                setShowMentionPicker(false)
+                setShowMentionPicker(
+                  false
+                )
               }
             >
               <Ionicons
@@ -671,7 +783,8 @@ export default function ConversationScreen() {
                 },
               ]}
             >
-              No matching members found.
+              No matching members
+              found.
             </Text>
           </View>
         </View>
@@ -691,13 +804,16 @@ export default function ConversationScreen() {
         ]}
       >
         <View
-          style={styles.mentionHeader}
+          style={
+            styles.mentionHeader
+          }
         >
           <Text
             style={[
               styles.mentionHeaderText,
               {
-                color: theme.text,
+                color:
+                  theme.text,
               },
             ]}
           >
@@ -706,7 +822,9 @@ export default function ConversationScreen() {
 
           <TouchableOpacity
             onPress={() =>
-              setShowMentionPicker(false)
+              setShowMentionPicker(
+                false
+              )
             }
           >
             <Ionicons
@@ -720,7 +838,9 @@ export default function ConversationScreen() {
         </View>
 
         <FlatList
-          data={filteredMentionMembers}
+          data={
+            filteredMentionMembers
+          }
           keyExtractor={(member) =>
             String(member.id)
           }
@@ -1665,6 +1785,23 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
 
+  mentionBubble: {
+    borderWidth: 1.5,
+  },
+
+  mentionMarker: {
+    alignSelf: 'flex-start',
+    borderRadius: 7,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    marginBottom: 6,
+  },
+
+  mentionMarkerText: {
+    fontSize: 10,
+    fontFamily: 'Ubuntu-Bold',
+  },
+
   senderLabel: {
     fontSize: 11,
     fontFamily: 'Ubuntu-Bold',
@@ -1807,7 +1944,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 14,
     paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth:
+      StyleSheet.hairlineWidth,
   },
 
   mentionHeaderText: {
@@ -1879,7 +2017,8 @@ const styles = StyleSheet.create({
 
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor:
+      'rgba(0,0,0,0.6)',
     justifyContent: 'flex-end',
   },
 

@@ -496,19 +496,56 @@ export default function MessageScreen() {
                     {(chat.unreadCount > 0 || chat.hasUnread) && (
                       <View
                         style={{
-                          backgroundColor: '#059669',
-                          minWidth: 20,
-                          height: 20,
-                          borderRadius: 10,
-                          paddingHorizontal: 6,
-                          justifyContent: 'center',
+                          flexDirection: 'row',
                           alignItems: 'center',
                           marginLeft: 8,
+                          gap: 5,
                         }}
                       >
-                        <Text style={{ color: '#FFFFFF', fontFamily: 'Ubuntu-Bold', fontSize: 10 }}>
-                          {chat.unreadCount > 99 ? '99+' : (chat.unreadCount || 1)}
-                        </Text>
+                        <View
+                          style={{
+                            backgroundColor: '#059669',
+                            minWidth: 20,
+                            height: 20,
+                            borderRadius: 10,
+                            paddingHorizontal: 6,
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                          }}
+                        >
+                          <Text
+                            style={{
+                              color: '#FFFFFF',
+                              fontFamily: 'Ubuntu-Bold',
+                              fontSize: 10,
+                            }}
+                          >
+                            {chat.unreadCount > 99
+                              ? '99+'
+                              : chat.unreadCount || 1}
+                          </Text>
+                        </View>
+
+                        {Number(chat.mentionCount || 0) > 0 && (
+                          <View
+                            style={[
+                              styles.mentionBadge,
+                              {
+                                borderColor: theme.primary,
+                                backgroundColor: `${theme.primary}12`,
+                              },
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.mentionBadgeText,
+                                { color: theme.primary },
+                              ]}
+                            >
+                              @{chat.mentionCount > 99 ? '99+' : chat.mentionCount}
+                            </Text>
+                          </View>
+                        )}
                       </View>
                     )}
                   </View>
@@ -678,6 +715,18 @@ const styles = StyleSheet.create({
   recentMessageSnippet: {
     fontSize: 13,
     fontFamily: 'Ubuntu-Regular',
+  },
+  mentionBadge: {
+    minHeight: 20,
+    borderRadius: 10,
+    borderWidth: 1,
+    paddingHorizontal: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  mentionBadgeText: {
+    fontFamily: 'Ubuntu-Bold',
+    fontSize: 10,
   },
   emptyCard: {
     padding: 24,
