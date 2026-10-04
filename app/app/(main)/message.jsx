@@ -8,8 +8,10 @@ import {
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
+  StatusBar,
+  Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useThemeStore } from '../../store/themeStore';
@@ -25,7 +27,13 @@ import {
 
 export default function MessageScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { theme, isDarkMode } = useThemeStore();
+
+  const topInset = Math.max(
+    insets.top,
+    Platform.OS === 'android' ? StatusBar.currentHeight || 24 : 0
+  );
 
   const [activeTab, setActiveTab] = useState('faculty'); // 'faculty' | 'department' | 'level'
   const [searchQuery, setSearchQuery] = useState('');
@@ -116,7 +124,11 @@ export default function MessageScreen() {
 
   return (
     <SafeAreaView
-      style={[styles.container, { backgroundColor: theme.background }]}
+      style={[
+        styles.container,
+        { backgroundColor: theme.background, paddingTop: topInset },
+      ]}
+      edges={['left', 'right', 'bottom']}
     >
       {/* Header */}
       <View style={styles.header}>

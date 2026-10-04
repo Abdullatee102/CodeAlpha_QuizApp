@@ -10,6 +10,8 @@ import {
   ActivityIndicator,
   Modal,
   Pressable,
+  StatusBar,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
@@ -24,10 +26,15 @@ import {
   getFacultyMeta,
   getCourseIcon,
 } from '../../constants/academicIcons';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function HomeScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const topInset = Math.max(
+    insets.top,
+    Platform.OS === 'android' ? StatusBar.currentHeight || 24 : 0
+  );
 
   // =====================================================
   // AUTH / SESSION STATE
@@ -377,8 +384,10 @@ export default function HomeScreen() {
         styles.safeArea,
         {
           backgroundColor: theme.background,
+          paddingTop: topInset,
         },
       ]}
+      edges={['left', 'right', 'bottom']}
     >
       <ScrollView
         showsVerticalScrollIndicator={false}

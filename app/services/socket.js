@@ -10,7 +10,7 @@ class SocketService {
   }
 
   getServerUrl() {
-    const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.132.15:5000/api';
+    const apiUrl = process.env.EXPO_PUBLIC_API_URL;
     return apiUrl.replace(/\/api\/?$/, '');
   }
 

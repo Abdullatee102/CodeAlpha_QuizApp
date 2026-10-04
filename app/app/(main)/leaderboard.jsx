@@ -1,14 +1,18 @@
-import React, { useState } from 'react';
 import {
-  View, Text, FlatList, StyleSheet, ActivityIndicator, Image, TouchableOpacity
+  View, Text, FlatList, StyleSheet, ActivityIndicator, Image, TouchableOpacity, StatusBar, Platform
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
 import { useLeaderboardQuery } from '../../hooks/useLeaderboardQuery';
 
 export default function LeaderboardScreen() {
+  const insets = useSafeAreaInsets();
+  const topInset = Math.max(
+    insets.top,
+    Platform.OS === 'android' ? StatusBar.currentHeight || 24 : 0
+  );
   const { profile } = useAuthStore();
   const { theme, isDarkMode } = useThemeStore();
   const [activeTab, setActiveTab] = useState('24h');
@@ -79,7 +83,13 @@ export default function LeaderboardScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>
+    <SafeAreaView
+      style={[
+        styles.container,
+        { backgroundColor: theme.background, paddingTop: topInset },
+      ]}
+      edges={['left', 'right', 'bottom']}
+    >
       <View style={styles.headerContainer}>
         <Text style={[styles.headerTitle, { color: theme.primary }]}>Leaderboard</Text>
         <Text style={[styles.subtitle, { color: theme.textSecondary }]}>See where you stand among top players.</Text>

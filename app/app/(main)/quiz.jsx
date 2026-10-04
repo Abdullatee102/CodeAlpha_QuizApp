@@ -18,9 +18,10 @@ import {
   Platform,
   ScrollView,
   Modal,
+  StatusBar,
 } from 'react-native';
 
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   useLocalSearchParams,
@@ -54,6 +55,11 @@ const CBT_SECONDS_PER_QUESTION = 30;
 const THEORY_SECONDS_PER_QUESTION = 100;
 
 export default function QuizScreen() {
+  const insets = useSafeAreaInsets();
+  const topInset = Math.max(
+    insets.top,
+    Platform.OS === 'android' ? StatusBar.currentHeight || 24 : 0
+  );
   const {
     courseId,
     courseTitle,
@@ -1095,7 +1101,7 @@ export default function QuizScreen() {
       setIsEditingReview(false);
 
       Alert.alert(
-        'Time Elapsed â°',
+        'Time Elapsed ⏱️',
         'Your assessment time has ended. Your answers are now read-only. Review your answers, then submit the assessment when you are ready.',
         [
           {
@@ -1961,10 +1967,10 @@ export default function QuizScreen() {
         let theoryMessage = `Percentage: ${finalScore}%\nPoints: ${scorePoints} / ${maxScore}\nQuestions Evaluated: ${totalQuestions}`;
 
         if (matched.length > 0) {
-          theoryMessage += `\n\nâœ“ Matched Rubric Concepts (${matched.length}):\n| ${matched.slice(0, 6).join('\n| ')}`;
+          theoryMessage += `\n\n✓ Matched Rubric Concepts (${matched.length}):\n| ${matched.slice(0, 6).join('\n| ')}`;
         }
         if (missing.length > 0) {
-          theoryMessage += `\n\nâœ— Missing Rubric Concepts (${missing.length}):\n| ${missing.slice(0, 6).join('\n| ')}`;
+          theoryMessage += `\n\n✗ Missing Rubric Concepts (${missing.length}):\n| ${missing.slice(0, 6).join('\n| ')}`;
         }
         if (feedback) {
           theoryMessage += `\n\nRubric Feedback:\n${feedback}`;
@@ -2594,7 +2600,8 @@ export default function QuizScreen() {
           </View>
 
           <ScrollView
-            style={{ maxHeight: 220, marginVertical: 12 }}
+            style={{ width: '100%', maxHeight: 240, marginVertical: 10 }}
+            contentContainerStyle={{ flexGrow: 0 }}
             showsVerticalScrollIndicator={false}
           >
             <View style={styles.rulesList}>
@@ -2941,8 +2948,10 @@ export default function QuizScreen() {
           {
             backgroundColor:
               theme.background,
+            paddingTop: topInset,
           },
         ]}
+        edges={['left', 'right', 'bottom']}
       >
         <KeyboardAvoidingView
           style={
@@ -3662,8 +3671,10 @@ export default function QuizScreen() {
           {
             backgroundColor:
               theme.background,
+            paddingTop: topInset,
           },
         ]}
+        edges={['left', 'right', 'bottom']}
       >
         <KeyboardAvoidingView
           style={
@@ -5437,11 +5448,12 @@ const styles =
       paddingHorizontal: 20,
     },
     rulesCard: {
-      width: '100%',
+      width: '92%',
       maxWidth: 400,
+      alignSelf: 'center',
       borderRadius: 20,
       borderWidth: 1,
-      padding: 20,
+      padding: 18,
       alignItems: 'center',
     },
     rulesHeaderIconBox: {
