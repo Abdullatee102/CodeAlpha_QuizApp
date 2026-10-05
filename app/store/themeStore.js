@@ -20,10 +20,7 @@ import {
 } from 'react-native';
 
 const getSystemColorScheme = () => {
-  return (
-    Appearance.getColorScheme() ||
-    'light'
-  );
+  return Appearance.getColorScheme() || 'light';
 };
 
 const getThemeForAppearance = (
@@ -52,49 +49,102 @@ const getThemeForAppearance = (
       ? darkTheme
       : lightTheme,
 
-    isDarkMode:
-      isSystemDark,
+    isDarkMode: isSystemDark,
   };
 };
 
 const getInitialThemeState = () => {
-  const systemScheme = getSystemColorScheme();
+  const systemScheme =
+    getSystemColorScheme();
+
   try {
-    const raw = storage.getString('theme-storage');
+    const raw =
+      storage.getString('theme-storage');
+
     if (raw) {
-      const parsed = JSON.parse(raw);
-      const savedAppearance = parsed?.state?.appearance;
-      if (savedAppearance) {
-        const themeConfig = getThemeForAppearance(savedAppearance, systemScheme);
+      const parsed =
+        JSON.parse(raw);
+
+      const savedAppearance =
+        parsed?.state?.appearance;
+
+      if (
+        savedAppearance === 'system' ||
+        savedAppearance === 'light' ||
+        savedAppearance === 'dark'
+      ) {
+        const themeConfig =
+          getThemeForAppearance(
+            savedAppearance,
+            systemScheme
+          );
+
         return {
-          appearance: savedAppearance,
-          theme: themeConfig.theme,
-          isDarkMode: themeConfig.isDarkMode,
+          appearance:
+            savedAppearance,
+
+          theme:
+            themeConfig.theme,
+
+          isDarkMode:
+            themeConfig.isDarkMode,
         };
       }
     }
-  } catch (e) {
-    console.warn('[THEME] Error reading initial theme from MMKV:', e);
+  } catch (error) {
+    console.warn(
+      '[THEME] Error reading initial theme from MMKV:',
+      error
+    );
   }
-  const defaultTheme = getThemeForAppearance('system', systemScheme);
+
+  /*
+   * System Default is the default
+   * appearance for new users.
+   */
+  const defaultTheme =
+    getThemeForAppearance(
+      'system',
+      systemScheme
+    );
+
   return {
     appearance: 'system',
-    theme: defaultTheme.theme,
-    isDarkMode: defaultTheme.isDarkMode,
+
+    theme:
+      defaultTheme.theme,
+
+    isDarkMode:
+      defaultTheme.isDarkMode,
   };
 };
 
-const initialThemeState = getInitialThemeState();
+const initialThemeState =
+  getInitialThemeState();
 
 export const useThemeStore = create(
   persist(
     (set, get) => ({
-      appearance: initialThemeState.appearance,
-      isDarkMode: initialThemeState.isDarkMode,
-      theme: initialThemeState.theme,
+      /*
+       * System Default is the
+       * default appearance.
+       */
+      appearance:
+        initialThemeState.appearance,
+
+      isDarkMode:
+        initialThemeState.isDarkMode,
+
+      theme:
+        initialThemeState.theme,
 
       /*
        * Change appearance preference.
+       *
+       * Supported values:
+       * - system
+       * - light
+       * - dark
        */
       setAppearance: (
         appearance
@@ -110,8 +160,10 @@ export const useThemeStore = create(
 
         set({
           appearance,
+
           theme:
             next.theme,
+
           isDarkMode:
             next.isDarkMode,
         });
@@ -120,8 +172,8 @@ export const useThemeStore = create(
       /*
        * Compatibility helper.
        *
-       * Existing code that still calls toggleTheme()
-       * will continue working.
+       * Existing code that still calls
+       * toggleTheme() will continue working.
        *
        * It toggles between Light and Dark.
        */
@@ -133,11 +185,9 @@ export const useThemeStore = create(
           get().isDarkMode;
 
         const nextAppearance =
-          currentAppearance ===
-          'light'
+          currentAppearance === 'light'
             ? 'dark'
-            : currentAppearance ===
-              'dark'
+            : currentAppearance === 'dark'
             ? 'light'
             : currentIsDark
             ? 'light'
@@ -152,16 +202,21 @@ export const useThemeStore = create(
         set({
           appearance:
             nextAppearance,
+
           theme:
             next.theme,
+
           isDarkMode:
             next.isDarkMode,
         });
       },
 
       /*
-       * Called when the device's system theme changes
-       * while the user has selected "System Default".
+       * Called whenever the device's
+       * system theme changes.
+       *
+       * This only affects the app when
+       * the user selected "System Default".
        */
       updateSystemTheme: (
         systemColorScheme
@@ -182,6 +237,7 @@ export const useThemeStore = create(
         set({
           theme:
             next.theme,
+
           isDarkMode:
             next.isDarkMode,
         });
@@ -196,33 +252,57 @@ export const useThemeStore = create(
           () => mmkvStorage
         ),
 
+      /*
+       * Only the user's actual preference
+       * needs to be persisted.
+       *
+       * The active theme and isDarkMode
+       * are derived again on startup.
+       */
       partialize: (state) => ({
         appearance:
           state.appearance,
-        isDarkMode:
-          state.isDarkMode,
       }),
 
-      onRehydrateStorage: () => (state) => {
-        if (state) {
-          const systemColorScheme = getSystemColorScheme();
-          const next = getThemeForAppearance(
+      /*
+       * Recalculate the actual theme after
+       * Zustand restores the saved preference.
+       *
+       * This is especially important for
+       * "System Default".
+       */
+      onRehydrateStorage: () => (
+        state
+      ) => {
+        if (!state) {
+          return;
+        }
+
+        const systemColorScheme =
+          getSystemColorScheme();
+
+        const next =
+          getThemeForAppearance(
             state.appearance,
             systemColorScheme
           );
-          state.theme = next.theme;
-          state.isDarkMode = next.isDarkMode;
-        }
+
+        state.theme =
+          next.theme;
+
+        state.isDarkMode =
+          next.isDarkMode;
       },
     }
   )
 );
 
 /*
- * Listen for changes to the phone's system appearance.
+ * Listen for changes to the phone's
+ * system appearance.
  *
- * This matters only when the user selected
- * "System Default".
+ * This only changes the app when
+ * "System Default" is selected.
  */
 Appearance.addChangeListener(
   ({ colorScheme }) => {

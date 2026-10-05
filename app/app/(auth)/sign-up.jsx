@@ -11,9 +11,10 @@ import {
   Platform,
   ActivityIndicator,
   Alert,
+  StatusBar
 } from 'react-native';
 
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useRouter } from 'expo-router';
 
@@ -28,6 +29,11 @@ import { Colors } from '../../constants/colors';
 import { GlobalStyles } from '../../constants/styles';
 
 export default function SignUpScreen() {
+  const insets = useSafeAreaInsets();
+  const topInset = Math.max(
+    insets.top,
+    Platform.OS === 'android' ? StatusBar.currentHeight || 24 : 0
+  );
   const [fullName, setFullName] = useState('');
   const [username, setUsername] = useState('');
   const [identifier, setIdentifier] = useState('');
@@ -170,14 +176,14 @@ export default function SignUpScreen() {
   };
 
   return (
-    <SafeAreaView
-      style={[
+    <SafeAreaView style={[
         styles.container,
         {
           backgroundColor: theme.background,
-        },
+        },,
+        { paddingTop: topInset },
       ]}
-    >
+     edges={['left', 'right', 'bottom']}>
       <KeyboardAvoidingView
         behavior={
           Platform.OS === 'ios'

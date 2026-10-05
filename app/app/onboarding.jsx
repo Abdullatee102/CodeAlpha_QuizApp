@@ -7,8 +7,10 @@ import {
   Image,
   TouchableOpacity,
   Dimensions,
+  StatusBar,
+  Platform
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 
@@ -20,6 +22,11 @@ import { Colors } from '../constants/colors';
 const { width, height } = Dimensions.get('window');
 
 export default function OnboardingScreen() {
+  const insets = useSafeAreaInsets();
+  const topInset = Math.max(
+    insets.top,
+    Platform.OS === 'android' ? StatusBar.currentHeight || 24 : 0
+  );
   const [currentIndex, setCurrentIndex] = useState(0);
 
   const scrollClick = useRef(null);
@@ -93,14 +100,14 @@ export default function OnboardingScreen() {
   );
 
   return (
-    <SafeAreaView
-      style={[
+    <SafeAreaView style={[
         styles.container,
         {
           backgroundColor: theme.background,
-        },
+        },,
+        { paddingTop: topInset },
       ]}
-    >
+     edges={['left', 'right', 'bottom']}>
       <FlatList
         data={onboardingPages}
         renderItem={renderItem}

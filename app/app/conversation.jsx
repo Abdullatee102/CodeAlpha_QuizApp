@@ -72,6 +72,10 @@ export default function ConversationScreen() {
   const inputRef = useRef(null);
 
   const insets = useSafeAreaInsets();
+  const topInset = Math.max(
+    insets.top,
+    Platform.OS === 'android' ? StatusBar.currentHeight || 24 : 0
+  );
 
   const currentUserId =
     user?.id ||
@@ -950,12 +954,13 @@ export default function ConversationScreen() {
         {
           backgroundColor:
             theme.background,
+          paddingTop: topInset,
         },
       ]}
       edges={[
-        'top',
         'left',
         'right',
+        'bottom',
       ]}
     >
       {/* HEADER */}

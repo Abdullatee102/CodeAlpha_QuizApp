@@ -11,11 +11,10 @@ import {
   Platform,
   ActivityIndicator,
   Alert,
+  StatusBar
 } from 'react-native';
 
-import {
-  SafeAreaView,
-} from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   useRouter,
@@ -48,6 +47,11 @@ import {
 } from '../../constants/styles';
 
 export default function LoginScreen() {
+  const insets = useSafeAreaInsets();
+  const topInset = Math.max(
+    insets.top,
+    Platform.OS === 'android' ? StatusBar.currentHeight || 24 : 0
+  );
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -222,15 +226,15 @@ export default function LoginScreen() {
   };
 
   return (
-    <SafeAreaView
-      style={[
+    <SafeAreaView style={[
         styles.container,
         {
           backgroundColor:
             theme.background,
-        },
+        },,
+        { paddingTop: topInset },
       ]}
-    >
+     edges={['left', 'right', 'bottom']}>
       <KeyboardAvoidingView
         behavior={
           Platform.OS === 'ios'

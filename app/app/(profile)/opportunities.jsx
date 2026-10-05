@@ -6,8 +6,10 @@ import {
   ScrollView,
   TouchableOpacity,
   Switch,
+  StatusBar,
+  Platform
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -16,6 +18,11 @@ import { useThemeStore } from '../../store/themeStore';
 const ASYNC_KEY = 'opportunity_notifications';
 
 export default function OpportunitiesScreen() {
+  const insets = useSafeAreaInsets();
+  const topInset = Math.max(
+    insets.top,
+    Platform.OS === 'android' ? StatusBar.currentHeight || 24 : 0
+  );
   const router = useRouter();
   const { theme } = useThemeStore();
   
@@ -82,9 +89,11 @@ export default function OpportunitiesScreen() {
   };
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: theme.background }]}
-    >
+    <SafeAreaView style={[
+        styles.container, { backgroundColor: theme.background },
+        { paddingTop: topInset },
+      ]}
+     edges={['left', 'right', 'bottom']}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} hitSlop={10}>

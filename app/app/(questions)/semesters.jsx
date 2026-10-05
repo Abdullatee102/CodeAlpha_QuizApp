@@ -8,6 +8,8 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
+  StatusBar,
+  Platform
 } from 'react-native';
 
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -17,7 +19,7 @@ import {
   Ionicons,
 } from '@expo/vector-icons';
 
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useThemeStore } from '../../store/themeStore';
 
@@ -43,6 +45,11 @@ const SEMESTERS = [
 ];
 
 export default function SemestersScreen() {
+  const insets = useSafeAreaInsets();
+  const topInset = Math.max(
+    insets.top,
+    Platform.OS === 'android' ? StatusBar.currentHeight || 24 : 0
+  );
   const router = useRouter();
 
   const params = useLocalSearchParams();
@@ -174,14 +181,14 @@ export default function SemestersScreen() {
   };
 
   return (
-    <SafeAreaView
-      style={[
+    <SafeAreaView style={[
         styles.container,
         {
           backgroundColor: theme.background,
-        },
+        },,
+        { paddingTop: topInset },
       ]}
-    >
+     edges={['left', 'right', 'bottom']}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity

@@ -13,6 +13,8 @@ import {
   Alert,
   TextInput,
   ActivityIndicator,
+  StatusBar,
+  Platform
 } from 'react-native';
 
 import {
@@ -24,7 +26,7 @@ import {
   MaterialCommunityIcons,
 } from '@expo/vector-icons';
 
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useThemeStore } from '../../store/themeStore';
 import { GlobalStyles } from '../../constants/styles';
@@ -34,6 +36,11 @@ import api from '../../data/api';
 import { Colors } from '../../constants/colors';
 
 export default function VerifyEmail() {
+  const insets = useSafeAreaInsets();
+  const topInset = Math.max(
+    insets.top,
+    Platform.OS === 'android' ? StatusBar.currentHeight || 24 : 0
+  );
   const router = useRouter();
   const params = useLocalSearchParams();
 
@@ -175,15 +182,15 @@ export default function VerifyEmail() {
   };
 
   return (
-    <SafeAreaView
-      style={[
+    <SafeAreaView style={[
         GlobalStyles.safeArea,
         {
           backgroundColor:
             theme.background,
-        },
+        },,
+        { paddingTop: topInset },
       ]}
-    >
+     edges={['left', 'right', 'bottom']}>
       <ScrollView
         contentContainerStyle={
           styles.container

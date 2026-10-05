@@ -11,11 +11,12 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  StatusBar
 } from 'react-native';
 
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuthStore } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
@@ -24,6 +25,11 @@ import { Colors } from '../../constants/colors';
 import { GlobalStyles } from '../../constants/styles';
 
 export default function ForgotPassword() {
+  const insets = useSafeAreaInsets();
+  const topInset = Math.max(
+    insets.top,
+    Platform.OS === 'android' ? StatusBar.currentHeight || 24 : 0
+  );
   const [identifier, setIdentifier] = useState('');
 
   const {
@@ -96,14 +102,14 @@ export default function ForgotPassword() {
   };
 
   return (
-    <SafeAreaView
-      style={[
+    <SafeAreaView style={[
         GlobalStyles.safeArea,
         {
           backgroundColor: theme.background,
-        },
+        },,
+        { paddingTop: topInset },
       ]}
-    >
+     edges={['left', 'right', 'bottom']}>
       <KeyboardAvoidingView
         behavior={
           Platform.OS === 'ios'

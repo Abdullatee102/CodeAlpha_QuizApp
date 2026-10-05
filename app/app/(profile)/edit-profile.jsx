@@ -13,11 +13,12 @@ import {
   Platform,
   Modal,
   FlatList,
+  StatusBar
 } from 'react-native';
 import { useAuthStore } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
 import { useRouter } from 'expo-router';
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import api from '../../data/api';
@@ -25,6 +26,11 @@ import api from '../../data/api';
 const LEVELS = [100, 200, 300, 400, 500];
 
 export default function EditProfileScreen() {
+  const insets = useSafeAreaInsets();
+  const topInset = Math.max(
+    insets.top,
+    Platform.OS === 'android' ? StatusBar.currentHeight || 24 : 0
+  );
   const { user, profile, updateProfile } = useAuthStore();
   const { theme, isDarkMode } = useThemeStore();
   const router = useRouter();
@@ -214,7 +220,10 @@ export default function EditProfileScreen() {
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+    <SafeAreaView style={[
+        styles.container, { backgroundColor: theme.background },
+        { paddingTop: topInset },
+      ]} edges={['left', 'right', 'bottom']}>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
@@ -482,7 +491,10 @@ export default function EditProfileScreen() {
         transparent={true}
         onRequestClose={() => setShowFacultyModal(false)}
       >
-        <SafeAreaView style={styles.modalBackdrop}>
+        <SafeAreaView style={[
+        styles.modalBackdrop,
+        { paddingTop: topInset },
+      ]} edges={['left', 'right', 'bottom']}>
           <View style={[styles.modalCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: theme.text }]}>Select Faculty</Text>
@@ -542,7 +554,10 @@ export default function EditProfileScreen() {
         transparent={true}
         onRequestClose={() => setShowDeptModal(false)}
       >
-        <SafeAreaView style={styles.modalBackdrop}>
+        <SafeAreaView style={[
+        styles.modalBackdrop,
+        { paddingTop: topInset },
+      ]} edges={['left', 'right', 'bottom']}>
           <View style={[styles.modalCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: theme.text }]}>Select Department</Text>

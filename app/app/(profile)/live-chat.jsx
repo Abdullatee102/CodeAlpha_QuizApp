@@ -13,8 +13,9 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  StatusBar
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
@@ -44,6 +45,11 @@ const PRIORITIES = [
 ];
 
 export default function LiveChatScreen() {
+  const insets = useSafeAreaInsets();
+  const topInset = Math.max(
+    insets.top,
+    Platform.OS === 'android' ? StatusBar.currentHeight || 24 : 0
+  );
   const router = useRouter();
   const queryClient = useQueryClient();
   const { theme, isDarkMode } = useThemeStore();
@@ -200,7 +206,11 @@ export default function LiveChatScreen() {
     const isClosed = ticketDetails?.status === 'closed';
 
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top', 'left', 'right']}>
+      <SafeAreaView
+      style={[
+        styles.container, { backgroundColor: theme.background },
+        { paddingTop: topInset },
+      ]} edges={['left', 'right', 'bottom']}>
         {/* Detail Header */}
         <View style={[styles.header, { borderBottomColor: theme.border, backgroundColor: theme.card }]}>
           <TouchableOpacity onPress={() => setSelectedRequestId(null)} style={styles.backBtn} activeOpacity={0.7}>
@@ -310,7 +320,7 @@ export default function LiveChatScreen() {
           )}
 
           {/* Composer */}
-          <SafeAreaView edges={['bottom']} style={{ backgroundColor: theme.card }}>
+          <SafeAreaView edges={['left', 'right', 'bottom']} style={{ backgroundColor: theme.card }}>
             {isClosed ? (
               <View style={[styles.closedNotice, { backgroundColor: isDarkMode ? '#1E293B' : '#F1F5F9' }]}>
                 <Ionicons name="lock-closed-outline" size={16} color={theme.textSecondary} />
@@ -361,7 +371,10 @@ export default function LiveChatScreen() {
   // 2. TICKETS LIST / HOME VIEW
   // =====================================================
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+    <SafeAreaView style={[
+        styles.container, { backgroundColor: theme.background },
+        { paddingTop: topInset },
+      ]} edges={['left', 'right', 'bottom']}>
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: theme.border }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
@@ -478,7 +491,10 @@ export default function LiveChatScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
           style={{ flex: 1 }}
         >
-          <SafeAreaView style={styles.modalBackdrop}>
+          <SafeAreaView style={[
+        styles.modalBackdrop,
+        { paddingTop: topInset },
+      ]} edges={['left', 'right', 'bottom']}>
             <View
               style={[styles.modalCard, { backgroundColor: theme.card, borderColor: theme.border }]}
             >

@@ -7,11 +7,10 @@ import {
   StyleSheet,
   Switch,
   Platform,
+  StatusBar
 } from 'react-native';
 
-import {
-  SafeAreaView,
-} from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   Ionicons,
@@ -26,6 +25,11 @@ import {
 } from '../../store/themeStore';
 
 export default function AppearanceScreen() {
+  const insets = useSafeAreaInsets();
+  const topInset = Math.max(
+    insets.top,
+    Platform.OS === 'android' ? StatusBar.currentHeight || 24 : 0
+  );
   const router = useRouter();
 
   const {
@@ -66,12 +70,10 @@ export default function AppearanceScreen() {
         {
           backgroundColor:
             theme.background,
-        },
+        },,
+        { paddingTop: topInset },
       ]}
-      edges={[
-        'top',
-        'bottom',
-      ]}
+      edges={['left', 'right', 'bottom']}
     >
       <View style={styles.header}>
         <TouchableOpacity

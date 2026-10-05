@@ -9,9 +9,11 @@ import {
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
+  StatusBar,
+  Platform
 } from 'react-native';
 
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   Ionicons,
@@ -32,6 +34,11 @@ function AchievementIcon({ name, size, color }) {
 }
 
 export default function AchievementScreen() {
+  const insets = useSafeAreaInsets();
+  const topInset = Math.max(
+    insets.top,
+    Platform.OS === 'android' ? StatusBar.currentHeight || 24 : 0
+  );
   const router = useRouter();
 
   const {
@@ -412,15 +419,15 @@ export default function AchievementScreen() {
   // =====================================================
 
   return (
-    <SafeAreaView
-      style={[
+    <SafeAreaView style={[
         styles.container,
         {
           backgroundColor:
             theme.background,
-        },
+        },,
+        { paddingTop: topInset },
       ]}
-    >
+     edges={['left', 'right', 'bottom']}>
       <View
         style={styles.header}
       >

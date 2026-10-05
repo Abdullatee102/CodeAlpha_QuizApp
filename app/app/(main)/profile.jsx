@@ -10,8 +10,10 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  StatusBar,
+  Platform
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -24,6 +26,11 @@ import { useQuizHistoryQuery } from '../../hooks/useQuizHistoryQuery';
 import { useAchievementsQuery } from '../../hooks/useAchievementsQuery';
 
 export default function ProfileScreen() {
+  const insets = useSafeAreaInsets();
+  const topInset = Math.max(
+    insets.top,
+    Platform.OS === 'android' ? StatusBar.currentHeight || 24 : 0
+  );
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -241,16 +248,17 @@ export default function ProfileScreen() {
     <SafeAreaView
       style={[
         styles.container,
-        { backgroundColor: theme.background },
+        { backgroundColor: theme.background },,
+        { paddingTop: topInset },
       ]}
-      edges={['top', 'left', 'right']}
+      edges={['left', 'right', 'bottom']}
     >
       {/* Top Header with Profile title & Settings / Edit Icons */}
       <View style={styles.topBar}>
         <Text
           style={[
             styles.screenTitle,
-            { color: theme.text },
+            { color: theme.primary },
           ]}
         >
           Scholar Profile
@@ -1402,8 +1410,8 @@ const styles = StyleSheet.create({
   },
 
   screenTitle: {
-    fontSize: 22,
-    fontFamily: 'Ubuntu-Bold',
+    fontSize: 26,
+    fontFamily: 'Archivo-Black',
     letterSpacing: -0.3,
     flexShrink: 1,
   },

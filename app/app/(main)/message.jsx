@@ -134,7 +134,7 @@ export default function MessageScreen() {
       <View style={styles.header}>
         <View style={styles.headerTop}>
           <View>
-            <Text style={[styles.headerTitle, { color: theme.text }]}>
+            <Text style={[styles.headerTitle, { color: theme.primary }]}>
               Academic Discussions
             </Text>
             <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>
@@ -584,8 +584,8 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   headerTitle: {
-    fontSize: 22,
-    fontFamily: 'Ubuntu-Bold',
+    fontSize: 26,
+    fontFamily: 'Archivo-Black',
     letterSpacing: -0.3,
   },
   headerSubtitle: {

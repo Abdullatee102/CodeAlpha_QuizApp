@@ -1,3 +1,4 @@
+import React, { useState} from 'react';
 import {
   View, Text, FlatList, StyleSheet, ActivityIndicator, Image, TouchableOpacity, StatusBar, Platform
 } from 'react-native';

@@ -6,9 +6,11 @@ import {
   StyleSheet,
   TouchableOpacity,
   View,
+  StatusBar,
+  Platform
 } from 'react-native';
 
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Ionicons } from '@expo/vector-icons';
 
@@ -17,18 +19,23 @@ import { useRouter } from 'expo-router';
 import { useThemeStore } from '../../store/themeStore';
 
 export default function TermsScreen() {
+  const insets = useSafeAreaInsets();
+  const topInset = Math.max(
+    insets.top,
+    Platform.OS === 'android' ? StatusBar.currentHeight || 24 : 0
+  );
   const router = useRouter();
   const { theme } = useThemeStore();
 
   return (
-    <SafeAreaView
-      style={[
+    <SafeAreaView style={[
         styles.container,
         {
           backgroundColor: theme.background,
-        },
+        },,
+        { paddingTop: topInset },
       ]}
-    >
+     edges={['left', 'right', 'bottom']}>
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backBtn}
