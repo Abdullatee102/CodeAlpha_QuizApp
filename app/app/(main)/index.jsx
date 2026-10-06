@@ -387,7 +387,7 @@ export default function HomeScreen() {
           paddingTop: topInset,
         },
       ]}
-      edges={['left', 'right', 'bottom']}
+      edges={['left', 'right']}
     >
       {/* Fixed Header */}
       <View style={styles.header}>

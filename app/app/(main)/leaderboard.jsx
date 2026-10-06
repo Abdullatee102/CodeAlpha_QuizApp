@@ -46,28 +46,52 @@ export default function LeaderboardScreen() {
         ? Number(item.totalScore.toFixed(1))
         : item.totalScore || item.score || item.points || 0;
 
-    // Faculty Distinction Code Resolution for Circle
-    const rawFaculty = (
+    // Faculty Code Resolution
+    let facultyCode = (
       item.facultyCode ||
       item.faculty ||
       item.departmentCode ||
       item.department ||
-      (isCurrentUser ? profile?.facultyCode || profile?.faculty : '') ||
+      (isCurrentUser
+        ? profile?.facultyCode ||
+          profile?.faculty?.code ||
+          profile?.department?.faculty?.code ||
+          profile?.departmentCode ||
+          profile?.faculty ||
+          profile?.department
+        : '') ||
       ''
     )
       .toString()
       .toUpperCase()
       .trim();
 
+    // Fallback for logged-in user profile if department/faculty is set
+    if (
+      !facultyCode &&
+      isCurrentUser &&
+      (profile?.facultyCode ||
+        profile?.departmentCode ||
+        profile?.facultyName ||
+        profile?.departmentName)
+    ) {
+      facultyCode = (
+        profile?.facultyCode ||
+        profile?.departmentCode ||
+        'FCI'
+      ).toUpperCase();
+    }
+
     const facultyMeta = getFacultyMeta({
-      code: rawFaculty,
-      name: item.facultyName || item.faculty,
+      code: facultyCode,
+      name:
+        item.facultyName ||
+        item.faculty ||
+        (isCurrentUser ? profile?.facultyName || profile?.departmentName : ''),
     });
 
-    const displayCircleCode =
-      rawFaculty && rawFaculty.length <= 6
-        ? rawFaculty
-        : null;
+    const displayFacultyCode =
+      facultyCode && facultyCode.length <= 6 ? facultyCode : null;
 
     const userInitial = (item.username || item.fullName || 'U')
       .charAt(0)
@@ -95,18 +119,16 @@ export default function LeaderboardScreen() {
           )}
         </View>
 
-        {/* Avatar Circle: Photo -> Faculty Code -> First Letter Initial */}
+        {/* Avatar Circle: Configured Faculty Code -> Profile Photo -> First Letter Initial */}
         <View style={styles.avatarContainer}>
-          {item.photoURL ? (
-            <Image source={{ uri: item.photoURL }} style={styles.avatar} />
-          ) : displayCircleCode ? (
+          {displayFacultyCode ? (
             <View
               style={[
                 styles.avatar,
                 styles.facultyAvatar,
                 {
-                  backgroundColor: `${facultyMeta.color}20`,
-                  borderColor: `${facultyMeta.color}40`,
+                  backgroundColor: `${facultyMeta.color}22`,
+                  borderColor: `${facultyMeta.color}45`,
                 },
               ]}
             >
@@ -117,20 +139,20 @@ export default function LeaderboardScreen() {
                 ]}
                 numberOfLines={1}
                 adjustsFontSizeToFit
-                minimumFontScale={0.7}
+                minimumFontScale={0.65}
               >
-                {displayCircleCode}
+                {displayFacultyCode}
               </Text>
             </View>
+          ) : item.photoURL ? (
+            <Image source={{ uri: item.photoURL }} style={styles.avatar} />
           ) : (
             <View
               style={[
                 styles.avatar,
                 styles.initialAvatar,
                 {
-                  backgroundColor: isDarkMode
-                    ? theme.border
-                    : '#E0E7FF',
+                  backgroundColor: isDarkMode ? theme.border : '#E0E7FF',
                 },
               ]}
             >
@@ -161,7 +183,7 @@ export default function LeaderboardScreen() {
     );
   };
 
-  // Loading state wrapped in Theme-Aware SafeAreaView (Fixes White Top Bar Flash)
+  // Loading state wrapped in Theme-Aware SafeAreaView
   if (isLoading && leaderboard.length === 0) {
     return (
       <SafeAreaView
@@ -169,7 +191,7 @@ export default function LeaderboardScreen() {
           styles.container,
           { backgroundColor: theme.background, paddingTop: topInset },
         ]}
-        edges={['left', 'right', 'bottom']}
+        edges={['left', 'right']}
       >
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.primary} />
@@ -187,7 +209,7 @@ export default function LeaderboardScreen() {
         styles.container,
         { backgroundColor: theme.background, paddingTop: topInset },
       ]}
-      edges={['left', 'right', 'bottom']}
+      edges={['left', 'right']}
     >
       <View style={styles.headerContainer}>
         <Text style={[styles.headerTitle, { color: theme.primary }]}>
@@ -283,7 +305,7 @@ const styles = StyleSheet.create({
   tabText: { fontFamily: 'Ubuntu-Bold', fontSize: 13 },
   listContainer: {
     paddingHorizontal: 20,
-    paddingBottom: 30,
+    paddingBottom: 20,
     gap: 12,
     paddingTop: 10,
   },
@@ -308,7 +330,7 @@ const styles = StyleSheet.create({
   facultyAvatar: {
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
+    borderWidth: 1.5,
     paddingHorizontal: 2,
   },
   facultyAvatarText: {
