@@ -128,7 +128,7 @@ export default function MessageScreen() {
         styles.container,
         { backgroundColor: theme.background, paddingTop: topInset },
       ]}
-      edges={['left', 'right', 'bottom']}
+      edges={['left', 'right']}
     >
       {/* Header */}
       <View style={styles.header}>

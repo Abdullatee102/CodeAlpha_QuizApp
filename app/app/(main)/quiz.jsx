@@ -2076,6 +2076,7 @@ export default function QuizScreen() {
             backgroundColor: theme.background,
           },
         ]}
+        edges={['left', 'right']}
       >
         <ScrollView
           contentContainerStyle={styles.resultScrollContent}
@@ -2951,7 +2952,7 @@ export default function QuizScreen() {
             paddingTop: topInset,
           },
         ]}
-        edges={['left', 'right', 'bottom']}
+        edges={['left', 'right']}
       >
         <KeyboardAvoidingView
           style={
@@ -3674,7 +3675,7 @@ export default function QuizScreen() {
             paddingTop: topInset,
           },
         ]}
-        edges={['left', 'right', 'bottom']}
+        edges={['left', 'right']}
       >
         <KeyboardAvoidingView
           style={

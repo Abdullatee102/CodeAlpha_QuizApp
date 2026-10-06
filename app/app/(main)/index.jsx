@@ -1422,7 +1422,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 25,
     paddingTop: 20,
-    marginBottom: 20,
+    marginBottom: 15,
   },
 
   welcomeContainer: {

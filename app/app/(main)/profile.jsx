@@ -248,10 +248,10 @@ export default function ProfileScreen() {
     <SafeAreaView
       style={[
         styles.container,
-        { backgroundColor: theme.background },,
+        { backgroundColor: theme.background },
         { paddingTop: topInset },
       ]}
-      edges={['left', 'right', 'bottom']}
+      edges={['left', 'right']}
     >
       {/* Top Header with Profile title & Settings / Edit Icons */}
       <View style={styles.topBar}>
