@@ -46,7 +46,7 @@ export default function LeaderboardScreen() {
         ? Number(item.totalScore.toFixed(1))
         : item.totalScore || item.score || item.points || 0;
 
-    // Global Faculty Code Resolution for every scholar
+    // Faculty Code Resolution from configured user/item data
     let rawFac = (
       item.facultyCode ||
       item.faculty?.code ||
@@ -62,7 +62,9 @@ export default function LeaderboardScreen() {
           profile?.department?.faculty?.code ||
           profile?.departmentCode ||
           profile?.faculty ||
-          profile?.department
+          profile?.department ||
+          profile?.facultyName ||
+          profile?.departmentName
         : '') ||
       ''
     )
@@ -70,7 +72,7 @@ export default function LeaderboardScreen() {
       .toUpperCase()
       .trim();
 
-    // Map department codes to parent LAUTECH Faculty Codes if needed
+    // Map department codes to parent LAUTECH Faculty Codes if configured as department
     const deptToFac = {
       CSC: 'FCI', CYB: 'FCI', INS: 'FCI',
       EEE: 'FET', MEE: 'FET', CVE: 'FET', CHE: 'FET', AGE: 'FET', CPE: 'FET', FDE: 'FET',
@@ -84,37 +86,35 @@ export default function LeaderboardScreen() {
       AEC: 'FAS', AEX: 'FAS', AGR: 'FAS', APB: 'FAS'
     };
 
-    let facultyCode = deptToFac[rawFac] || rawFac;
-
-    // Check if valid 3-5 char faculty code
+    let resolvedCode = deptToFac[rawFac] || rawFac;
     const knownFaculties = ['FCI', 'FET', 'FES', 'FFCS', 'FMS', 'FPAS', 'FASS', 'FBMS', 'FBCS', 'FCS', 'FNS', 'FRNR', 'FAS'];
-    if (!knownFaculties.includes(facultyCode)) {
+
+    let displayFacultyCode = null;
+
+    if (knownFaculties.includes(resolvedCode)) {
+      displayFacultyCode = resolvedCode;
+    } else if (rawFac.length > 0) {
       const lower = rawFac.toLowerCase();
-      if (lower.includes('comput') || lower.includes('informatic')) facultyCode = 'FCI';
-      else if (lower.includes('engin') || lower.includes('technol')) facultyCode = 'FET';
-      else if (lower.includes('environ')) facultyCode = 'FES';
-      else if (lower.includes('food') || lower.includes('consum')) facultyCode = 'FFCS';
-      else if (lower.includes('manag') || lower.includes('busin')) facultyCode = 'FMS';
-      else if (lower.includes('pure') || lower.includes('science')) facultyCode = 'FPAS';
-      else if (lower.includes('art') || lower.includes('social')) facultyCode = 'FASS';
-      else if (lower.includes('agric')) facultyCode = 'FAS';
-      else {
-        // Fallback distribution across core LAUTECH faculties if unassigned
-        const fallbacks = ['FCI', 'FET', 'FPAS', 'FMS', 'FES', 'FASS', 'FAS'];
-        const seed = (item.id || item.username || 'U').split('').reduce((acc, ch) => acc + ch.charCodeAt(0), index);
-        facultyCode = fallbacks[seed % fallbacks.length];
+      if (lower.includes('comput') || lower.includes('informatic')) displayFacultyCode = 'FCI';
+      else if (lower.includes('engin') || lower.includes('technol')) displayFacultyCode = 'FET';
+      else if (lower.includes('environ')) displayFacultyCode = 'FES';
+      else if (lower.includes('food') || lower.includes('consum')) displayFacultyCode = 'FFCS';
+      else if (lower.includes('manag') || lower.includes('busin')) displayFacultyCode = 'FMS';
+      else if (lower.includes('pure') || lower.includes('science')) displayFacultyCode = 'FPAS';
+      else if (lower.includes('art') || lower.includes('social')) displayFacultyCode = 'FASS';
+      else if (lower.includes('agric')) displayFacultyCode = 'FAS';
+      else if (rawFac.length <= 5) {
+        displayFacultyCode = rawFac;
       }
     }
 
     const facultyMeta = getFacultyMeta({
-      code: facultyCode,
+      code: displayFacultyCode || 'MIXED',
       name:
         item.facultyName ||
         item.faculty ||
         (isCurrentUser ? profile?.facultyName || profile?.departmentName : ''),
     });
-
-    const displayFacultyCode = facultyCode;
 
     const userInitial = (item.username || item.fullName || 'U')
       .charAt(0)
@@ -142,30 +142,46 @@ export default function LeaderboardScreen() {
           )}
         </View>
 
-        {/* Avatar Circle: Global Faculty Code Badge for ALL users */}
+        {/* Avatar Circle: Configured Faculty Code OR First Letter Initial */}
         <View style={styles.avatarContainer}>
-          <View
-            style={[
-              styles.avatar,
-              styles.facultyAvatar,
-              {
-                backgroundColor: `${facultyMeta.color}22`,
-                borderColor: `${facultyMeta.color}45`,
-              },
-            ]}
-          >
-            <Text
+          {displayFacultyCode ? (
+            <View
               style={[
-                styles.facultyAvatarText,
-                { color: facultyMeta.color },
+                styles.avatar,
+                styles.facultyAvatar,
+                {
+                  backgroundColor: `${facultyMeta.color}22`,
+                  borderColor: `${facultyMeta.color}45`,
+                },
               ]}
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.6}
             >
-              {displayFacultyCode}
-            </Text>
-          </View>
+              <Text
+                style={[
+                  styles.facultyAvatarText,
+                  { color: facultyMeta.color },
+                ]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.6}
+              >
+                {displayFacultyCode}
+              </Text>
+            </View>
+          ) : (
+            <View
+              style={[
+                styles.avatar,
+                styles.initialAvatar,
+                {
+                  backgroundColor: isDarkMode ? theme.border : '#E0E7FF',
+                },
+              ]}
+            >
+              <Text style={[styles.initialText, { color: theme.primary }]}>
+                {userInitial}
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* User Info */}
