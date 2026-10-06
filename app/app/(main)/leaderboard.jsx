@@ -11,7 +11,7 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
 import { useLeaderboardQuery } from '../../hooks/useLeaderboardQuery';
@@ -46,13 +46,12 @@ export default function LeaderboardScreen() {
         ? Number(item.totalScore.toFixed(1))
         : item.totalScore || item.score || item.points || 0;
 
-    // Faculty Distinction Resolution
-    const facultyCode = (
+    // Faculty Distinction Code Resolution for Circle
+    const rawFaculty = (
       item.facultyCode ||
       item.faculty ||
       item.departmentCode ||
       item.department ||
-      item.facultyName ||
       (isCurrentUser ? profile?.facultyCode || profile?.faculty : '') ||
       ''
     )
@@ -61,23 +60,25 @@ export default function LeaderboardScreen() {
       .trim();
 
     const facultyMeta = getFacultyMeta({
-      code: facultyCode,
+      code: rawFaculty,
       name: item.facultyName || item.faculty,
     });
 
-    const displayFacultyBadge =
-      facultyCode && facultyCode.length <= 6
-        ? facultyCode
-        : facultyMeta.family !== 'Academic Faculty'
-        ? facultyMeta.family.split(' ')[0]
-        : 'SCHOLAR';
+    const displayCircleCode =
+      rawFaculty && rawFaculty.length <= 6
+        ? rawFaculty
+        : null;
+
+    const userInitial = (item.username || item.fullName || 'U')
+      .charAt(0)
+      .toUpperCase();
 
     return (
       <View
         style={[
           styles.row,
           {
-            backgroundColor: isDarkMode ? '#1E293B' : '#F8FAFC',
+            backgroundColor: isDarkMode ? '#1E1E1E' : '#F9F9F9',
             borderColor: theme.border,
           },
           isCurrentUser && { borderColor: theme.primary, borderWidth: 2 },
@@ -94,53 +95,57 @@ export default function LeaderboardScreen() {
           )}
         </View>
 
-        {/* User Avatar */}
+        {/* Avatar Circle: Photo -> Faculty Code -> First Letter Initial */}
         <View style={styles.avatarContainer}>
           {item.photoURL ? (
             <Image source={{ uri: item.photoURL }} style={styles.avatar} />
+          ) : displayCircleCode ? (
+            <View
+              style={[
+                styles.avatar,
+                styles.facultyAvatar,
+                {
+                  backgroundColor: `${facultyMeta.color}20`,
+                  borderColor: `${facultyMeta.color}40`,
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.facultyAvatarText,
+                  { color: facultyMeta.color },
+                ]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.7}
+              >
+                {displayCircleCode}
+              </Text>
+            </View>
           ) : (
             <View
               style={[
                 styles.avatar,
                 styles.initialAvatar,
-                { backgroundColor: `${facultyMeta.color}20` },
+                {
+                  backgroundColor: isDarkMode
+                    ? theme.border
+                    : '#E0E7FF',
+                },
               ]}
             >
-              <Text style={[styles.initialText, { color: facultyMeta.color }]}>
-                {(item.username || item.fullName || 'U').charAt(0).toUpperCase()}
+              <Text style={[styles.initialText, { color: theme.primary }]}>
+                {userInitial}
               </Text>
             </View>
           )}
         </View>
 
-        {/* User Info & Faculty Distinction Badge */}
+        {/* User Info */}
         <View style={styles.userInfo}>
           <Text style={[styles.userName, { color: theme.text }]} numberOfLines={1}>
             @{item.username || 'user'} {isCurrentUser && '(You)'}
           </Text>
-
-          <View style={styles.facultyBadgeRow}>
-            <View
-              style={[
-                styles.facultyBadge,
-                { backgroundColor: `${facultyMeta.color}15` },
-              ]}
-            >
-              <MaterialCommunityIcons
-                name={facultyMeta.icon || 'school-outline'}
-                size={12}
-                color={facultyMeta.color}
-              />
-              <Text
-                style={[
-                  styles.facultyBadgeText,
-                  { color: facultyMeta.color },
-                ]}
-              >
-                {displayFacultyBadge}
-              </Text>
-            </View>
-          </View>
         </View>
 
         {/* Score Points */}
@@ -189,13 +194,13 @@ export default function LeaderboardScreen() {
           Leaderboard
         </Text>
         <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-          See where you stand among top scholars.
+          See where you stand among top players.
         </Text>
 
         <View
           style={[
             styles.tabContainer,
-            { backgroundColor: isDarkMode ? '#1E293B' : '#F1F5F9' },
+            { backgroundColor: isDarkMode ? '#1E1E1E' : '#E5E7EB' },
           ]}
         >
           {['24h', '30d', 'all'].map((tab) => (
@@ -212,7 +217,7 @@ export default function LeaderboardScreen() {
                 style={[
                   styles.tabText,
                   {
-                    color: activeTab === tab ? '#ffffff' : theme.textSecondary,
+                    color: activeTab === tab ? '#fff' : theme.textSecondary,
                   },
                 ]}
               >
@@ -261,37 +266,36 @@ const styles = StyleSheet.create({
     paddingTop: 15,
     paddingBottom: 10,
   },
-  headerTitle: { fontFamily: 'Archivo-Black', fontSize: 28, marginBottom: 4 },
-  subtitle: { fontFamily: 'Ubuntu-Regular', fontSize: 13, marginBottom: 14 },
+  headerTitle: { fontFamily: 'Archivo-Black', fontSize: 28, marginBottom: 5 },
+  subtitle: { fontFamily: 'Ubuntu-Regular', fontSize: 14, marginBottom: 15 },
   tabContainer: {
     flexDirection: 'row',
     borderRadius: 12,
-    padding: 3,
-    marginBottom: 4,
+    padding: 4,
+    marginBottom: 5,
   },
   tabButton: {
     flex: 1,
-    paddingVertical: 9,
+    paddingVertical: 10,
     alignItems: 'center',
-    borderRadius: 9,
+    borderRadius: 10,
   },
   tabText: { fontFamily: 'Ubuntu-Bold', fontSize: 13 },
   listContainer: {
     paddingHorizontal: 20,
     paddingBottom: 30,
-    gap: 10,
-    paddingTop: 8,
+    gap: 12,
+    paddingTop: 10,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    padding: 14,
     borderRadius: 16,
     borderWidth: 1,
   },
   rankContainer: {
-    width: 28,
+    width: 30,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,
@@ -300,22 +304,23 @@ const styles = StyleSheet.create({
   avatarContainer: { marginRight: 12 },
   avatar: { width: 42, height: 42, borderRadius: 21 },
   initialAvatar: { justifyContent: 'center', alignItems: 'center' },
-  initialText: { fontFamily: 'Ubuntu-Bold', fontSize: 17 },
-  userInfo: { flex: 1, marginRight: 10, justifyContent: 'center' },
-  userName: { fontFamily: 'Ubuntu-Bold', fontSize: 14, marginBottom: 3 },
-  facultyBadgeRow: { flexDirection: 'row', alignItems: 'center' },
-  facultyBadge: {
-    flexDirection: 'row',
+  initialText: { fontFamily: 'Ubuntu-Bold', fontSize: 16 },
+  facultyAvatar: {
+    justifyContent: 'center',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 6,
+    borderWidth: 1,
+    paddingHorizontal: 2,
   },
-  facultyBadgeText: { fontFamily: 'Ubuntu-Bold', fontSize: 10 },
-  scoreContainer: { alignItems: 'flex-end', justifyContent: 'center' },
-  scoreText: { fontFamily: 'Archivo-Black', fontSize: 17 },
-  scoreLabel: { fontFamily: 'Ubuntu-Regular', fontSize: 10, marginTop: -2 },
+  facultyAvatarText: {
+    fontFamily: 'Ubuntu-Bold',
+    fontSize: 11,
+    textAlign: 'center',
+  },
+  userInfo: { flex: 1, marginRight: 10 },
+  userName: { fontFamily: 'Ubuntu-Bold', fontSize: 15 },
+  scoreContainer: { alignItems: 'flex-end' },
+  scoreText: { fontFamily: 'Archivo-Black', fontSize: 18 },
+  scoreLabel: { fontFamily: 'Ubuntu-Regular', fontSize: 10 },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -327,9 +332,10 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   centered: {
-    paddingVertical: 40,
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    marginTop: 50,
   },
   emptyText: { fontFamily: 'Ubuntu-Medium', fontSize: 14, marginTop: 10 },
 });

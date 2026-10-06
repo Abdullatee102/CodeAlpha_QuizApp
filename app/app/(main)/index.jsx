@@ -389,145 +389,142 @@ export default function HomeScreen() {
       ]}
       edges={['left', 'right', 'bottom']}
     >
+      {/* Fixed Header */}
+      <View style={styles.header}>
+        <View style={styles.welcomeContainer}>
+          <Text
+            style={[
+              styles.welcomeText,
+              {
+                color: theme.textSecondary,
+              },
+            ]}
+          >
+            Hello,
+          </Text>
+
+          <Text
+            style={[
+              styles.userName,
+              {
+                color: theme.primary,
+              },
+            ]}
+            numberOfLines={2}
+            adjustsFontSizeToFit
+            minimumFontScale={0.75}
+          >
+            {(() => {
+              const rawName =
+                profile?.fullName ||
+                user?.displayName ||
+                user?.fullName ||
+                profile?.username ||
+                user?.username ||
+                'Scholar';
+
+              const cleanName =
+                rawName === 'Verified User' ||
+                rawName === 'Verified'
+                  ? profile?.username ||
+                    user?.username ||
+                    'Scholar'
+                  : rawName;
+
+              return cleanName.split(' ')[0];
+            })()}
+          </Text>
+        </View>
+
+        {/* Header actions */}
+        <View style={styles.headerActions}>
+          {/* Notification Bell */}
+          <TouchableOpacity
+            onPress={() => router.push('/notifications')}
+            style={[
+              styles.notificationButton,
+              {
+                backgroundColor: theme.card,
+                borderColor: theme.border,
+              },
+            ]}
+            activeOpacity={0.7}
+          >
+            <Ionicons
+              name="notifications-outline"
+              size={25}
+              color={theme.primary}
+            />
+
+            {unreadNotificationCount > 0 && (
+              <View
+                style={[
+                  styles.notificationBadge,
+                  {
+                    backgroundColor: Colors.error,
+                    borderColor: theme.card,
+                  },
+                ]}
+              >
+                <Text style={styles.notificationBadgeText}>
+                  {unreadNotificationCount > 99
+                    ? '99+'
+                    : unreadNotificationCount}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+
+          {/* Avatar */}
+          <TouchableOpacity
+            onPress={() => router.push('/')}
+            style={styles.avatarWrapper}
+            activeOpacity={0.8}
+          >
+            {profileImage ? (
+              <Image
+                source={{
+                  uri: profileImage,
+                }}
+                style={[
+                  styles.avatar,
+                  {
+                    borderColor: theme.background,
+                  },
+                ]}
+              />
+            ) : (
+              <View
+                style={[
+                  styles.avatar,
+                  styles.initialAvatar,
+                  {
+                    backgroundColor: `${theme.primary}20`,
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.initialText,
+                    {
+                      color: theme.primary,
+                    },
+                  ]}
+                >
+                  {userInitial}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
+      </View>
+
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
           paddingBottom: 30,
         }}
       >
-        {/* Header */}
-
-        <View style={styles.header}>
-          <View style={styles.welcomeContainer}>
-            <Text
-              style={[
-                styles.welcomeText,
-                {
-                  color: theme.textSecondary,
-                },
-              ]}
-            >
-              Hello,
-            </Text>
-
-            <Text
-              style={[
-                styles.userName,
-                {
-                  color: theme.primary,
-                },
-              ]}
-              numberOfLines={2}
-              adjustsFontSizeToFit
-              minimumFontScale={0.75}
-            >
-              {(() => {
-                const rawName =
-                  profile?.fullName ||
-                  user?.displayName ||
-                  user?.fullName ||
-                  profile?.username ||
-                  user?.username ||
-                  'Scholar';
-
-                const cleanName =
-                  rawName === 'Verified User' ||
-                  rawName === 'Verified'
-                    ? profile?.username ||
-                      user?.username ||
-                      'Scholar'
-                    : rawName;
-
-                return cleanName.split(' ')[0];
-              })()}
-            </Text>
-          </View>
-
-          {/* Header actions */}
-
-          <View style={styles.headerActions}>
-            {/* Notification Bell */}
-
-            <TouchableOpacity
-              onPress={() => router.push('/notifications')}
-              style={[
-                styles.notificationButton,
-                {
-                  backgroundColor: theme.card,
-                  borderColor: theme.border,
-                },
-              ]}
-              activeOpacity={0.7}
-            >
-              <Ionicons
-                name="notifications-outline"
-                size={25}
-                color={theme.primary}
-              />
-
-              {unreadNotificationCount > 0 && (
-                <View
-                  style={[
-                    styles.notificationBadge,
-                    {
-                      backgroundColor: Colors.error,
-                      borderColor: theme.card,
-                    },
-                  ]}
-                >
-                  <Text style={styles.notificationBadgeText}>
-                    {unreadNotificationCount > 99
-                      ? '99+'
-                      : unreadNotificationCount}
-                  </Text>
-                </View>
-              )}
-            </TouchableOpacity>
-
-            {/* Avatar */}
-
-            <TouchableOpacity
-              onPress={() => router.push('/')}
-              style={styles.avatarWrapper}
-              activeOpacity={0.8}
-            >
-              {profileImage ? (
-                <Image
-                  source={{
-                    uri: profileImage,
-                  }}
-                  style={[
-                    styles.avatar,
-                    {
-                      borderColor: theme.background,
-                    },
-                  ]}
-                />
-              ) : (
-                <View
-                  style={[
-                    styles.avatar,
-                    styles.initialAvatar,
-                    {
-                      backgroundColor: `${theme.primary}20`,
-                    },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.initialText,
-                      {
-                        color: theme.primary,
-                      },
-                    ]}
-                  >
-                    {userInitial}
-                  </Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          </View>
-        </View>
 
         {/* How to Play */}
 
