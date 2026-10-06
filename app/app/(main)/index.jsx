@@ -1421,9 +1421,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 4,
+    paddingTop: 6,
     paddingBottom: 8,
-    marginBottom: 6,
+    marginBottom: 16,
   },
 
   welcomeContainer: {

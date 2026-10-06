@@ -577,11 +577,11 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 16,
+    paddingTop: 4,
+    paddingBottom: 10,
   },
   headerTop: {
-    marginBottom: 14,
+    marginBottom: 8,
   },
   headerTitle: {
     fontSize: 26,

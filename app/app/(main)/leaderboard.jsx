@@ -16,6 +16,10 @@ import { useAuthStore } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
 import { useLeaderboardQuery } from '../../hooks/useLeaderboardQuery';
 import { getFacultyMeta } from '../../constants/academicIcons';
+import {
+  getGlobalUserFaculty,
+  saveGlobalUserFaculty,
+} from '../../utils/mmkvStorage';
 
 export default function LeaderboardScreen() {
   const insets = useSafeAreaInsets();
@@ -46,7 +50,25 @@ export default function LeaderboardScreen() {
         ? Number(item.totalScore.toFixed(1))
         : item.totalScore || item.score || item.points || 0;
 
-    // Faculty Code Resolution from configured user/item data
+    // Save current user's profile faculty globally whenever available
+    if (
+      isCurrentUser &&
+      (profile?.facultyCode ||
+        profile?.departmentCode ||
+        profile?.faculty ||
+        profile?.department)
+    ) {
+      const myFac =
+        profile?.facultyCode ||
+        profile?.departmentCode ||
+        profile?.faculty ||
+        profile?.department;
+      if (myFac) {
+        saveGlobalUserFaculty(profile?.username || item.username, myFac);
+      }
+    }
+
+    // Faculty Code Resolution from configured user/item data or persistent global map
     let rawFac = (
       item.facultyCode ||
       item.faculty?.code ||
@@ -56,6 +78,7 @@ export default function LeaderboardScreen() {
       (typeof item.department === 'string' ? item.department : '') ||
       item.facultyName ||
       item.departmentName ||
+      getGlobalUserFaculty(item.username) ||
       (isCurrentUser
         ? profile?.facultyCode ||
           profile?.faculty?.code ||
@@ -306,11 +329,11 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   headerContainer: {
     paddingHorizontal: 20,
-    paddingTop: 15,
-    paddingBottom: 10,
+    paddingTop: 4,
+    paddingBottom: 6,
   },
-  headerTitle: { fontFamily: 'Archivo-Black', fontSize: 28, marginBottom: 5 },
-  subtitle: { fontFamily: 'Ubuntu-Regular', fontSize: 14, marginBottom: 15 },
+  headerTitle: { fontFamily: 'Archivo-Black', fontSize: 26, marginBottom: 2 },
+  subtitle: { fontFamily: 'Ubuntu-Regular', fontSize: 13, marginBottom: 10 },
   tabContainer: {
     flexDirection: 'row',
     borderRadius: 12,
