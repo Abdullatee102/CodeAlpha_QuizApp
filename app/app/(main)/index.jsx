@@ -452,7 +452,7 @@ export default function HomeScreen() {
           >
             <Ionicons
               name="notifications-outline"
-              size={25}
+              size={20}
               color={theme.primary}
             />
 
@@ -1420,37 +1420,39 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 25,
-    paddingTop: 20,
-    marginBottom: 15,
+    paddingHorizontal: 20,
+    paddingTop: 4,
+    paddingBottom: 8,
+    marginBottom: 6,
   },
 
   welcomeContainer: {
     flex: 1,
-    marginRight: 15,
+    marginRight: 12,
   },
 
   welcomeText: {
-    fontFamily: 'Ubuntu-Light',
-    fontSize: 16,
+    fontFamily: 'Ubuntu-Regular',
+    fontSize: 13,
+    marginBottom: -2,
   },
 
   userName: {
     fontFamily: 'Archivo-Black',
-    fontSize: 24,
+    fontSize: 20,
     flexWrap: 'wrap',
   },
 
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
   },
 
   notificationButton: {
-    width: 45,
-    height: 45,
-    borderRadius: 22.5,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
@@ -1459,15 +1461,15 @@ const styles = StyleSheet.create({
 
   notificationBadge: {
     position: 'absolute',
-    top: -4,
-    right: -4,
-    minWidth: 19,
-    height: 19,
-    borderRadius: 10,
-    paddingHorizontal: 4,
+    top: -3,
+    right: -3,
+    minWidth: 17,
+    height: 17,
+    borderRadius: 8.5,
+    paddingHorizontal: 3,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
+    borderWidth: 1.5,
   },
 
   notificationBadgeText: {
@@ -1482,10 +1484,10 @@ const styles = StyleSheet.create({
   },
 
   avatar: {
-    width: 55,
-    height: 55,
-    borderRadius: 27.5,
-    borderWidth: 2,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1.5,
   },
 
   initialAvatar: {
@@ -1496,7 +1498,7 @@ const styles = StyleSheet.create({
 
   initialText: {
     fontFamily: 'Archivo-Black',
-    fontSize: 22,
+    fontSize: 16,
   },
 
   instructionCard: {
