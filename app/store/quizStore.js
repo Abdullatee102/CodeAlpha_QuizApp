@@ -559,13 +559,19 @@ export const useQuizStore = create(
           totalQuestions,
           wrongAnswers,
           createdAt: history?.createdAt || new Date().toISOString(),
-          questions: (get().questions || []).map((q) => ({
-            id: q.id,
-            question: q.question,
-            options: q.options || [],
-            type: q.type,
-            difficulty: q.difficulty,
-          })),
+          questions: (get().questions || []).map((q) => {
+            const gr = (grading?.results || []).find((r) => r.questionId === q.id);
+            const ans = gr?.correctAnswer || q.correctAnswer || q.answer;
+            return {
+              id: q.id,
+              question: q.question,
+              options: q.options || [],
+              type: q.type,
+              difficulty: q.difficulty,
+              correctAnswer: ans,
+              sampleAnswer: gr?.sampleAnswer || ans || q.sampleAnswer,
+            };
+          }),
           answers: get().answers || [],
           results: grading?.results || [],
         };

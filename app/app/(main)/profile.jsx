@@ -1396,7 +1396,7 @@ export default function ProfileScreen() {
         <View
           style={[
             styles.sectionBlock,
-            { marginBottom: 30 },
+            { marginBottom: 20 },
           ]}
         >
           <Text
@@ -1833,15 +1833,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
 
-  /*
-   * Recent Activity responsive layout:
-   *
-   * Icon      | Course information        | Score
-   * 40x40     | flex: 1 / minWidth: 0    | fixed
-   *
-   * On narrow screens the course text can shrink/truncate
-   * instead of pushing the score outside the card.
-   */
   historyItemCard: {
     flexDirection: 'row',
     alignItems: 'center',

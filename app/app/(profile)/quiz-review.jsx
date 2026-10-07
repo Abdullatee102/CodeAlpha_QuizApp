@@ -57,22 +57,103 @@ export default function QuizReviewScreen() {
     const cached = getQuizReview(historyId);
     if (cached) {
       setReview(cached);
-      return;
     }
 
-    // 2. If not in local cache, attempt to fetch questions for this course to show assessment review
-    if (courseId) {
-      setIsLoadingFallback(true);
+    const effectiveCourseId = courseId || cached?.courseId;
+    const effectiveQuizType = quizType || cached?.quizType || 'cbt';
+
+    // Check if any question is missing its correctAnswer
+    const questions = cached?.questions || [];
+    const results = cached?.results || [];
+    const needsAnswers =
+      !cached ||
+      questions.length === 0 ||
+      questions.some((q) => !q.correctAnswer && !q.answer) ||
+      results.some((r) => !r.correctAnswer);
+
+    const questionIds = (questions.length > 0 ? questions : cached?.answers || [])
+      .map((q) => q.id || q.questionId)
+      .filter(Boolean);
+
+    if (needsAnswers && (effectiveCourseId || questionIds.length > 0)) {
+      setIsLoadingFallback(!cached);
+
+      const params = { type: effectiveQuizType };
+      if (questionIds.length > 0) {
+        params.questionIds = questionIds.join(',');
+      }
+
+      const reviewUrl =
+        effectiveCourseId && effectiveCourseId !== 'mixed'
+          ? `/auth/courses/${effectiveCourseId}/review-questions`
+          : `/auth/questions/review`;
+
       api
-        .get(`/auth/courses/${courseId}/questions`, {
-          params: { type: quizType },
+        .get(reviewUrl, { params })
+        .catch(() => {
+          // If review-questions fails, try standard questions
+          if (effectiveCourseId) {
+            return api.get(`/auth/courses/${effectiveCourseId}/questions`, {
+              params: { type: effectiveQuizType },
+            });
+          }
+          return Promise.reject(new Error('No questions found'));
         })
         .then((res) => {
           const fetched = res.data?.data || res.data?.questions || [];
-          setFallbackQuestions(fetched);
+          if (Array.isArray(fetched) && fetched.length > 0) {
+            setFallbackQuestions(fetched);
+
+            setReview((prev) => {
+              const base = prev || cached;
+              if (!base) {
+                return {
+                  historyId,
+                  courseId: effectiveCourseId,
+                  quizType: effectiveQuizType,
+                  questions: fetched,
+                  answers: [],
+                  results: [],
+                };
+              }
+
+              const fetchedMap = new Map(fetched.map((item) => [item.id, item]));
+
+              const enrichedQuestions = (base.questions || []).map((q) => {
+                const match = fetchedMap.get(q.id);
+                return {
+                  ...q,
+                  correctAnswer: match?.correctAnswer || q.correctAnswer,
+                  sampleAnswer:
+                    match?.sampleAnswer ||
+                    match?.correctAnswer ||
+                    q.sampleAnswer,
+                };
+              });
+
+              const enrichedResults = (base.results || []).map((r) => {
+                const match = fetchedMap.get(r.questionId);
+                return {
+                  ...r,
+                  correctAnswer: match?.correctAnswer || r.correctAnswer,
+                  sampleAnswer:
+                    match?.sampleAnswer ||
+                    match?.correctAnswer ||
+                    r.sampleAnswer,
+                };
+              });
+
+              return {
+                ...base,
+                questions:
+                  enrichedQuestions.length > 0 ? enrichedQuestions : fetched,
+                results: enrichedResults,
+              };
+            });
+          }
         })
         .catch((err) => {
-          console.warn('[QUIZ REVIEW] Could not fetch fallback questions:', err);
+          console.warn('[QUIZ REVIEW] Could not fetch review questions:', err);
         })
         .finally(() => {
           setIsLoadingFallback(false);
@@ -382,30 +463,47 @@ export default function QuizReviewScreen() {
                           : null) ||
                         (typeof q.correctOption === 'number'
                           ? q.options[q.correctOption]
-                          : null);
+                          : null) ||
+                        (isCorrect === true ? userAnswer : null);
 
                       return q.options.map((opt, optIdx) => {
-                        const isSelected = userAnswer === opt;
-                        const isTargetCorrect =
-                          targetCorrect &&
-                          (opt === targetCorrect ||
-                            String(opt).trim().toLowerCase() ===
-                              String(targetCorrect).trim().toLowerCase());
-
                         const optLabel = String.fromCharCode(65 + optIdx); // A, B, C, D
+
+                        const isSelected =
+                          userAnswer !== undefined &&
+                          userAnswer !== null &&
+                          (userAnswer === opt ||
+                            String(userAnswer).trim().toLowerCase() ===
+                              String(opt).trim().toLowerCase());
+
+                        const isLetterMatch =
+                          typeof targetCorrect === 'string' &&
+                          targetCorrect.trim().length === 1 &&
+                          targetCorrect.trim().toUpperCase() === optLabel;
+
+                        const isIndexMatch =
+                          (typeof targetCorrect === 'number' && targetCorrect === optIdx) ||
+                          targetCorrect === String(optIdx);
+
+                        const isTargetCorrect = Boolean(
+                          targetCorrect &&
+                            (opt === targetCorrect ||
+                              String(opt).trim().toLowerCase() ===
+                                String(targetCorrect).trim().toLowerCase() ||
+                              isLetterMatch ||
+                              isIndexMatch)
+                        );
 
                         let optBg = isDarkMode ? theme.background : '#F8FAFC';
                         let optBorder = theme.border;
                         let textColor = theme.text;
                         let badge = null;
-                        let isGreenStyle = false;
 
                         if (isSelected) {
                           if (isCorrect === true || isTargetCorrect) {
                             optBg = '#10B98118';
                             optBorder = '#10B981';
                             textColor = '#10B981';
-                            isGreenStyle = true;
                             badge = (
                               <View style={styles.optBadge}>
                                 <Ionicons
@@ -450,7 +548,6 @@ export default function QuizReviewScreen() {
                           optBg = '#10B98118';
                           optBorder = '#10B981';
                           textColor = '#10B981';
-                          isGreenStyle = true;
                           badge = (
                             <View style={styles.optBadge}>
                               <Ionicons
@@ -478,6 +575,8 @@ export default function QuizReviewScreen() {
                               {
                                 backgroundColor: optBg,
                                 borderColor: optBorder,
+                                borderWidth:
+                                  isSelected || isTargetCorrect ? 1.5 : 1,
                               },
                             ]}
                           >
