@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons, FontAwesome } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -1389,8 +1389,78 @@ export default function ProfileScreen() {
                 color={theme.textSecondary}
               />
             </TouchableOpacity>
+          </View>
+        </View>
 
-            {/* JOIN COMMUNITIES GROUP SECTION */}
+        {/* JOIN COMMUNITIES GROUP SECTION */}
+        <View
+          style={[
+            styles.sectionBlock,
+            { marginBottom: 30 },
+          ]}
+        >
+          <Text
+            style={[
+              styles.sectionTitle,
+              { color: theme.text },
+            ]}
+          >
+            Join Communities Group
+          </Text>
+
+          <View
+            style={[
+              styles.menuContainer,
+              {
+                backgroundColor: theme.card,
+                borderColor: theme.border,
+              },
+            ]}
+          >
+            {/* WhatsApp Group Box */}
+            <TouchableOpacity
+              style={styles.menuRow}
+              onPress={() => {
+                Linking.openURL('https://chat.whatsapp.com/sample').catch(() => {
+                  Alert.alert('Error', 'Could not open WhatsApp link.');
+                });
+              }}
+              activeOpacity={0.7}
+            >
+              <View
+                style={[
+                  styles.menuIconWrap,
+                  { backgroundColor: '#25D36618' },
+                ]}
+              >
+                <FontAwesome
+                  name="whatsapp"
+                  size={20}
+                  color="#25D366"
+                />
+              </View>
+
+              <View style={styles.menuInfo}>
+                <Text style={[styles.menuTitle, { color: theme.text }]}>
+                  WhatsApp Community
+                </Text>
+                <Text
+                  style={[
+                    styles.menuSubtitle,
+                    { color: theme.textSecondary },
+                  ]}
+                >
+                  Join our official WhatsApp student group
+                </Text>
+              </View>
+
+              <Ionicons
+                name="open-outline"
+                size={18}
+                color={theme.textSecondary}
+              />
+            </TouchableOpacity>
+
             <View
               style={[
                 styles.menuDivider,
@@ -1398,111 +1468,49 @@ export default function ProfileScreen() {
               ]}
             />
 
-            <View style={{ paddingVertical: 8 }}>
-              <Text
-                style={[
-                  styles.sectionLabel,
-                  { color: theme.textSecondary, marginBottom: 8 },
-                ]}
-              >
-                JOIN COMMUNITIES GROUP
-              </Text>
-
-              {/* WhatsApp Group Box */}
-              <TouchableOpacity
-                style={styles.menuRow}
-                onPress={() => {
-                  Linking.openURL('https://chat.whatsapp.com/sample').catch(() => {
-                    Alert.alert('Error', 'Could not open WhatsApp link.');
-                  });
-                }}
-                activeOpacity={0.7}
-              >
-                <View
-                  style={[
-                    styles.menuIconWrap,
-                    { backgroundColor: '#25D36618' },
-                  ]}
-                >
-                  <MaterialCommunityIcons
-                    name="whatsapp"
-                    size={22}
-                    color="#25D366"
-                  />
-                </View>
-
-                <View style={styles.menuInfo}>
-                  <Text style={[styles.menuTitle, { color: theme.text }]}>
-                    WhatsApp Community
-                  </Text>
-                  <Text
-                    style={[
-                      styles.menuSubtitle,
-                      { color: theme.textSecondary },
-                    ]}
-                  >
-                    Join our official WhatsApp student group
-                  </Text>
-                </View>
-
-                <Ionicons
-                  name="open-outline"
-                  size={18}
-                  color={theme.textSecondary}
-                />
-              </TouchableOpacity>
-
+            {/* Telegram Channel Box */}
+            <TouchableOpacity
+              style={styles.menuRow}
+              onPress={() => {
+                Linking.openURL('https://t.me/sample').catch(() => {
+                  Alert.alert('Error', 'Could not open Telegram link.');
+                });
+              }}
+              activeOpacity={0.7}
+            >
               <View
                 style={[
-                  styles.menuDivider,
-                  { backgroundColor: theme.border },
+                  styles.menuIconWrap,
+                  { backgroundColor: '#229ED918' },
                 ]}
-              />
-
-              {/* Telegram Group Box */}
-              <TouchableOpacity
-                style={styles.menuRow}
-                onPress={() => {
-                  Linking.openURL('https://t.me/sample').catch(() => {
-                    Alert.alert('Error', 'Could not open Telegram link.');
-                  });
-                }}
-                activeOpacity={0.7}
               >
-                <View
+                <FontAwesome
+                  name="telegram"
+                  size={20}
+                  color="#229ED9"
+                />
+              </View>
+
+              <View style={styles.menuInfo}>
+                <Text style={[styles.menuTitle, { color: theme.text }]}>
+                  Telegram Channel
+                </Text>
+                <Text
                   style={[
-                    styles.menuIconWrap,
-                    { backgroundColor: '#229ED918' },
+                    styles.menuSubtitle,
+                    { color: theme.textSecondary },
                   ]}
                 >
-                  <MaterialCommunityIcons
-                    name="telegram"
-                    size={22}
-                    color="#229ED9"
-                  />
-                </View>
+                  Get instant study materials & updates
+                </Text>
+              </View>
 
-                <View style={styles.menuInfo}>
-                  <Text style={[styles.menuTitle, { color: theme.text }]}>
-                    Telegram Channel
-                  </Text>
-                  <Text
-                    style={[
-                      styles.menuSubtitle,
-                      { color: theme.textSecondary },
-                    ]}
-                  >
-                    Get instant study materials & updates
-                  </Text>
-                </View>
-
-                <Ionicons
-                  name="open-outline"
-                  size={18}
-                  color={theme.textSecondary}
-                />
-              </TouchableOpacity>
-            </View>
+              <Ionicons
+                name="open-outline"
+                size={18}
+                color={theme.textSecondary}
+              />
+            </TouchableOpacity>
           </View>
         </View>
       </ScrollView>
