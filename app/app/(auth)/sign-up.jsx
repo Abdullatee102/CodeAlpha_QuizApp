@@ -252,7 +252,8 @@ export default function SignUpScreen() {
             />
 
             <TextInput
-              placeholder="Email Address or Phone Number"
+              placeholder="Email Address"
+              keyboardType="email-address"
               placeholderTextColor={theme.textSecondary}
               style={[
                 GlobalStyles.inputField,

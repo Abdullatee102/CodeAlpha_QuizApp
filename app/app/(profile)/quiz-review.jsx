@@ -372,20 +372,85 @@ export default function QuizReviewScreen() {
                 {/* Options List for CBT */}
                 {Array.isArray(q.options) && q.options.length > 0 && (
                   <View style={styles.optionsList}>
-                    {q.options.map((opt, optIdx) => {
-                      const isSelected = userAnswer === opt;
-                      const optLabel = String.fromCharCode(65 + optIdx); // A, B, C, D
+                    {(() => {
+                      const targetCorrect =
+                        q.correctAnswer ||
+                        q.answer ||
+                        grading?.correctAnswer ||
+                        (typeof q.correctOptionIndex === 'number'
+                          ? q.options[q.correctOptionIndex]
+                          : null) ||
+                        (typeof q.correctOption === 'number'
+                          ? q.options[q.correctOption]
+                          : null);
 
-                      let optBg = isDarkMode ? theme.background : '#F8FAFC';
-                      let optBorder = theme.border;
-                      let textColor = theme.text;
-                      let badge = null;
+                      return q.options.map((opt, optIdx) => {
+                        const isSelected = userAnswer === opt;
+                        const isTargetCorrect =
+                          targetCorrect &&
+                          (opt === targetCorrect ||
+                            String(opt).trim().toLowerCase() ===
+                              String(targetCorrect).trim().toLowerCase());
 
-                      if (isSelected) {
-                        if (isCorrect === true) {
+                        const optLabel = String.fromCharCode(65 + optIdx); // A, B, C, D
+
+                        let optBg = isDarkMode ? theme.background : '#F8FAFC';
+                        let optBorder = theme.border;
+                        let textColor = theme.text;
+                        let badge = null;
+                        let isGreenStyle = false;
+
+                        if (isSelected) {
+                          if (isCorrect === true || isTargetCorrect) {
+                            optBg = '#10B98118';
+                            optBorder = '#10B981';
+                            textColor = '#10B981';
+                            isGreenStyle = true;
+                            badge = (
+                              <View style={styles.optBadge}>
+                                <Ionicons
+                                  name="checkmark-circle"
+                                  size={14}
+                                  color="#10B981"
+                                />
+                                <Text
+                                  style={[
+                                    styles.optBadgeText,
+                                    { color: '#10B981' },
+                                  ]}
+                                >
+                                  Your Answer
+                                </Text>
+                              </View>
+                            );
+                          } else {
+                            optBg = '#EF444418';
+                            optBorder = '#EF4444';
+                            textColor = '#EF4444';
+                            badge = (
+                              <View style={styles.optBadge}>
+                                <Ionicons
+                                  name="close-circle"
+                                  size={14}
+                                  color="#EF4444"
+                                />
+                                <Text
+                                  style={[
+                                    styles.optBadgeText,
+                                    { color: '#EF4444' },
+                                  ]}
+                                >
+                                  Your Answer
+                                </Text>
+                              </View>
+                            );
+                          }
+                        } else if (isTargetCorrect) {
+                          // Highlight the correct answer option when the user missed it
                           optBg = '#10B98118';
                           optBorder = '#10B981';
                           textColor = '#10B981';
+                          isGreenStyle = true;
                           badge = (
                             <View style={styles.optBadge}>
                               <Ionicons
@@ -393,99 +458,79 @@ export default function QuizReviewScreen() {
                                 size={14}
                                 color="#10B981"
                               />
-                              <Text style={[styles.optBadgeText, { color: '#10B981' }]}>
-                                Your Answer
-                              </Text>
-                            </View>
-                          );
-                        } else if (isCorrect === false) {
-                          optBg = '#EF444418';
-                          optBorder = '#EF4444';
-                          textColor = '#EF4444';
-                          badge = (
-                            <View style={styles.optBadge}>
-                              <Ionicons
-                                name="close-circle"
-                                size={14}
-                                color="#EF4444"
-                              />
-                              <Text style={[styles.optBadgeText, { color: '#EF4444' }]}>
-                                Your Answer
-                              </Text>
-                            </View>
-                          );
-                        } else {
-                          optBg = `${theme.primary}18`;
-                          optBorder = theme.primary;
-                          badge = (
-                            <View style={styles.optBadge}>
-                              <Text style={[styles.optBadgeText, { color: theme.primary }]}>
-                                Selected
+                              <Text
+                                style={[
+                                  styles.optBadgeText,
+                                  { color: '#10B981' },
+                                ]}
+                              >
+                                Correct Answer
                               </Text>
                             </View>
                           );
                         }
-                      }
 
-                      return (
-                        <View
-                          key={optIdx}
-                          style={[
-                            styles.optionItem,
-                            {
-                              backgroundColor: optBg,
-                              borderColor: optBorder,
-                            },
-                          ]}
-                        >
+                        return (
                           <View
+                            key={optIdx}
                             style={[
-                              styles.optLetterBox,
+                              styles.optionItem,
                               {
-                                backgroundColor: isSelected
-                                  ? isCorrect === true
-                                    ? '#10B981'
-                                    : isCorrect === false
-                                    ? '#EF4444'
-                                    : theme.primary
-                                  : isDarkMode
-                                  ? theme.border
-                                  : '#E2E8F0',
+                                backgroundColor: optBg,
+                                borderColor: optBorder,
                               },
                             ]}
                           >
-                            <Text
+                            <View
                               style={[
-                                styles.optLetterText,
+                                styles.optLetterBox,
                                 {
-                                  color: isSelected
-                                    ? '#FFFFFF'
-                                    : theme.textSecondary,
+                                  backgroundColor: isSelected
+                                    ? isCorrect === true || isTargetCorrect
+                                      ? '#10B981'
+                                      : '#EF4444'
+                                    : isTargetCorrect
+                                    ? '#10B981'
+                                    : isDarkMode
+                                    ? theme.border
+                                    : '#E2E8F0',
                                 },
                               ]}
                             >
-                              {optLabel}
+                              <Text
+                                style={[
+                                  styles.optLetterText,
+                                  {
+                                    color:
+                                      isSelected || isTargetCorrect
+                                        ? '#FFFFFF'
+                                        : theme.textSecondary,
+                                  },
+                                ]}
+                              >
+                                {optLabel}
+                              </Text>
+                            </View>
+
+                            <Text
+                              style={[
+                                styles.optText,
+                                { color: textColor, flex: 1 },
+                              ]}
+                            >
+                              {opt}
                             </Text>
+
+                            {badge}
                           </View>
-
-                          <Text
-                            style={[
-                              styles.optText,
-                              { color: textColor, flex: 1 },
-                            ]}
-                          >
-                            {opt}
-                          </Text>
-
-                          {badge}
-                        </View>
-                      );
-                    })}
+                        );
+                      });
+                    })()}
                   </View>
                 )}
 
                 {/* Theory Answer View (if theory) */}
-                {quizType === 'theory' && userAnswer && (
+                {quizType === 'theory' && (
                   <View
                     style={[
                       styles.theoryBox,
@@ -497,17 +542,32 @@ export default function QuizReviewScreen() {
                       },
                     ]}
                   >
-                    <Text
-                      style={[
-                        styles.theoryLabel,
-                        { color: theme.textSecondary },
-                      ]}
-                    >
-                      Your Submitted Answer:
-                    </Text>
-                    <Text style={[styles.theoryText, { color: theme.text }]}>
-                      {userAnswer}
-                    </Text>
+                    {userAnswer ? (
+                      <>
+                        <Text
+                          style={[
+                            styles.theoryLabel,
+                            { color: theme.textSecondary },
+                          ]}
+                        >
+                          Your Submitted Answer:
+                        </Text>
+                        <Text
+                          style={[styles.theoryText, { color: theme.text }]}
+                        >
+                          {userAnswer}
+                        </Text>
+                      </>
+                    ) : (
+                      <Text
+                        style={[
+                          styles.theoryText,
+                          { color: theme.textSecondary, italic: true },
+                        ]}
+                      >
+                        No answer was submitted for this question.
+                      </Text>
+                    )}
 
                     {grading?.feedback && (
                       <View style={styles.feedbackWrap}>
@@ -526,6 +586,39 @@ export default function QuizReviewScreen() {
                           ]}
                         >
                           {grading.feedback}
+                        </Text>
+                      </View>
+                    )}
+
+                    {(q.sampleAnswer ||
+                      q.correctAnswer ||
+                      grading?.correctAnswer ||
+                      grading?.referenceAnswer ||
+                      q.explanation) && (
+                      <View
+                        style={{
+                          marginTop: 12,
+                          paddingTop: 10,
+                          borderTopWidth: 1,
+                          borderTopColor: theme.border,
+                        }}
+                      >
+                        <Text
+                          style={[
+                            styles.feedbackLabel,
+                            { color: '#10B981' },
+                          ]}
+                        >
+                          Sample Solution / Expected Key Points:
+                        </Text>
+                        <Text
+                          style={[styles.theoryText, { color: theme.text }]}
+                        >
+                          {q.sampleAnswer ||
+                            q.correctAnswer ||
+                            grading?.correctAnswer ||
+                            grading?.referenceAnswer ||
+                            q.explanation}
                         </Text>
                       </View>
                     )}

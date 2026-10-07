@@ -276,7 +276,8 @@ export default function LoginScreen() {
 
           <View style={styles.form}>
             <TextInput
-              placeholder="Email Address or Phone Number"
+              placeholder="Email Address"
+              keyboardType="email-address"
               placeholderTextColor={
                 theme.textSecondary
               }

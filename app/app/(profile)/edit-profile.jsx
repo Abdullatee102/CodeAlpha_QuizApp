@@ -148,6 +148,20 @@ export default function EditProfileScreen() {
     if (!name.trim()) return Alert.alert("Error", "Full Name cannot be empty");
     if (!username.trim()) return Alert.alert("Error", "Username cannot be empty");
 
+    if (facultyId && !departmentId) {
+      return Alert.alert(
+        "Department Required",
+        "Selecting a faculty requires choosing your specific department."
+      );
+    }
+
+    if (!level) {
+      return Alert.alert(
+        "Level Required",
+        "Please select your academic level (e.g. 100, 200, 300, 400, or 500 Level) to ensure accurate course recommendations."
+      );
+    }
+
     // Check if the user is adding or modifying an empty/missing email or phone for the first time
     const isEmailBeingSet = !initialEmailRef.current && email.trim() !== '';
     const isPhoneBeingSet = !initialPhoneRef.current && phone.trim() !== '';

@@ -11,7 +11,8 @@ import {
   Alert,
   ActivityIndicator,
   StatusBar,
-  Platform
+  Platform,
+  Linking
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -1388,6 +1389,120 @@ export default function ProfileScreen() {
                 color={theme.textSecondary}
               />
             </TouchableOpacity>
+
+            {/* JOIN COMMUNITIES GROUP SECTION */}
+            <View
+              style={[
+                styles.menuDivider,
+                { backgroundColor: theme.border },
+              ]}
+            />
+
+            <View style={{ paddingVertical: 8 }}>
+              <Text
+                style={[
+                  styles.sectionLabel,
+                  { color: theme.textSecondary, marginBottom: 8 },
+                ]}
+              >
+                JOIN COMMUNITIES GROUP
+              </Text>
+
+              {/* WhatsApp Group Box */}
+              <TouchableOpacity
+                style={styles.menuRow}
+                onPress={() => {
+                  Linking.openURL('https://chat.whatsapp.com/sample').catch(() => {
+                    Alert.alert('Error', 'Could not open WhatsApp link.');
+                  });
+                }}
+                activeOpacity={0.7}
+              >
+                <View
+                  style={[
+                    styles.menuIconWrap,
+                    { backgroundColor: '#25D36618' },
+                  ]}
+                >
+                  <MaterialCommunityIcons
+                    name="whatsapp"
+                    size={22}
+                    color="#25D366"
+                  />
+                </View>
+
+                <View style={styles.menuInfo}>
+                  <Text style={[styles.menuTitle, { color: theme.text }]}>
+                    WhatsApp Community
+                  </Text>
+                  <Text
+                    style={[
+                      styles.menuSubtitle,
+                      { color: theme.textSecondary },
+                    ]}
+                  >
+                    Join our official WhatsApp student group
+                  </Text>
+                </View>
+
+                <Ionicons
+                  name="open-outline"
+                  size={18}
+                  color={theme.textSecondary}
+                />
+              </TouchableOpacity>
+
+              <View
+                style={[
+                  styles.menuDivider,
+                  { backgroundColor: theme.border },
+                ]}
+              />
+
+              {/* Telegram Group Box */}
+              <TouchableOpacity
+                style={styles.menuRow}
+                onPress={() => {
+                  Linking.openURL('https://t.me/sample').catch(() => {
+                    Alert.alert('Error', 'Could not open Telegram link.');
+                  });
+                }}
+                activeOpacity={0.7}
+              >
+                <View
+                  style={[
+                    styles.menuIconWrap,
+                    { backgroundColor: '#229ED918' },
+                  ]}
+                >
+                  <MaterialCommunityIcons
+                    name="telegram"
+                    size={22}
+                    color="#229ED9"
+                  />
+                </View>
+
+                <View style={styles.menuInfo}>
+                  <Text style={[styles.menuTitle, { color: theme.text }]}>
+                    Telegram Channel
+                  </Text>
+                  <Text
+                    style={[
+                      styles.menuSubtitle,
+                      { color: theme.textSecondary },
+                    ]}
+                  >
+                    Get instant study materials & updates
+                  </Text>
+                </View>
+
+                <Ionicons
+                  name="open-outline"
+                  size={18}
+                  color={theme.textSecondary}
+                />
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </ScrollView>

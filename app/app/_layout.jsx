@@ -205,21 +205,7 @@ export default function RootLayout() {
   // REGISTER DEVICE FOR PUSH NOTIFICATIONS
   // =====================================================
 
-  /*
-   * The root layout does NOT call the notification API.
-   *
-   * It only asks authStore to handle registration.
-   *
-   * This runs whenever an authenticated user exists.
-   *
-   * This also covers:
-   * - normal login
-   * - signup
-   * - OTP login
-   * - Google login
-   * - biometric login
-   * - app restart with an existing session
-   */
+  
   useEffect(() => {
     if (
       !_hasHydrated ||
@@ -358,7 +344,7 @@ export default function RootLayout() {
       >
         <ActivityIndicator
           size="large"
-          color="#ffffff"
+          color={theme.primary}
         />
 
         <Text
