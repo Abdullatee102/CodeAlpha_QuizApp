@@ -244,6 +244,23 @@ api.interceptors.response.use(
       }
     }
 
+    // Handle Account Suspension / Disablement (403)
+    if (error.response?.status === 403) {
+      const respMsg = error.response?.data?.message || '';
+      const isAccountRestricted =
+        respMsg.toLowerCase().includes('account is') &&
+        respMsg.toLowerCase().includes('access denied');
+
+      if (isAccountRestricted) {
+        console.warn('[API] Restricted account status encountered (403):', respMsg);
+        storage.delete('userToken');
+        storage.delete('refreshToken');
+        try {
+          queryClient.clear();
+        } catch (e) {}
+      }
+    }
+
     return Promise.reject(error);
   }
 );

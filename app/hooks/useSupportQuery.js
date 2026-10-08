@@ -1,4 +1,5 @@
 // app/hooks/useSupportQuery.js
+import { Platform } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../data/api';
 import formatAxiosError from '../data/formatError';
@@ -47,13 +48,18 @@ export function useCreateSupportMutation() {
 
   return useMutation({
     mutationFn: async ({ subject, category, message, priority = 'medium' }) => {
-      const response = await api.post('/support/requests', {
-        subject,
-        category,
-        message,
-        priority,
-      });
-      return response.data?.data;
+      try {
+        const response = await api.post('/support/requests', {
+          subject,
+          category,
+          message,
+          priority,
+        });
+        return response.data?.data;
+      } catch (err) {
+        const formatted = formatAxiosError(err);
+        throw new Error(formatted.message);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
@@ -68,10 +74,89 @@ export function useAddSupportMessageMutation() {
 
   return useMutation({
     mutationFn: async ({ requestId, message }) => {
-      const response = await api.post(`/support/requests/${requestId}/messages`, {
-        message,
+      try {
+        const response = await api.post(`/support/requests/${requestId}/messages`, {
+          message,
+        });
+        return response.data?.data;
+      } catch (err) {
+        const formatted = formatAxiosError(err);
+        throw new Error(formatted.message);
+      }
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ['supportDetails', variables.requestId],
       });
-      return response.data?.data;
+      queryClient.invalidateQueries({
+        queryKey: ['supportRequests'],
+      });
+    },
+  });
+}
+
+export function useUploadSupportAttachmentMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ requestId, uri, fileName, mimeType, messageId }) => {
+      try {
+        const formData = new FormData();
+        const fileUri = Platform.OS === 'android' ? uri : uri.replace('file://', '');
+        const normalizedName = fileName || `attachment_${Date.now()}.jpg`;
+        const normalizedType = mimeType || 'image/jpeg';
+
+        formData.append('file', {
+          uri: fileUri,
+          name: normalizedName,
+          type: normalizedType,
+        });
+
+        if (messageId) {
+          formData.append('messageId', messageId);
+        }
+
+        const response = await api.post(
+          `/support/requests/${requestId}/attachments`,
+          formData,
+          {
+            headers: {
+              'Content-Type': 'multipart/form-data',
+            },
+          }
+        );
+
+        return response.data?.data?.attachment;
+      } catch (err) {
+        const formatted = formatAxiosError(err);
+        throw new Error(formatted.message);
+      }
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ['supportDetails', variables.requestId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['supportRequests'],
+      });
+    },
+  });
+}
+
+export function useUpdateSupportStatusMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ requestId, status }) => {
+      try {
+        const response = await api.patch(`/support/requests/${requestId}/status`, {
+          status,
+        });
+        return response.data?.data;
+      } catch (err) {
+        const formatted = formatAxiosError(err);
+        throw new Error(formatted.message);
+      }
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
@@ -87,8 +172,13 @@ export function useAddSupportMessageMutation() {
 export function useAskAIAssistantMutation() {
   return useMutation({
     mutationFn: async ({ message }) => {
-      const response = await api.post('/support/ai-assistant', { message });
-      return response.data?.data;
-    }
+      try {
+        const response = await api.post('/support/ai-assistant', { message });
+        return response.data?.data;
+      } catch (err) {
+        const formatted = formatAxiosError(err);
+        throw new Error(formatted.message);
+      }
+    },
   });
 }

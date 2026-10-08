@@ -197,12 +197,25 @@ export default function NotificationsScreen() {
           }
         }
 
-        const url =
-          notification?.data?.url;
+        const requestId = notification?.data?.requestId;
+        const url = notification?.data?.url;
+
+        if (requestId) {
+          try {
+            router.push({
+              pathname: '/(profile)/live-chat',
+              params: { requestId: String(requestId) },
+            });
+            return;
+          } catch (error) {
+            console.warn('[NOTIFICATIONS] Failed to navigate to support ticket:', error);
+          }
+        }
 
         if (url) {
           try {
-            router.push(url);
+            const targetUrl = url === '/support' ? '/(profile)/live-chat' : url;
+            router.push(targetUrl);
           } catch (error) {
             console.warn(
               '[NOTIFICATIONS] Failed to navigate from notification:',
