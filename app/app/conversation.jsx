@@ -14,6 +14,7 @@ import {
   Image,
   Keyboard,
   Modal,
+  StatusBar,
 } from 'react-native';
 
 import {
