@@ -1,15 +1,15 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   FlatList,
-  Image,
   TouchableOpacity,
   Dimensions,
   StatusBar,
   Platform
 } from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -37,6 +37,14 @@ export default function OnboardingScreen() {
   );
 
   const { theme } = useThemeStore();
+
+  useEffect(() => {
+    onboardingPages.forEach((page) => {
+      if (page?.image) {
+        Image.prefetch(page.image);
+      }
+    });
+  }, []);
 
   const onViewableItemsChanged = useRef(({ viewableItems }) => {
     if (viewableItems.length > 0) {
@@ -70,7 +78,10 @@ export default function OnboardingScreen() {
       <Image
         source={item.image}
         style={styles.image}
-        resizeMode="contain"
+        contentFit="contain"
+        priority="high"
+        cachePolicy="memory-disk"
+        transition={150}
       />
 
       <View style={styles.textContainer}>
@@ -118,6 +129,10 @@ export default function OnboardingScreen() {
         viewabilityConfig={viewConfig}
         ref={scrollClick}
         keyExtractor={(item) => item.id}
+        initialNumToRender={3}
+        maxToRenderPerBatch={3}
+        windowSize={5}
+        removeClippedSubviews={false}
       />
 
       {/* Pagination & Footer */}

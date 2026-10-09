@@ -586,7 +586,7 @@ export default function LiveChatScreen() {
         {/* Messages Body */}
         <KeyboardAvoidingView
           style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
         >
           {isLoadingDetails ? (
@@ -1121,7 +1121,7 @@ export default function LiveChatScreen() {
         onRequestClose={() => setShowNewModal(false)}
       >
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={{ flex: 1 }}
         >
           <SafeAreaView
