@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -37,14 +37,6 @@ export default function OnboardingScreen() {
   );
 
   const { theme } = useThemeStore();
-
-  useEffect(() => {
-    onboardingPages.forEach((page) => {
-      if (page?.image) {
-        Image.prefetch(page.image);
-      }
-    });
-  }, []);
 
   const onViewableItemsChanged = useRef(({ viewableItems }) => {
     if (viewableItems.length > 0) {
