@@ -172,8 +172,9 @@ export default function QuizReviewScreen() {
   const parsedScore = Number(review?.score ?? score);
   const parsedPercentage = Number(review?.percentage ?? percentage);
   const parsedCorrect = Number(review?.correctAnswers ?? correctAnswers);
-  const parsedTotal = Number(
-    review?.totalQuestions ?? (totalQuestions || questionsList.length)
+  const parsedTotal = Math.max(
+    questionsList.length,
+    Number(review?.totalQuestions ?? (totalQuestions || 0))
   );
   const parsedWrong = Math.max(0, parsedTotal - parsedCorrect);
 
@@ -390,12 +391,17 @@ export default function QuizReviewScreen() {
           questionsList.map((q, index) => {
             const userAnswer = userAnswersMap.get(q.id);
             const grading = resultsMap.get(q.id);
+            const hasUserAnswered =
+              userAnswer !== undefined &&
+              userAnswer !== null &&
+              String(userAnswer).trim().length > 0;
+
             const isCorrect =
               grading !== undefined
                 ? Boolean(grading.isCorrect)
-                : parsedPercentage === 100
-                ? true
-                : undefined;
+                : hasUserAnswered
+                ? (parsedPercentage === 100 ? true : undefined)
+                : false;
 
             return (
               <View
@@ -407,7 +413,7 @@ export default function QuizReviewScreen() {
                     borderColor:
                       isCorrect === true
                         ? '#10B98150'
-                        : isCorrect === false
+                        : isCorrect === false && hasUserAnswered
                         ? '#EF444450'
                         : theme.border,
                   },
@@ -419,30 +425,76 @@ export default function QuizReviewScreen() {
                     Question {index + 1}
                   </Text>
 
-                  {isCorrect !== undefined && (
+                  {isCorrect === true ? (
                     <View
                       style={[
                         styles.statusChip,
                         {
-                          backgroundColor: isCorrect ? '#10B98115' : '#EF444415',
+                          backgroundColor: '#10B98115',
                         },
                       ]}
                     >
                       <Ionicons
-                        name={isCorrect ? 'checkmark-circle' : 'close-circle'}
+                        name="checkmark-circle"
                         size={14}
-                        color={isCorrect ? '#10B981' : '#EF4444'}
+                        color="#10B981"
                       />
                       <Text
                         style={[
                           styles.statusChipText,
-                          { color: isCorrect ? '#10B981' : '#EF4444' },
+                          { color: '#10B981' },
                         ]}
                       >
-                        {isCorrect ? 'Correct' : 'Missed'}
+                        Correct
                       </Text>
                     </View>
-                  )}
+                  ) : isCorrect === false && hasUserAnswered ? (
+                    <View
+                      style={[
+                        styles.statusChip,
+                        {
+                          backgroundColor: '#EF444415',
+                        },
+                      ]}
+                    >
+                      <Ionicons
+                        name="close-circle"
+                        size={14}
+                        color="#EF4444"
+                      />
+                      <Text
+                        style={[
+                          styles.statusChipText,
+                          { color: '#EF4444' },
+                        ]}
+                      >
+                        Missed
+                      </Text>
+                    </View>
+                  ) : !hasUserAnswered ? (
+                    <View
+                      style={[
+                        styles.statusChip,
+                        {
+                          backgroundColor: isDarkMode ? '#1E293B' : '#F1F5F9',
+                        },
+                      ]}
+                    >
+                      <Ionicons
+                        name="help-circle-outline"
+                        size={14}
+                        color={theme.textSecondary}
+                      />
+                      <Text
+                        style={[
+                          styles.statusChipText,
+                          { color: theme.textSecondary },
+                        ]}
+                      >
+                        Unanswered
+                      </Text>
+                    </View>
+                  ) : null}
                 </View>
 
                 {/* Question Text */}
@@ -466,33 +518,60 @@ export default function QuizReviewScreen() {
                           : null) ||
                         (isCorrect === true ? userAnswer : null);
 
-                      return q.options.map((opt, optIdx) => {
-                        const optLabel = String.fromCharCode(65 + optIdx); // A, B, C, D
+                      // Determine the single correct option index
+                      let correctOptIdx = -1;
+                      if (targetCorrect !== null && targetCorrect !== undefined) {
+                        const targetStr = String(targetCorrect).trim().toLowerCase();
+                        const textMatchIdx = q.options.findIndex(
+                          (opt) => String(opt).trim().toLowerCase() === targetStr
+                        );
 
-                        const isSelected =
-                          userAnswer !== undefined &&
-                          userAnswer !== null &&
-                          (userAnswer === opt ||
-                            String(userAnswer).trim().toLowerCase() ===
-                              String(opt).trim().toLowerCase());
-
-                        const isLetterMatch =
+                        if (textMatchIdx !== -1) {
+                          correctOptIdx = textMatchIdx;
+                        } else if (
                           typeof targetCorrect === 'string' &&
                           targetCorrect.trim().length === 1 &&
-                          targetCorrect.trim().toUpperCase() === optLabel;
+                          ['A', 'B', 'C', 'D', 'E'].includes(
+                            targetCorrect.trim().toUpperCase()
+                          )
+                        ) {
+                          correctOptIdx =
+                            targetCorrect.trim().toUpperCase().charCodeAt(0) - 65;
+                        } else if (
+                          typeof targetCorrect === 'number' &&
+                          targetCorrect >= 0 &&
+                          targetCorrect < q.options.length
+                        ) {
+                          correctOptIdx = targetCorrect;
+                        }
+                      }
 
-                        const isIndexMatch =
-                          (typeof targetCorrect === 'number' && targetCorrect === optIdx) ||
-                          targetCorrect === String(optIdx);
-
-                        const isTargetCorrect = Boolean(
-                          targetCorrect &&
-                            (opt === targetCorrect ||
-                              String(opt).trim().toLowerCase() ===
-                                String(targetCorrect).trim().toLowerCase() ||
-                              isLetterMatch ||
-                              isIndexMatch)
+                      // Determine the single user selected option index
+                      let selectedOptIdx = -1;
+                      if (hasUserAnswered) {
+                        const userStr = String(userAnswer).trim().toLowerCase();
+                        const userTextMatchIdx = q.options.findIndex(
+                          (opt) => String(opt).trim().toLowerCase() === userStr
                         );
+
+                        if (userTextMatchIdx !== -1) {
+                          selectedOptIdx = userTextMatchIdx;
+                        } else if (
+                          typeof userAnswer === 'string' &&
+                          userAnswer.trim().length === 1 &&
+                          ['A', 'B', 'C', 'D', 'E'].includes(
+                            userAnswer.trim().toUpperCase()
+                          )
+                        ) {
+                          selectedOptIdx =
+                            userAnswer.trim().toUpperCase().charCodeAt(0) - 65;
+                        }
+                      }
+
+                      return q.options.map((opt, optIdx) => {
+                        const optLabel = String.fromCharCode(65 + optIdx); // A, B, C, D
+                        const isSelected = optIdx === selectedOptIdx;
+                        const isTargetCorrect = optIdx === correctOptIdx;
 
                         let optBg = isDarkMode ? theme.background : '#F8FAFC';
                         let optBorder = theme.border;
@@ -544,7 +623,7 @@ export default function QuizReviewScreen() {
                             );
                           }
                         } else if (isTargetCorrect) {
-                          // Highlight the correct answer option when the user missed it
+                          // Highlight the single correct answer option when user missed or skipped it
                           optBg = '#10B98118';
                           optBorder = '#10B981';
                           textColor = '#10B981';

@@ -20,8 +20,10 @@ import { useThemeStore } from '../../store/themeStore';
 import Colors from '../../constants/colors';
 import {
   useNotificationsQuery,
-  useNotificationMutations,
 } from '../../hooks/useNotificationsQuery';
+import {
+  useNotificationMutations,
+} from '../../hooks/useNotificationMutations';
 
 const formatNotificationTime = (dateString) => {
   if (!dateString) {

@@ -572,7 +572,13 @@ export const useQuizStore = create(
               sampleAnswer: gr?.sampleAnswer || ans || q.sampleAnswer,
             };
           }),
-          answers: get().answers || [],
+          answers: (get().questions || []).map((q) => {
+            const userAns = (get().answers || []).find((a) => a.questionId === q.id);
+            return {
+              questionId: q.id,
+              answer: userAns?.answer || '',
+            };
+          }),
           results: grading?.results || [],
         };
 

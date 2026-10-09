@@ -4,6 +4,12 @@ import {
   useAuthStore,
 } from '../store/authStore';
 
+export {
+  useNotificationMutations,
+  useMarkNotificationAsReadMutation,
+  useMarkAllNotificationsAsReadMutation,
+} from './useNotificationMutations';
+
 export function useNotificationsQuery(
   limit = 50
 ) {

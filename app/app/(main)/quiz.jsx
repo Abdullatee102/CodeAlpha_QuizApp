@@ -912,6 +912,14 @@ export default function QuizScreen() {
       const state =
         useQuizStore.getState();
 
+      const answeredMap = new Map(
+        (state.answers || []).map((a) => [a.questionId, a.answer])
+      );
+      const completeAnswers = (state.questions || []).map((q) => ({
+        questionId: q.id,
+        answer: answeredMap.has(q.id) ? (answeredMap.get(q.id) ?? '') : '',
+      }));
+
       return {
         courseId:
           state.currentCourseId ||
@@ -931,7 +939,7 @@ export default function QuizScreen() {
           resolvedQuizType,
 
         answers:
-          state.answers,
+          completeAnswers,
 
         totalQuestions:
           state.questions.length,
@@ -1554,8 +1562,16 @@ export default function QuizScreen() {
       const latestAnswers =
         latestState.answers;
 
+      const answeredMap = new Map(
+        (latestAnswers || []).map((a) => [a.questionId, a.answer])
+      );
+      const completeAnswers = (latestState.questions || []).map((q) => ({
+        questionId: q.id,
+        answer: answeredMap.has(q.id) ? (answeredMap.get(q.id) ?? '') : '',
+      }));
+
       /*
-       * Make sure the payload always uses the latest edited answers.
+       * Make sure the payload always uses the latest edited answers for all questions.
        */
       const finalQuizData = {
         courseId:
@@ -1576,7 +1592,7 @@ export default function QuizScreen() {
           resolvedQuizType,
 
         answers:
-          latestAnswers,
+          completeAnswers,
 
         totalQuestions:
           latestState.questions.length,
@@ -1625,6 +1641,16 @@ export default function QuizScreen() {
         return false;
       }
 
+      const latestState = useQuizStore.getState();
+      const rawAnswers = quizData.answers || latestState.answers || [];
+      const answeredMap = new Map(
+        rawAnswers.map((a) => [a.questionId, a.answer])
+      );
+      const completeAnswers = (latestState.questions || []).map((q) => ({
+        questionId: q.id,
+        answer: answeredMap.has(q.id) ? (answeredMap.get(q.id) ?? '') : '',
+      }));
+
       const finalQuizData = {
         courseId:
           quizData.courseId ||
@@ -1644,7 +1670,7 @@ export default function QuizScreen() {
           resolvedQuizType,
 
         answers:
-          quizData.answers || [],
+          completeAnswers.length > 0 ? completeAnswers : rawAnswers,
       };
 
       console.log(
