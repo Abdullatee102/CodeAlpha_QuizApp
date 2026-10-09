@@ -1421,7 +1421,7 @@ export default function ProfileScreen() {
             <TouchableOpacity
               style={styles.menuRow}
               onPress={() => {
-                Linking.openURL('https://chat.whatsapp.com/sample').catch(() => {
+                Linking.openURL('https://chat.whatsapp.com/CO7zbTSAYrgEyLUvNO6dMB').catch(() => {
                   Alert.alert('Error', 'Could not open WhatsApp link.');
                 });
               }}
@@ -1472,7 +1472,7 @@ export default function ProfileScreen() {
             <TouchableOpacity
               style={styles.menuRow}
               onPress={() => {
-                Linking.openURL('https://t.me/sample').catch(() => {
+                Linking.openURL('https://t.me/+OATpbg3e4l1mNGM0').catch(() => {
                   Alert.alert('Error', 'Could not open Telegram link.');
                 });
               }}

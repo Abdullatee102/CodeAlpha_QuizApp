@@ -706,7 +706,11 @@ export default function LiveChatScreen() {
                               { color: isAi ? '#818CF8' : '#D97706' },
                             ]}
                           >
-                            {isAi ? 'Brain Buzz AI' : 'Support Team (Admin)'}
+                            {isAi
+                              ? 'Brain Buzz AI'
+                              : item.sender?.fullName
+                              ? `${item.sender.fullName} (Support)`
+                              : 'Support Team'}
                           </Text>
                           <View
                             style={[
@@ -722,7 +726,11 @@ export default function LiveChatScreen() {
                                 { color: isAi ? '#6366F1' : '#D97706' },
                               ]}
                             >
-                              {isAi ? 'AI BOT' : 'STAFF'}
+                              {isAi
+                                ? 'AI BOT'
+                                : (item.sender?.role || 'STAFF')
+                                    .replace('_', ' ')
+                                    .toUpperCase()}
                             </Text>
                           </View>
                         </View>
