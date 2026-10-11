@@ -46,13 +46,15 @@
           "resizeMode": "contain",
           "backgroundColor": "#005D4B",
           "dark": {
-            "backgroundColor": "#121212"
+            "backgroundColor": "#005D4B"
           }
         }
       ],
       "@react-native-firebase/app",
       "@react-native-google-signin/google-signin",
-      "@react-native-firebase/auth"
+      "@react-native-firebase/auth",
+      "expo-font",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,
