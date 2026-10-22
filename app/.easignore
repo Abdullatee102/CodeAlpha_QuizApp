@@ -1,75 +1,77 @@
+
 # Dependencies
+node_modules/
+**/node_modules/
 
-/node_modules/
-
-# Expo generated files
-
-/.expo/
-/dist/
-/web-build/
+# Expo generated files and caches
+.expo/
+**/.expo/
+dist/
+**/dist/
+web-build/
+**/web-build/
 expo-env.d.ts
 
-# Native project generated locally
+# Native projects generated locally
+android/
+**/android/
+ios/
+**/ios/
 
-/android/
-/ios/
-
-# Android build/cache artifacts
-
+# Android build outputs and native caches
 **/build/
 **/.cxx/
 **/.gradle/
 .gradle/
+.kotlin/
 
-# EAS inspection output
-
-/eas-archive-inspect/
+# EAS archive inspection output
+eas-archive-inspect/
+**/eas-archive-inspect/
 
 # Metro
-
 .metro-health-check*
 
-# Debug/log files
-
+# Debug and log files
 npm-debug.*
 yarn-debug.*
 yarn-error.*
+*.log
 
 # macOS
-
 .DS_Store
 
-# Environment/secrets
-
+# Environment files
 .env
 .env.*
 !.env.example
 .env*.local
 
-# Git
-
+# Git metadata
 .git/
+**/.git/
 .gitignore
 
-# Editor
-
+# Editor settings
 .vscode/
+**/.vscode/
 
-# Kotlin/Gradle generated files
-
-.kotlin/
+# Kotlin and Gradle artifacts
 *.orig.*
 *.jks
+*.keystore
 *.p8
 *.p12
 *.key
 *.mobileprovision
 
 # Build outputs
-
 *.apk
 *.aab
 
 # Local/example files
-
 app-example
+
+# TypeScript build cache
+*.tsbuildinfo
+- 

@@ -159,6 +159,11 @@ export default function QuizScreen() {
   const isTheory =
     resolvedQuizType === 'theory';
 
+  const resolvedLevel =
+    Array.isArray(level)
+      ? level[0]
+      : level;
+
   const secondsPerQuestion =
     isTheory
       ? THEORY_SECONDS_PER_QUESTION
@@ -419,7 +424,8 @@ export default function QuizScreen() {
           resolvedQuizType,
           Array.isArray(courseCode)
             ? courseCode[0]
-            : courseCode
+            : courseCode,
+          resolvedLevel
         ),
         timeoutPromise,
       ]);
@@ -510,7 +516,7 @@ export default function QuizScreen() {
       clearTimeout(initializationTimeoutRef.current);
     }
   };
-}, [resolvedCourseId, resolvedQuizType]);
+}, [resolvedCourseId, resolvedQuizType, resolvedLevel]);
 
 
   // =========================================================
