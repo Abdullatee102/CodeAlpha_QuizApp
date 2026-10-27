@@ -797,6 +797,17 @@ export const useQuizStore = create(
         level,
         semester
       ) => {
+        if (!departmentId || departmentId === 'mixed') {
+          set({
+            courses: [],
+            isLoadingCourses: false,
+          });
+          return {
+            success: true,
+            data: [],
+          };
+        }
+
         set({
           isLoadingCourses: true,
 
@@ -883,7 +894,8 @@ export const useQuizStore = create(
         courseId,
         type = 'cbt',
         courseCode = null,
-        level = null
+        level = null,
+        semester = null
       ) => {
         const normalizedType = String(type || 'cbt').toLowerCase();
 
@@ -905,6 +917,7 @@ export const useQuizStore = create(
               params: {
                 type: normalizedType,
                 ...(level ? { level: Number(level) } : {}),
+                ...(semester ? { semester } : {}),
                 limit: 30,
               },
             });

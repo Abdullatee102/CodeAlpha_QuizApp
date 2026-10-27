@@ -38,6 +38,7 @@ import {
   QueryClientProvider,
 } from '@tanstack/react-query';
 import { queryClient } from '../data/queryClient';
+import { socketService } from '../services/socket';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -146,6 +147,9 @@ export default function RootLayout() {
             'Notification Received:',
             notification
           );
+          queryClient.invalidateQueries({
+            queryKey: ['notifications'],
+          });
         }
       );
 
@@ -217,6 +221,7 @@ export default function RootLayout() {
     }
 
     registerPushNotifications();
+    socketService.connect();
   }, [
     _hasHydrated,
     isInitializing,

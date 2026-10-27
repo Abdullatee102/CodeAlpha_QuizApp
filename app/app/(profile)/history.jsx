@@ -62,18 +62,20 @@ export default function HistoryScreen() {
   };
 
   const handleReviewPress = (item) => {
-    const courseName =
-      item.courseTitle ||
-      item.courseName ||
-      'Assessment';
+    const isMixed = item.category === 'MIXED' || item.courseCode === 'MIXED';
 
-    const courseCode =
-      String(
-        item.courseCode ||
-          item.course?.code ||
-          item.category ||
-          ''
-      ).toUpperCase();
+    const courseName = isMixed
+      ? 'Mixed Faculties Question'
+      : (item.courseTitle || item.courseName || 'Assessment');
+
+    const courseCode = isMixed
+      ? 'MIXED'
+      : String(
+          item.courseCode ||
+            item.course?.code ||
+            item.category ||
+            ''
+        ).toUpperCase();
 
     const quizType = String(item.quizType || 'cbt').toLowerCase();
     const totalQuestions = Number(item.totalQuestions) || 0;
@@ -99,6 +101,8 @@ export default function HistoryScreen() {
         correctAnswers: String(correctCount),
         totalQuestions: String(totalQuestions),
         createdAt: item.createdAt || item.date || '',
+        level: item.level ? String(item.level) : '',
+        semester: item.semester || '',
       },
     });
   };

@@ -38,6 +38,11 @@ import Constants from 'expo-constants';
 import { queryClient } from '../data/queryClient';
 import { socketService } from '../services/socket';
 
+
+ // Prevent duplicate login and push-token registration requests.
+let loginPromise = null;
+let pushRegistrationPromise = null;
+
 export const useAuthStore = create(
   persist(
     (set, get) => ({
@@ -92,180 +97,190 @@ export const useAuthStore = create(
       // PUSH NOTIFICATIONS
       // =====================================================
 
-      registerPushNotifications: async () => {
-        try {
-          if (Platform.OS === 'web') {
-            return {
-              success: false,
-              error:
-                'Push notifications are not supported on web.',
-            };
-          }
+      registerPushNotifications: () => {
+        if (pushRegistrationPromise) {
+          return pushRegistrationPromise;
+        }
 
-          if (!Device.isDevice) {
-            console.log(
-              '[PUSH] Push notifications require a physical device.'
-            );
+        pushRegistrationPromise = (async () => {
+          try {
+            if (Platform.OS === 'web') {
+              return {
+                success: false,
+                error:
+                  'Push notifications are not supported on web.',
+              };
+            }
 
-            return {
-              success: false,
-              error:
-                'Push notifications require a physical device.',
-            };
-          }
+            if (!Device.isDevice) {
+              console.log(
+                '[PUSH] Push notifications require a physical device.'
+              );
 
-          const {
-            status: existingStatus,
-          } =
-            await Notifications.getPermissionsAsync();
+              return {
+                success: false,
+                error:
+                  'Push notifications require a physical device.',
+              };
+            }
 
-          let finalStatus =
-            existingStatus;
-
-          if (
-            existingStatus !==
-            Notifications.PermissionStatus.GRANTED
-          ) {
             const {
-              status,
+              status: existingStatus,
             } =
-              await Notifications.requestPermissionsAsync();
+              await Notifications.getPermissionsAsync();
 
-            finalStatus = status;
-          }
+            let finalStatus =
+              existingStatus;
 
-          if (
-            finalStatus !==
-            Notifications.PermissionStatus.GRANTED
-          ) {
-            console.log(
-              '[PUSH] Notification permission was not granted.'
-            );
+            if (
+              existingStatus !==
+              Notifications.PermissionStatus.GRANTED
+            ) {
+              const {
+                status,
+              } =
+                await Notifications.requestPermissionsAsync();
 
-            return {
-              success: false,
-              error:
-                'Notification permission was not granted.',
-            };
-          }
+              finalStatus = status;
+            }
 
-          if (
-            Platform.OS === 'android'
-          ) {
-            await Notifications.setNotificationChannelAsync(
-              'default',
-              {
-                name: 'Default',
-                importance:
-                  Notifications.AndroidImportance.MAX,
-                vibrationPattern: [
-                  0,
-                  250,
-                  250,
-                  250,
-                ],
-                lightColor:
-                  '#ffffff',
-              }
-            );
-          }
+            if (
+              finalStatus !==
+              Notifications.PermissionStatus.GRANTED
+            ) {
+              console.log(
+                '[PUSH] Notification permission was not granted.'
+              );
 
-          const projectId =
-            Constants.expoConfig
-              ?.extra?.eas
-              ?.projectId ||
-            Constants.easConfig
-              ?.projectId;
+              return {
+                success: false,
+                error:
+                  'Notification permission was not granted.',
+              };
+            }
 
-          if (!projectId) {
-            console.error(
-              '[PUSH] Expo project ID is missing.'
-            );
+            if (
+              Platform.OS === 'android'
+            ) {
+              await Notifications.setNotificationChannelAsync(
+                'default',
+                {
+                  name: 'Default',
+                  importance:
+                    Notifications.AndroidImportance.MAX,
+                  vibrationPattern: [
+                    0,
+                    250,
+                    250,
+                    250,
+                  ],
+                  lightColor:
+                    '#ffffff',
+                }
+              );
+            }
 
-            return {
-              success: false,
-              error:
-                'Expo project ID is missing.',
-            };
-          }
+            const projectId =
+              Constants.expoConfig
+                ?.extra?.eas
+                ?.projectId ||
+              Constants.easConfig
+                ?.projectId;
 
-          const tokenResponse =
-            await Notifications.getExpoPushTokenAsync({
-              projectId,
-            });
+            if (!projectId) {
+              console.error(
+                '[PUSH] Expo project ID is missing.'
+              );
 
-          const pushToken =
-            tokenResponse.data;
+              return {
+                success: false,
+                error:
+                  'Expo project ID is missing.',
+              };
+            }
 
-          if (!pushToken) {
-            return {
-              success: false,
-              error:
-                'Expo push token was not returned.',
-            };
-          }
+            const tokenResponse =
+              await Notifications.getExpoPushTokenAsync({
+                projectId,
+              });
 
-          const lastRegisteredToken =
-            storage.getString('registeredPushToken');
+            const pushToken =
+              tokenResponse.data;
 
-          if (lastRegisteredToken === pushToken) {
-            console.log(
-              '[PUSH] Device push token already registered on server:',
+            if (!pushToken) {
+              return {
+                success: false,
+                error:
+                  'Expo push token was not returned.',
+              };
+            }
+
+            const lastRegisteredToken =
+              storage.getString('registeredPushToken');
+
+            if (lastRegisteredToken === pushToken) {
+              console.log(
+                '[PUSH] Device push token already registered on server.'
+              );
+
+              return {
+                success: true,
+                pushToken,
+                alreadyRegistered: true,
+              };
+            }
+
+            const platform =
+              Platform.OS === 'ios'
+                ? 'ios'
+                : 'android';
+
+            const response =
+              await api.post(
+                '/notifications/devices',
+                {
+                  pushToken,
+                  platform,
+                }
+              );
+
+            storage.set(
+              'registeredPushToken',
               pushToken
+            );
+
+            console.log(
+              '[PUSH] Device registered successfully.'
             );
 
             return {
               success: true,
+              data:
+                response.data,
               pushToken,
-              alreadyRegistered: true,
             };
-          }
+          } catch (err) {
+            const formatted =
+              formatAxiosError(err);
 
-          const platform =
-            Platform.OS === 'ios'
-              ? 'ios'
-              : 'android';
-
-          const response =
-            await api.post(
-              '/notifications/devices',
-              {
-                pushToken,
-                platform,
-              }
+            console.error(
+              '[PUSH] Device registration failed:',
+              formatted.message
             );
 
-          storage.set(
-            'registeredPushToken',
-            pushToken
-          );
+            return {
+              success: false,
+              error:
+                formatted.message,
+            };
+          } finally {
+            pushRegistrationPromise = null;
+          }
+        })().finally(() => {
+          pushRegistrationPromise = null;
+        });
 
-          console.log(
-            '[PUSH] Device registered successfully:',
-            pushToken
-          );
-
-          return {
-            success: true,
-            data:
-              response.data,
-            pushToken,
-          };
-        } catch (err) {
-          const formatted =
-            formatAxiosError(err);
-
-          console.error(
-            '[PUSH] Device registration failed:',
-            formatted.message
-          );
-
-          return {
-            success: false,
-            error:
-              formatted.message,
-          };
-        }
+        return pushRegistrationPromise;
       },
 
       unregisterPushNotifications:
@@ -1150,16 +1165,21 @@ export const useAuthStore = create(
       // LOGIN
       // =====================================================
 
-      login: async (
+      login: (
         identifier,
         password
       ) => {
-        set({
-          isLoading: true,
-          error: null,
-        });
+        if (loginPromise) {
+          return loginPromise;
+        }
 
-        try {
+        loginPromise = (async () => {
+          set({
+            isLoading: true,
+            error: null,
+          });
+
+          try {
           const safeIdentifier =
             (identifier || '').trim();
 
@@ -1321,8 +1341,15 @@ export const useAuthStore = create(
             error:
               formatted.message,
           };
+        } finally {
+          loginPromise = null;
         }
-      },
+      })().finally(() => {
+        loginPromise = null;
+      });
+
+      return loginPromise;
+    },
 
       // =====================================================
       // BIOMETRIC LOGIN

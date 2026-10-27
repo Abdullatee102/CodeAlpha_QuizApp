@@ -1,83 +1,99 @@
+
 import axios from 'axios';
 import { storage } from '../utils/mmkvStorage';
 import { queryClient } from './queryClient';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
+const API_URL = (
+  process.env.EXPO_PUBLIC_API_URL || ''
+).replace(/\/+$/, '');
 
-// Shared promise to serialize concurrent 401 token refresh attempts
+const REQUEST_TIMEOUT = 30000;
+
+// Shared promise serializes concurrent 401 refresh attempts.
 let refreshPromise = null;
 
-console.log('====================================');
-console.log('[API] API_URL:', API_URL);
-console.log('====================================');
+const AUTH_ENDPOINTS = [
+  '/auth/login',
+  '/auth/signup',
+  '/auth/send-otp',
+  '/auth/verify-otp',
+  '/auth/refresh-token',
+  '/auth/forgot-password',
+  '/auth/reset-password',
+  '/auth/google',
+];
 
 const api = axios.create({
   baseURL: API_URL,
-  timeout: 10000,
+  timeout: REQUEST_TIMEOUT,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Request interceptor
+if (!API_URL) {
+  console.error('[API] EXPO_PUBLIC_API_URL is not configured.');
+} else {
+  console.log('[API] Base URL:', API_URL);
+}
+
+function isAuthEndpoint(url = '') {
+  const path = url.split('?')[0];
+
+  return AUTH_ENDPOINTS.some(
+    (endpoint) =>
+      path === endpoint ||
+      path.endsWith(endpoint)
+  );
+}
+
+function clearSessionTokens() {
+  storage.delete('userToken');
+  storage.delete('refreshToken');
+
+  try {
+    queryClient.clear();
+  } catch (error) {
+    console.warn('[API] Failed to clear query cache.');
+  }
+}
+
+// Attach the current access token to requests.
 api.interceptors.request.use(
   (config) => {
     const token = storage.getString('userToken');
 
-    console.log('------------------------------------');
-    console.log('[API] OUTGOING REQUEST');
-    console.log('[API] Method:', config.method?.toUpperCase());
-    console.log('[API] Base URL:', config.baseURL);
-    console.log('[API] Endpoint:', config.url);
-    console.log(
-      '[API] Full URL:',
-      `${config.baseURL}${config.url}`
-    );
-
-    // Log the actual request body
-    console.log('[API] Request data:', config.data);
-
-    try {
-      console.log(
-        '[API] Parsed request data:',
-        typeof config.data === 'string'
-          ? JSON.parse(config.data)
-          : config.data
-      );
-    } catch (e) {
-      console.log(
-        '[API] Could not parse request data:',
-        config.data
-      );
-    }
-
-    console.log('[API] Token exists:', !!token);
-    console.log('------------------------------------');
-
     if (token) {
+      config.headers = config.headers || {};
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    // Never log request bodies or credentials.
+    console.log('[API] Request:', {
+      method: config.method?.toUpperCase(),
+      url: `${config.baseURL || ''}${config.url || ''}`,
+      hasToken: Boolean(token),
+    });
 
     return config;
   },
   (error) => {
-    console.log(
-      '[API] REQUEST INTERCEPTOR ERROR:',
-      error
+    console.error(
+      '[API] Request setup failed:',
+      error.message
     );
 
     return Promise.reject(error);
   }
 );
 
-// Handle expired access tokens
+// Handle responses and expired access tokens.
 api.interceptors.response.use(
   (response) => {
-    console.log('------------------------------------');
-    console.log('[API] RESPONSE SUCCESS');
-    console.log('[API] Status:', response.status);
-    console.log('[API] URL:', response.config?.url);
-    console.log('------------------------------------');
+    console.log('[API] Response:', {
+      status: response.status,
+      url: response.config?.url,
+    });
 
     return response;
   },
@@ -85,99 +101,87 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
     const requestUrl = originalRequest?.url || '';
+    const status = error.response?.status;
 
-    console.log('====================================');
-    console.log('[API] RESPONSE ERROR');
-    console.log('[API] Status:', error.response?.status);
-    console.log('[API] URL:', requestUrl);
-    console.log('[API] Message:', error.message);
-    console.log(
-      '[API] Response data:',
-      error.response?.data
-    );
-    console.log('====================================');
+    // Log diagnostic metadata only; never log credentials or
+    // potentially sensitive request/response bodies.
+    console.error('[API] Request failed:', {
+      method: originalRequest?.method?.toUpperCase(),
+      url: requestUrl,
+      status: status ?? null,
+      code: error.code ?? null,
+      message: error.message,
+      hasResponse: Boolean(error.response),
+      hasRequest: Boolean(error.request),
+    });
 
-    // Do not attempt token refresh for auth endpoints
-    if (
-      requestUrl.includes('/auth/login') ||
-      requestUrl.includes('/auth/signup') ||
-      requestUrl.includes('/auth/send-otp') ||
-      requestUrl.includes('/auth/verify-otp') ||
-      requestUrl.includes('/auth/refresh-token')
-    ) {
+    if (!originalRequest) {
       return Promise.reject(error);
     }
 
-    // Distinguish 401 cases
-    if (error.response?.status === 401 && !originalRequest?._retry) {
-      const requestUrl = originalRequest?.url || '';
+    // Never refresh or retry authentication entry points.
+    if (isAuthEndpoint(requestUrl)) {
+      return Promise.reject(error);
+    }
 
-      // Never attempt token refresh on public auth endpoints or refresh-token endpoint itself
-      const isPublicOrAuthEndpoint =
-        requestUrl.includes('/auth/login') ||
-        requestUrl.includes('/auth/signup') ||
-        requestUrl.includes('/auth/send-otp') ||
-        requestUrl.includes('/auth/verify-otp') ||
-        requestUrl.includes('/auth/forgot-password') ||
-        requestUrl.includes('/auth/reset-password') ||
-        requestUrl.includes('/auth/refresh-token');
-
-      if (isPublicOrAuthEndpoint) {
-        return Promise.reject(error);
-      }
-
+    // Only refresh an authenticated request after a 401.
+    if (
+      status === 401 &&
+      !originalRequest._retry
+    ) {
       const refreshToken = storage.getString('refreshToken');
-      const hadAuthHeader = !!originalRequest?.headers?.Authorization;
+      const hadAuthHeader = Boolean(
+        originalRequest.headers?.Authorization
+      );
 
-      // Case B: No active access token/session — do NOT attempt refresh, do NOT throw error storm
       if (!refreshToken || !hadAuthHeader) {
-        console.log(
-          '[API] 401 received with no active session/tokens. Skipping token refresh.'
+        console.warn(
+          '[API] Skipping token refresh: no active refreshable session.'
         );
+
         return Promise.reject(error);
       }
 
-      // Case A & C: Authenticated request with expired access token and valid refresh token available
       originalRequest._retry = true;
-
-      console.log(
-        '[API] Access token expired. Initiating token rotation...'
-      );
 
       if (!refreshPromise) {
         refreshPromise = (async () => {
           try {
-            const currentRefreshToken = storage.getString('refreshToken');
+            const currentRefreshToken =
+              storage.getString('refreshToken');
 
             if (!currentRefreshToken) {
               return null;
             }
 
+            // Use bare Axios so refresh does not enter the
+            // normal API response interceptor recursively.
             const response = await axios.post(
               `${API_URL}/auth/refresh-token`,
-              { refreshToken: currentRefreshToken }
-            );
-
-            console.log(
-              '[API] Refresh successful.'
+              {
+                refreshToken: currentRefreshToken,
+              },
+              {
+                timeout: REQUEST_TIMEOUT,
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+              }
             );
 
             const newAccessToken =
               response.data?.tokens?.accessToken;
+
             const newRefreshToken =
               response.data?.tokens?.refreshToken;
 
             if (!newAccessToken) {
               throw new Error(
-                'No access token returned from refresh'
+                'No access token returned from refresh.'
               );
             }
 
-            // Save new tokens to MMKV
-            storage.set(
-              'userToken',
-              newAccessToken
-            );
+            storage.set('userToken', newAccessToken);
 
             if (newRefreshToken) {
               storage.set(
@@ -186,34 +190,26 @@ api.interceptors.response.use(
               );
             }
 
+            console.log('[API] Token refresh succeeded.');
+
             return newAccessToken;
           } catch (refreshError) {
-            console.log(
-              '===================================='
-            );
-            console.log(
-              '[API] TOKEN REFRESH FAILED:',
-              refreshError?.message
-            );
-            console.log(
-              '===================================='
-            );
+            const refreshStatus =
+              refreshError.response?.status;
 
-            // Case D: Refresh token invalid or revoked
+            console.error('[API] Token refresh failed:', {
+              status: refreshStatus ?? null,
+              code: refreshError.code ?? null,
+              message: refreshError.message,
+            });
+
+            // Clear the session only when the server explicitly
+            // rejects the refresh token.
             if (
-              refreshError.response?.status === 401 ||
-              refreshError.response?.status === 403
+              refreshStatus === 401 ||
+              refreshStatus === 403
             ) {
-              console.log(
-                '[API] Refresh token expired or revoked. Clearing normal session tokens...'
-              );
-
-              storage.delete('userToken');
-              storage.delete('refreshToken');
-
-              try {
-                queryClient.clear();
-              } catch (e) {}
+              clearSessionTokens();
             }
 
             throw refreshError;
@@ -230,12 +226,14 @@ api.interceptors.response.use(
           return Promise.reject(error);
         }
 
-        // Retry original request with new access token
+        originalRequest.headers =
+          originalRequest.headers || {};
+
         originalRequest.headers.Authorization =
           `Bearer ${newAccessToken}`;
 
         console.log(
-          '[API] Retrying original request with rotated token...'
+          '[API] Retrying request with refreshed token.'
         );
 
         return api(originalRequest);
@@ -244,20 +242,24 @@ api.interceptors.response.use(
       }
     }
 
-    // Handle Account Suspension / Disablement (403)
-    if (error.response?.status === 403) {
-      const respMsg = error.response?.data?.message || '';
+    // Handle account suspension/disablement.
+    if (status === 403) {
+      const message =
+        error.response?.data?.message || '';
+
+      const normalizedMessage =
+        message.toLowerCase();
+
       const isAccountRestricted =
-        respMsg.toLowerCase().includes('account is') &&
-        respMsg.toLowerCase().includes('access denied');
+        normalizedMessage.includes('account is') &&
+        normalizedMessage.includes('access denied');
 
       if (isAccountRestricted) {
-        console.warn('[API] Restricted account status encountered (403):', respMsg);
-        storage.delete('userToken');
-        storage.delete('refreshToken');
-        try {
-          queryClient.clear();
-        } catch (e) {}
+        console.warn(
+          '[API] Account restriction detected.'
+        );
+
+        clearSessionTokens();
       }
     }
 

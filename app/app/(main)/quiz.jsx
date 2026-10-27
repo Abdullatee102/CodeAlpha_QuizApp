@@ -164,6 +164,25 @@ export default function QuizScreen() {
       ? level[0]
       : level;
 
+  const resolvedSemester =
+    Array.isArray(semester)
+      ? semester[0]
+      : semester;
+
+  const isMixedQuiz =
+    resolvedCourseId === 'mixed' ||
+    (Array.isArray(courseCode) ? courseCode[0] : courseCode) === 'MIXED';
+
+  const formatSemesterLabel = (sem) => {
+    if (!sem) return '';
+    const s = String(sem).toLowerCase();
+    if (s === 'harmattan') return 'Harmattan Semester';
+    if (s === 'rain') return 'Rain Semester';
+    return `${sem} Semester`;
+  };
+
+  const mixedHeading = `Mixed Faculties Question${resolvedLevel ? ` - ${resolvedLevel}L` : ''}${resolvedSemester ? ` ${formatSemesterLabel(resolvedSemester)}` : ''}`.trim();
+
   const secondsPerQuestion =
     isTheory
       ? THEORY_SECONDS_PER_QUESTION
@@ -425,7 +444,8 @@ export default function QuizScreen() {
           Array.isArray(courseCode)
             ? courseCode[0]
             : courseCode,
-          resolvedLevel
+          resolvedLevel,
+          resolvedSemester
         ),
         timeoutPromise,
       ]);
@@ -516,7 +536,7 @@ export default function QuizScreen() {
       clearTimeout(initializationTimeoutRef.current);
     }
   };
-}, [resolvedCourseId, resolvedQuizType, resolvedLevel]);
+}, [resolvedCourseId, resolvedQuizType, resolvedLevel, resolvedSemester]);
 
 
   // =========================================================
@@ -1663,13 +1683,11 @@ export default function QuizScreen() {
           resolvedCourseId,
 
         category:
-          quizData.category ||
-          (Array.isArray(
-            courseCode
-          )
-            ? courseCode[0]
-            : courseCode) ||
-          'General',
+          isMixedQuiz
+            ? 'MIXED'
+            : (quizData.category ||
+              (Array.isArray(courseCode) ? courseCode[0] : courseCode) ||
+              'General'),
 
         quizType:
           quizData.quizType ||
@@ -2153,8 +2171,9 @@ export default function QuizScreen() {
                 },
               ]}
             >
-              {Array.isArray(courseCode) ? courseCode[0] : courseCode || 'Assessment'} |{' '}
-              {resolvedQuizType.toUpperCase()}
+              {isMixedQuiz
+                ? `${mixedHeading} | ${resolvedQuizType.toUpperCase()}`
+                : `${Array.isArray(courseCode) ? courseCode[0] : courseCode || 'Assessment'} | ${resolvedQuizType.toUpperCase()}`}
             </Text>
 
             <View style={styles.scoreBadgeBox}>
@@ -3154,11 +3173,11 @@ export default function QuizScreen() {
               ]}
               numberOfLines={1}
             >
-              {Array.isArray(
-                courseTitle
-              )
-                ? courseTitle[0]
-                : courseTitle}
+              {isMixedQuiz
+                ? mixedHeading
+                : (Array.isArray(courseTitle)
+                    ? courseTitle[0]
+                    : courseTitle)}
             </Text>
 
             <Text
@@ -3947,11 +3966,11 @@ export default function QuizScreen() {
                 },
               ]}
             >
-              {Array.isArray(
-                courseTitle
-              )
-                ? courseTitle[0]
-                : courseTitle}
+              {isMixedQuiz
+                ? mixedHeading
+                : (Array.isArray(courseTitle)
+                    ? courseTitle[0]
+                    : courseTitle)}
             </Text>
 
             <Text

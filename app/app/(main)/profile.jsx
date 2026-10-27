@@ -1034,14 +1034,20 @@ export default function ProfileScreen() {
                         params: {
                           historyId: item.id || '',
                           courseId: item.courseId || '',
-                          courseCode: item.courseCode || item.category || 'Assessment',
-                          courseTitle: item.courseTitle || item.courseName || 'Assessment',
+                          courseCode: (item.category === 'MIXED' || item.courseCode === 'MIXED')
+                            ? 'MIXED'
+                            : (item.courseCode || item.category || 'Assessment'),
+                          courseTitle: (item.category === 'MIXED' || item.courseCode === 'MIXED')
+                            ? 'Mixed Faculties Question'
+                            : (item.courseTitle || item.courseName || 'Assessment'),
                           quizType: item.quizType || 'cbt',
                           score: String(item.score || 0),
                           percentage: String(percent),
                           correctAnswers: String(item.correctAnswers ?? item.correct ?? 0),
                           totalQuestions: String(item.totalQuestions || 0),
                           createdAt: item.createdAt || '',
+                          level: item.level ? String(item.level) : '',
+                          semester: item.semester || '',
                         },
                       });
                     }}

@@ -43,6 +43,8 @@ export default function QuizReviewScreen() {
     correctAnswers = '0',
     totalQuestions = '0',
     createdAt,
+    level,
+    semester,
   } = params;
 
   const { theme, isDarkMode } = useThemeStore();
@@ -301,7 +303,26 @@ export default function QuizReviewScreen() {
           </View>
 
           <Text style={[styles.summaryTitle, { color: theme.text }]}>
-            {courseTitle || 'Assessment Review'}
+            {(() => {
+              const isMixed =
+                String(courseCode).toUpperCase() === 'MIXED' ||
+                (courseTitle && String(courseTitle).toLowerCase().includes('mixed'));
+              if (!isMixed) {
+                return courseTitle || 'Assessment Review';
+              }
+              const getSemesterDisplay = (val) => {
+                if (!val) return '';
+                const s = String(val).toLowerCase();
+                if (s === 'harmattan') return 'Harmattan Semester';
+                if (s === 'rain') return 'Rain Semester';
+                return `${val} Semester`;
+              };
+              const mixedFallback = `Mixed Faculties Question${level ? ` - ${level}L` : ''}${semester ? ` ${getSemesterDisplay(semester)}` : ''}`.trim();
+              if (courseTitle && String(courseTitle).toLowerCase().includes('mixed') && (courseTitle.includes('L') || courseTitle.includes('Semester'))) {
+                return courseTitle;
+              }
+              return mixedFallback || 'Mixed Faculties Question';
+            })()}
           </Text>
 
           <Text style={[styles.summaryDate, { color: theme.textSecondary }]}>

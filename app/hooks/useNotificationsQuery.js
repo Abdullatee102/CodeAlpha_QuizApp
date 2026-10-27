@@ -1,8 +1,11 @@
-import { useQuery } from '@tanstack/react-query';
+import { useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
   useAuthStore,
 } from '../store/authStore';
+
+import { socketService } from '../services/socket';
 
 export {
   useNotificationMutations,
@@ -24,6 +27,26 @@ export function useNotificationsQuery(
       (state) =>
         state.fetchNotifications
     );
+
+  const queryClient = useQueryClient();
+
+  // Real-time: invalidate the query whenever the backend emits 'notification:new'
+  useEffect(() => {
+    if (!token) return;
+
+    const socket = socketService.getSocket();
+    if (!socket) return;
+
+    const handleNewNotification = () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    };
+
+    socket.on('notification:new', handleNewNotification);
+
+    return () => {
+      socket.off('notification:new', handleNewNotification);
+    };
+  }, [token, queryClient]);
 
   return useQuery({
     queryKey: [
@@ -48,10 +71,10 @@ export function useNotificationsQuery(
       return result.data || [];
     },
 
-    staleTime:
-      1000 * 60 * 2,
+    // Shorter stale time so notification badge refreshes quickly on mount
+    staleTime: 1000 * 30,
 
-    refetchOnMount: false,
+    refetchOnMount: true,
 
     refetchOnWindowFocus: false,
   });

@@ -70,31 +70,29 @@ export default function CoursesScreen() {
 
   // FETCH COURSES
   useEffect(() => {
+    if (isMixedQuiz) return;
     if (departmentId && level && semester) {
       fetchCourses(departmentId, Number(level), semester);
     }
-  }, [departmentId, level, semester, fetchCourses]);
+  }, [isMixedQuiz, departmentId, level, semester, fetchCourses]);
 
   // DISPLAYED COURSES
   const displayedCourses = useMemo(() => {
-    const availableCourses = courses || [];
-
     if (isMixedQuiz) {
       return [
         {
           id: 'mixed',
-          title: `All Faculties ${level ? `${level}L ` : ''}Practice Quiz`,
+          title: `Mixed Faculties Question${level ? ` - ${level}L` : ''}${semester === 'harmattan' ? ' Harmattan Semester' : semester === 'rain' ? ' Rain Semester' : semester ? ` ${semester} Semester` : ''}`,
           code: 'MIXED',
           description:
             'Randomized questions across all LAUTECH faculties (Limit 30)',
           level: Number(level) || 0,
           semester,
         },
-        ...availableCourses,
       ];
     }
 
-    return availableCourses;
+    return courses || [];
   }, [isMixedQuiz, courses, level, semester]);
 
   // OPEN QUIZ
