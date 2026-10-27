@@ -80,7 +80,10 @@ export default function QuizReviewScreen() {
     if (needsAnswers && (effectiveCourseId || questionIds.length > 0)) {
       setIsLoadingFallback(!cached);
 
-      const params = { type: effectiveQuizType };
+      const params = {
+        type: effectiveQuizType,
+        ...(historyId ? { historyId } : {}),
+      };
       if (questionIds.length > 0) {
         params.questionIds = questionIds.join(',');
       }

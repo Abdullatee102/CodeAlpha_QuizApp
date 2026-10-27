@@ -1,0 +1,10 @@
+# IDE files
+.idea/
+*.iml
+
+# Crash and debug logs
+*.log
+
+# EAS temporary inspection archives
+eas-archive-inspect/
+app/eas-archive-inspect/

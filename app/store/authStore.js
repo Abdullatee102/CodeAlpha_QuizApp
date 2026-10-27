@@ -12,14 +12,6 @@ import {
   storage,
 } from '../utils/mmkvStorage';
 
-import { auth } from '../firebaseConfig';
-
-import {
-  GoogleAuthProvider,
-  signInWithCredential,
-  signOut as firebaseSignOut,
-} from 'firebase/auth';
-
 import api from '../data/api';
 
 import {
@@ -1948,20 +1940,6 @@ export const useAuthStore = create(
           }
 
           /*
-           * Sign out from Firebase.
-           */
-          try {
-            await firebaseSignOut(
-              auth
-            );
-          } catch (firebaseError) {
-            console.warn(
-              '[AUTH] Firebase sign-out after account deletion failed:',
-              firebaseError
-            );
-          }
-
-          /*
            * Remove all authentication credentials.
            */
           storage.delete(
@@ -2121,19 +2099,6 @@ export const useAuthStore = create(
           } catch (e) {
             console.warn(
               '[AUTH] Backend logout request failed.'
-            );
-          }
-
-          /*
-           * Sign out from Firebase.
-           */
-          try {
-            await firebaseSignOut(
-              auth
-            );
-          } catch (e) {
-            console.warn(
-              '[AUTH] Firebase sign-out failed.'
             );
           }
 

@@ -1,0 +1,58 @@
+﻿# Dependencies
+node_modules/
+**/node_modules/
+
+# Expo caches and generated files
+.expo/
+**/.expo/
+dist/
+**/dist/
+web-build/
+**/web-build/
+expo-env.d.ts
+
+# Generated native projects and build artifacts
+android/
+**/android/
+ios/
+**/ios/
+**/build/
+**/.gradle/
+**/.cxx/
+.gradle/
+.kotlin/
+
+# EAS inspection output
+eas-archive-inspect/
+**/eas-archive-inspect/
+
+# Git and editor files
+.git/
+.vscode/
+**/.vscode/
+
+# Logs and temporary files
+*.log
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+*.tsbuildinfo
+
+# Environment files
+.env
+.env.*
+!.env.example
+.env*.local
+
+# Signing keys and build outputs
+*.jks
+*.keystore
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.apk
+*.aab
+
+# OS files
+.DS_Store
