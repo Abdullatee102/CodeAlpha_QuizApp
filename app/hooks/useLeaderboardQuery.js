@@ -5,7 +5,8 @@ import {
 } from '../store/authStore';
 
 export function useLeaderboardQuery(
-  activeTab = '24h'
+  activeTab = '24h',
+  activeScope = 'global'
 ) {
   const token =
     useAuthStore(
@@ -19,23 +20,19 @@ export function useLeaderboardQuery(
         state.fetchLeaderboard
     );
 
-  const initialLeaderboard =
-    useAuthStore(
-      (state) =>
-        state.leaderboard
-    );
-
   return useQuery({
     queryKey: [
       'leaderboard',
       activeTab,
+      activeScope,
     ],
     enabled: !!token,
 
     queryFn: async () => {
       const result =
         await fetchLeaderboard(
-          activeTab
+          activeTab,
+          activeScope
         );
 
       if (!result?.success) {
@@ -45,13 +42,18 @@ export function useLeaderboardQuery(
         );
       }
 
-      return result.data || [];
+      const list = Array.isArray(result.data)
+        ? [...result.data]
+        : [];
+      list.standing = result.standing || null;
+
+      return list;
     },
 
     staleTime:
-      1000 * 60 * 5,
+      1000 * 60 * 2,
 
-    refetchOnMount: false,
+    refetchOnMount: true,
 
     refetchOnWindowFocus: false,
   });

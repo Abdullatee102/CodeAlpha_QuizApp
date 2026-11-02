@@ -1546,6 +1546,148 @@ export const useQuizStore = create(
       },
 
       // =====================================================
+      // OFFICIAL ACADEMIC ASSESSMENTS (BB-07F.4 DISCOVERY)
+      // =====================================================
+
+      fetchOfferingAssessments: async (offeringId) => {
+        try {
+          const response = await api.get(`/auth/offerings/${offeringId}/assessments`);
+          return {
+            success: true,
+            data: response.data?.data || [],
+          };
+        } catch (error) {
+          return {
+            success: false,
+            error: formatAxiosError(error),
+            data: [],
+          };
+        }
+      },
+
+      fetchAssessmentDetails: async (assessmentId) => {
+        try {
+          const response = await api.get(`/auth/assessments/${assessmentId}`);
+          return {
+            success: true,
+            data: response.data?.data || null,
+          };
+        } catch (error) {
+          return {
+            success: false,
+            error: formatAxiosError(error),
+            data: null,
+          };
+        }
+      },
+
+      // =====================================================
+      // OFFICIAL ACADEMIC ASSESSMENTS (BB-07F.5 EXAMINATION)
+      // =====================================================
+
+      fetchAvailableAssessments: async () => {
+        try {
+          const response = await api.get('/auth/assessments/available');
+          return {
+            success: true,
+            data: response.data?.data?.assessments || [],
+          };
+        } catch (error) {
+          return {
+            success: false,
+            error: formatAxiosError(error),
+            data: [],
+          };
+        }
+      },
+
+      fetchAssessmentInstructions: async (assessmentId) => {
+        try {
+          const response = await api.get(`/auth/assessments/${assessmentId}/instructions`);
+          return {
+            success: true,
+            data: response.data?.data?.assessment || null,
+          };
+        } catch (error) {
+          return {
+            success: false,
+            error: formatAxiosError(error),
+            data: null,
+          };
+        }
+      },
+
+      startOrResumeAttempt: async (assessmentId) => {
+        try {
+          const response = await api.post(`/auth/assessments/${assessmentId}/attempts`);
+          return {
+            success: true,
+            data: response.data?.data || null,
+          };
+        } catch (error) {
+          return {
+            success: false,
+            error: formatAxiosError(error),
+            data: null,
+          };
+        }
+      },
+
+      saveAttemptAnswers: async (assessmentId, attemptId, answers) => {
+        try {
+          const response = await api.put(
+            `/auth/assessments/${assessmentId}/attempts/${attemptId}/answers`,
+            { answers }
+          );
+          return {
+            success: true,
+            data: response.data,
+          };
+        } catch (error) {
+          return {
+            success: false,
+            error: formatAxiosError(error),
+          };
+        }
+      },
+
+      sendAttemptHeartbeat: async (assessmentId, attemptId) => {
+        try {
+          const response = await api.post(
+            `/auth/assessments/${assessmentId}/attempts/${attemptId}/heartbeat`
+          );
+          return {
+            success: true,
+            data: response.data?.data || null,
+          };
+        } catch (error) {
+          return {
+            success: false,
+            error: formatAxiosError(error),
+          };
+        }
+      },
+
+      submitAssessmentAttempt: async (assessmentId, attemptId, finalAnswers) => {
+        try {
+          const payload = finalAnswers ? { answers: finalAnswers } : {};
+          const response = await api.post(
+            `/auth/assessments/${assessmentId}/attempts/${attemptId}/submit`,
+            payload
+          );
+          return {
+            success: true,
+            data: response.data,
+          };
+        } catch (error) {
+          return {
+            success: false,
+            error: formatAxiosError(error),
+          };
+        }
+      },
+
+      // =====================================================
       // CLEAR USER SESSION
       // =====================================================
 

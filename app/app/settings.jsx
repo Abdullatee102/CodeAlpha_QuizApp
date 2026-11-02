@@ -353,6 +353,19 @@ export default function SettingsScreen() {
             }
             showDivider
           />
+
+          <SettingsRow
+            icon="shield-checkmark-outline"
+            title="Leaderboard Privacy"
+            subtitle="Manage how you appear on competitive rankings"
+            theme={theme}
+            onPress={() =>
+              router.push(
+                '/privacy'
+              )
+            }
+            showDivider
+          />
         </View>
 
         {/* =====================================================
@@ -443,6 +456,19 @@ export default function SettingsScreen() {
             onPress={() =>
               router.push(
                 '/support'
+              )
+            }
+            showDivider
+          />
+
+          <SettingsRow
+            icon="chatbox-ellipses-outline"
+            title="Share Feedback"
+            subtitle="Help improve Brain Buzz for LAUTECH students"
+            theme={theme}
+            onPress={() =>
+              router.push(
+                '/feedback'
               )
             }
           />
@@ -667,7 +693,7 @@ export default function SettingsScreen() {
               },
             ]}
           >
-            © 2026 Popoola Abdullateef
+            Â© 2026 Popoola Abdullateef
           </Text>
         </View>
       </ScrollView>

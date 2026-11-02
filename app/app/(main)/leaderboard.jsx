@@ -5,13 +5,13 @@ import {
   FlatList,
   StyleSheet,
   ActivityIndicator,
-  Image,
   TouchableOpacity,
   StatusBar,
   Platform,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
 import { useLeaderboardQuery } from '../../hooks/useLeaderboardQuery';
@@ -27,16 +27,21 @@ export default function LeaderboardScreen() {
     insets.top,
     Platform.OS === 'android' ? StatusBar.currentHeight || 24 : 0
   );
+  const router = useRouter();
   const { profile } = useAuthStore();
   const { theme, isDarkMode } = useThemeStore();
+
   const [activeTab, setActiveTab] = useState('24h');
+  const [activeScope, setActiveScope] = useState('global');
 
   const {
     data: leaderboard = [],
     isLoading,
     isFetching,
     refetch,
-  } = useLeaderboardQuery(activeTab);
+  } = useLeaderboardQuery(activeTab, activeScope);
+
+  const standing = leaderboard?.standing || null;
 
   const renderItem = ({ item, index }) => {
     const isCurrentUser =
@@ -49,6 +54,10 @@ export default function LeaderboardScreen() {
       typeof item.totalScore === 'number'
         ? Number(item.totalScore.toFixed(1))
         : item.totalScore || item.score || item.points || 0;
+
+    const isAnonymous =
+      String(item.username || '').startsWith('scholar_') ||
+      String(item.fullName || '').startsWith('Scholar #');
 
     // Save current user's profile faculty globally whenever available
     if (
@@ -68,7 +77,7 @@ export default function LeaderboardScreen() {
       }
     }
 
-    // Faculty Code Resolution from configured user/item data or persistent global map
+    // Faculty Code Resolution
     let rawFac = (
       item.facultyCode ||
       item.faculty?.code ||
@@ -95,7 +104,6 @@ export default function LeaderboardScreen() {
       .toUpperCase()
       .trim();
 
-    // Map department codes to parent LAUTECH Faculty Codes if configured as department
     const deptToFac = {
       CSC: 'FCI', CYB: 'FCI', INS: 'FCI',
       EEE: 'FET', MEE: 'FET', CVE: 'FET', CHE: 'FET', AGE: 'FET', CPE: 'FET', FDE: 'FET',
@@ -106,7 +114,7 @@ export default function LeaderboardScreen() {
       ELS: 'FASS', HIS: 'FASS', SOC: 'FASS', ECO: 'FASS',
       ANA: 'FBMS', PHS: 'FBMS', MLS: 'FBMS',
       NUR: 'FNS', MHN: 'FNS', MSN: 'FNS',
-      AEC: 'FAS', AEX: 'FAS', AGR: 'FAS', APB: 'FAS'
+      AEC: 'FAS', AEX: 'FAS', AGR: 'FAS', APB: 'FAS',
     };
 
     let resolvedCode = deptToFac[rawFac] || rawFac;
@@ -139,9 +147,17 @@ export default function LeaderboardScreen() {
         (isCurrentUser ? profile?.facultyName || profile?.departmentName : ''),
     });
 
-    const userInitial = (item.username || item.fullName || 'U')
+    const userInitial = (item.fullName || item.username || 'U')
       .charAt(0)
       .toUpperCase();
+
+    // Display Name handling
+    let displayName = `@${item.username || 'user'}`;
+    if (isAnonymous) {
+      displayName = item.fullName || 'Scholar';
+    } else if (item.fullName && !item.fullName.startsWith('@')) {
+      displayName = `${item.fullName} (@${item.username})`;
+    }
 
     return (
       <View
@@ -165,9 +181,21 @@ export default function LeaderboardScreen() {
           )}
         </View>
 
-        {/* Avatar Circle: Configured Faculty Code OR First Letter Initial */}
+        {/* Avatar Circle */}
         <View style={styles.avatarContainer}>
-          {displayFacultyCode ? (
+          {isAnonymous ? (
+            <View
+              style={[
+                styles.avatar,
+                styles.initialAvatar,
+                {
+                  backgroundColor: isDarkMode ? '#2D3748' : '#EDF2F7',
+                },
+              ]}
+            >
+              <Ionicons name="school-outline" size={20} color={theme.primary} />
+            </View>
+          ) : displayFacultyCode ? (
             <View
               style={[
                 styles.avatar,
@@ -210,8 +238,13 @@ export default function LeaderboardScreen() {
         {/* User Info */}
         <View style={styles.userInfo}>
           <Text style={[styles.userName, { color: theme.text }]} numberOfLines={1}>
-            @{item.username || 'user'} {isCurrentUser && '(You)'}
+            {displayName} {isCurrentUser && '(You)'}
           </Text>
+          {isCurrentUser && (
+            <Text style={[styles.userTagline, { color: theme.textSecondary }]}>
+              Academic Practice Rank
+            </Text>
+          )}
         </View>
 
         {/* Score Points */}
@@ -220,14 +253,13 @@ export default function LeaderboardScreen() {
             {displayScore}
           </Text>
           <Text style={[styles.scoreLabel, { color: theme.textSecondary }]}>
-            pts
+            XP
           </Text>
         </View>
       </View>
     );
   };
 
-  // Loading state wrapped in Theme-Aware SafeAreaView
   if (isLoading && leaderboard.length === 0) {
     return (
       <SafeAreaView
@@ -256,13 +288,63 @@ export default function LeaderboardScreen() {
       edges={['left', 'right']}
     >
       <View style={styles.headerContainer}>
-        <Text style={[styles.headerTitle, { color: theme.primary }]}>
-          Leaderboard
-        </Text>
-        <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-          See where you stand among top players.
-        </Text>
+        <View style={styles.titleRow}>
+          <View>
+            <Text style={[styles.headerTitle, { color: theme.primary }]}>
+              Leaderboard
+            </Text>
+            <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
+              Mastery XP rankings among LAUTECH scholars.
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={[styles.privacyPill, { backgroundColor: isDarkMode ? '#2D3748' : '#EDF2F7' }]}
+            onPress={() => router.push('/privacy')}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="shield-checkmark-outline" size={16} color={theme.primary} />
+            <Text style={[styles.privacyPillText, { color: theme.text }]}>
+              Privacy
+            </Text>
+          </TouchableOpacity>
+        </View>
 
+        {/* SCOPE TABS */}
+        <View
+          style={[
+            styles.tabContainer,
+            { backgroundColor: isDarkMode ? '#1E1E1E' : '#E5E7EB', marginBottom: 6 },
+          ]}
+        >
+          {[
+            { key: 'global', label: 'Campus' },
+            { key: 'faculty', label: 'My Faculty' },
+            { key: 'department', label: 'My Dept' },
+          ].map((scope) => (
+            <TouchableOpacity
+              key={scope.key}
+              style={[
+                styles.tabButton,
+                activeScope === scope.key && { backgroundColor: theme.primary },
+              ]}
+              onPress={() => setActiveScope(scope.key)}
+              activeOpacity={0.8}
+            >
+              <Text
+                style={[
+                  styles.tabText,
+                  {
+                    color: activeScope === scope.key ? '#fff' : theme.textSecondary,
+                  },
+                ]}
+              >
+                {scope.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* TIME RANGE TABS */}
         <View
           style={[
             styles.tabContainer,
@@ -296,6 +378,35 @@ export default function LeaderboardScreen() {
             </TouchableOpacity>
           ))}
         </View>
+
+        {/* SCOPE NOTICE BANNER (IF AFFILIATION MISSING) */}
+        {standing?.scopeNotice && (
+          <View
+            style={[
+              styles.noticeCard,
+              {
+                backgroundColor: isDarkMode ? '#2C2010' : '#FEF3C7',
+                borderColor: '#F59E0B',
+              },
+            ]}
+          >
+            <Ionicons name="information-circle-outline" size={18} color="#D97706" />
+            <Text
+              style={[
+                styles.noticeText,
+                { color: isDarkMode ? '#FDE68A' : '#92400E' },
+              ]}
+            >
+              {standing.scopeNotice}
+            </Text>
+            <TouchableOpacity
+              style={styles.noticeBtn}
+              onPress={() => router.push('/edit-profile')}
+            >
+              <Text style={styles.noticeBtnText}>Set Now</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
 
       <FlatList
@@ -316,11 +427,64 @@ export default function LeaderboardScreen() {
               color={theme.textSecondary}
             />
             <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
-              No leaderboard data available.
+              {standing?.scopeNotice
+                ? 'Affiliation needed to display rankings.'
+                : 'No leaderboard scores recorded for this filter yet.'}
             </Text>
           </View>
         }
       />
+
+      {/* PERSONAL STANDING STICKY FOOTER */}
+      {standing && typeof standing.rank === 'number' && (
+        <View
+          style={[
+            styles.standingFooter,
+            {
+              backgroundColor: isDarkMode ? '#1E1E1E' : '#FFFFFF',
+              borderTopColor: theme.border,
+            },
+          ]}
+        >
+          <View style={styles.standingLeft}>
+            <View
+              style={[
+                styles.standingRankBadge,
+                { backgroundColor: `${theme.primary}25` },
+              ]}
+            >
+              <Text style={[styles.standingRankText, { color: theme.primary }]}>
+                #{standing.rank}
+              </Text>
+            </View>
+            <View style={styles.standingMeta}>
+              <View style={styles.standingHeaderRow}>
+                <Text style={[styles.standingTitle, { color: theme.text }]}>
+                  Your Standing
+                </Text>
+                {standing.isExcluded && (
+                  <View style={styles.privatePill}>
+                    <Text style={styles.privatePillText}>Private Mode</Text>
+                  </View>
+                )}
+              </View>
+              <Text style={[styles.standingSub, { color: theme.textSecondary }]}>
+                {standing.percentile
+                  ? `Top ${Math.max(1, 100 - standing.percentile)}% of participants`
+                  : 'Active participant'}
+              </Text>
+            </View>
+          </View>
+          <View style={styles.standingRight}>
+            <Text style={[styles.standingScore, { color: theme.primary }]}>
+              {standing.totalScore}
+            </Text>
+            <Text style={[styles.standingScoreLabel, { color: theme.textSecondary }]}>
+              XP • {standing.accuracy}% acc
+            </Text>
+          </View>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -332,45 +496,87 @@ const styles = StyleSheet.create({
     paddingTop: 4,
     paddingBottom: 6,
   },
-  headerTitle: { fontFamily: 'Archivo-Black', fontSize: 26, marginBottom: 2 },
-  subtitle: { fontFamily: 'Ubuntu-Regular', fontSize: 13, marginBottom: 10 },
+  titleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  headerTitle: { fontFamily: 'Archivo-Black', fontSize: 24, marginBottom: 2 },
+  subtitle: { fontFamily: 'Ubuntu-Regular', fontSize: 12 },
+  privacyPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  privacyPillText: {
+    fontFamily: 'Ubuntu-Bold',
+    fontSize: 12,
+  },
   tabContainer: {
     flexDirection: 'row',
     borderRadius: 12,
-    padding: 4,
-    marginBottom: 5,
+    padding: 3,
   },
   tabButton: {
     flex: 1,
-    paddingVertical: 10,
+    paddingVertical: 8,
     alignItems: 'center',
-    borderRadius: 10,
+    borderRadius: 9,
   },
-  tabText: { fontFamily: 'Ubuntu-Bold', fontSize: 13 },
+  tabText: { fontFamily: 'Ubuntu-Bold', fontSize: 12 },
+  noticeCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 8,
+    marginTop: 8,
+    gap: 6,
+  },
+  noticeText: {
+    flex: 1,
+    fontFamily: 'Ubuntu-Regular',
+    fontSize: 12,
+  },
+  noticeBtn: {
+    backgroundColor: '#D97706',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  noticeBtnText: {
+    fontFamily: 'Ubuntu-Bold',
+    fontSize: 11,
+    color: '#FFF',
+  },
   listContainer: {
     paddingHorizontal: 20,
-    paddingBottom: 20,
-    gap: 12,
-    paddingTop: 10,
+    paddingBottom: 85,
+    gap: 10,
+    paddingTop: 8,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 14,
-    borderRadius: 16,
+    padding: 12,
+    borderRadius: 14,
     borderWidth: 1,
   },
   rankContainer: {
-    width: 30,
+    width: 28,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 10,
+    marginRight: 8,
   },
   rankText: { fontFamily: 'Ubuntu-Bold', fontSize: 14 },
-  avatarContainer: { marginRight: 12 },
-  avatar: { width: 42, height: 42, borderRadius: 21 },
+  avatarContainer: { marginRight: 10 },
+  avatar: { width: 38, height: 38, borderRadius: 19 },
   initialAvatar: { justifyContent: 'center', alignItems: 'center' },
-  initialText: { fontFamily: 'Ubuntu-Bold', fontSize: 16 },
+  initialText: { fontFamily: 'Ubuntu-Bold', fontSize: 15 },
   facultyAvatar: {
     justifyContent: 'center',
     alignItems: 'center',
@@ -379,13 +585,14 @@ const styles = StyleSheet.create({
   },
   facultyAvatarText: {
     fontFamily: 'Ubuntu-Bold',
-    fontSize: 11,
+    fontSize: 10,
     textAlign: 'center',
   },
-  userInfo: { flex: 1, marginRight: 10 },
-  userName: { fontFamily: 'Ubuntu-Bold', fontSize: 15 },
+  userInfo: { flex: 1, marginRight: 8 },
+  userName: { fontFamily: 'Ubuntu-Bold', fontSize: 14 },
+  userTagline: { fontFamily: 'Ubuntu-Regular', fontSize: 11, marginTop: 1 },
   scoreContainer: { alignItems: 'flex-end' },
-  scoreText: { fontFamily: 'Archivo-Black', fontSize: 18 },
+  scoreText: { fontFamily: 'Archivo-Black', fontSize: 16 },
   scoreLabel: { fontFamily: 'Ubuntu-Regular', fontSize: 10 },
   loadingContainer: {
     flex: 1,
@@ -401,7 +608,81 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 50,
+    marginTop: 40,
   },
-  emptyText: { fontFamily: 'Ubuntu-Medium', fontSize: 14, marginTop: 10 },
+  emptyText: { fontFamily: 'Ubuntu-Medium', fontSize: 13, marginTop: 10, textAlign: 'center' },
+  standingFooter: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  standingLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 10,
+  },
+  standingRankBadge: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  standingRankText: {
+    fontFamily: 'Archivo-Black',
+    fontSize: 14,
+  },
+  standingMeta: {
+    flex: 1,
+  },
+  standingHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  standingTitle: {
+    fontFamily: 'Ubuntu-Bold',
+    fontSize: 13,
+  },
+  privatePill: {
+    backgroundColor: '#6B7280',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  privatePillText: {
+    fontFamily: 'Ubuntu-Bold',
+    fontSize: 9,
+    color: '#FFF',
+  },
+  standingSub: {
+    fontFamily: 'Ubuntu-Regular',
+    fontSize: 11,
+    marginTop: 1,
+  },
+  standingRight: {
+    alignItems: 'flex-end',
+  },
+  standingScore: {
+    fontFamily: 'Archivo-Black',
+    fontSize: 16,
+  },
+  standingScoreLabel: {
+    fontFamily: 'Ubuntu-Regular',
+    fontSize: 10,
+  },
 });

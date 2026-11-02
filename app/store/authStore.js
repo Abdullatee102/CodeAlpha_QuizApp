@@ -60,6 +60,8 @@ export const useAuthStore = create(
 
       leaderboard: [],
 
+      userStanding: null,
+
       _hasHydrated: false,
 
       // =====================================================
@@ -207,12 +209,19 @@ export const useAuthStore = create(
               };
             }
 
+            const currentUser = get().user;
+            const currentUserId = currentUser?.id || currentUser?.userId;
+
+            const registrationKey = currentUserId
+              ? `registeredPushToken_${currentUserId}`
+              : 'registeredPushToken';
+
             const lastRegisteredToken =
-              storage.getString('registeredPushToken');
+              storage.getString(registrationKey);
 
             if (lastRegisteredToken === pushToken) {
               console.log(
-                '[PUSH] Device push token already registered on server.'
+                '[PUSH] Device push token already registered for current user.'
               );
 
               return {
@@ -237,9 +246,13 @@ export const useAuthStore = create(
               );
 
             storage.set(
-              'registeredPushToken',
+              registrationKey,
               pushToken
             );
+
+            if (currentUserId && storage.contains('registeredPushToken')) {
+              storage.delete('registeredPushToken');
+            }
 
             console.log(
               '[PUSH] Device registered successfully.'
@@ -344,6 +357,11 @@ export const useAuthStore = create(
               }
             );
 
+            const currentUser = get().user;
+            const currentUserId = currentUser?.id || currentUser?.userId;
+            if (currentUserId) {
+              storage.delete(`registeredPushToken_${currentUserId}`);
+            }
             storage.delete('registeredPushToken');
 
             console.log(
@@ -756,11 +774,12 @@ export const useAuthStore = create(
       },
 
       // =====================================================
-      // FETCH LEADERBOARD
+      // FETCH LEADERBOARD (SCOPED & PRIVACY-AWARE)
       // =====================================================
 
       fetchLeaderboard: async (
-        tab = '24h'
+        tab = '24h',
+        scope = 'global'
       ) => {
         const token =
           storage.getString('userToken') ||
@@ -771,13 +790,14 @@ export const useAuthStore = create(
             success: false,
             error: 'No active session',
             data: [],
+            standing: null,
           };
         }
 
         try {
           const response =
             await api.get(
-              `/auth/leaderboard?range=${tab}`
+              `/auth/leaderboard?range=${tab}&scope=${scope}`
             );
 
           const leaderboardData =
@@ -785,15 +805,23 @@ export const useAuthStore = create(
             response.data ||
             [];
 
+          const standingData =
+            response.data?.standing ||
+            null;
+
           set({
             leaderboard:
               leaderboardData,
+            userStanding:
+              standingData,
           });
 
           return {
             success: true,
             data:
               leaderboardData,
+            standing:
+              standingData,
           };
         } catch (err) {
           const formatted =
@@ -801,6 +829,64 @@ export const useAuthStore = create(
 
           console.error(
             'Leaderboard fetch error:',
+            formatted.message
+          );
+
+          return {
+            success: false,
+            error:
+              formatted.message,
+            data: [],
+            standing: null,
+          };
+        }
+      },
+
+      // =====================================================
+      // UPDATE LEADERBOARD PRIVACY
+      // =====================================================
+
+      updateLeaderboardPrivacy: async (
+        privacy
+      ) => {
+        const token =
+          storage.getString('userToken') ||
+          get().token;
+
+        if (!token) {
+          return {
+            success: false,
+            error: 'No active session',
+          };
+        }
+
+        try {
+          const response =
+            await api.patch(
+              '/auth/profile/leaderboard-privacy',
+              { privacy }
+            );
+
+          const currentProfile = get().profile;
+          if (currentProfile) {
+            set({
+              profile: {
+                ...currentProfile,
+                leaderboardPrivacy: privacy,
+              },
+            });
+          }
+
+          return {
+            success: true,
+            data: response.data?.data || response.data,
+          };
+        } catch (err) {
+          const formatted =
+            formatAxiosError(err);
+
+          console.error(
+            'Leaderboard privacy update error:',
             formatted.message
           );
 
@@ -2076,6 +2162,13 @@ export const useAuthStore = create(
             console.warn(
               '[AUTH] Push-token cleanup failed during logout.'
             );
+          } finally {
+            const currentUser = get().user;
+            const currentUserId = currentUser?.id || currentUser?.userId;
+            if (currentUserId) {
+              storage.delete(`registeredPushToken_${currentUserId}`);
+            }
+            storage.delete('registeredPushToken');
           }
 
           /*

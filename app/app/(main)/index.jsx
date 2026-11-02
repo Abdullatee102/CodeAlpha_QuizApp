@@ -704,6 +704,47 @@ export default function HomeScreen() {
           </View>
         </View>
 
+        {/* Official Course Assessments Action Banner (BB-07F.5) */}
+        <TouchableOpacity
+          style={[
+            styles.officialAssessmentsCard,
+            {
+              backgroundColor: isDarkMode ? '#1E1B4B' : '#EEF2FF',
+              borderColor: isDarkMode ? '#4338CA' : '#C7D2FE',
+            },
+          ]}
+          onPress={() => router.push('/(assessments)')}
+          activeOpacity={0.8}
+        >
+          <View style={styles.officialAssessmentsContent}>
+            <View style={styles.officialAssessmentsIconBox}>
+              <MaterialCommunityIcons name="clipboard-text-clock" size={26} color="#4F46E5" />
+            </View>
+            <View style={{ flex: 1, marginLeft: 12 }}>
+              <View style={styles.officialBadgeRow}>
+                <Text style={styles.officialAssessmentsBadge}>ACADEMIC PORTAL</Text>
+              </View>
+              <Text
+                style={[
+                  styles.officialAssessmentsTitle,
+                  { color: isDarkMode ? '#FFFFFF' : '#1E1B4B' },
+                ]}
+              >
+                Course Assessments
+              </Text>
+              <Text
+                style={[
+                  styles.officialAssessmentsSubtitle,
+                  { color: isDarkMode ? '#C7D2FE' : '#4338CA' },
+                ]}
+              >
+                Access scheduled tests, CBT exams & assignments
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#6366F1" />
+          </View>
+        </TouchableOpacity>
+
         {/* Personalized Academic Area & Recommended Courses */}
 
         <View style={styles.sectionContainer}>
@@ -1528,6 +1569,44 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 
+  officialAssessmentsCard: {
+    marginHorizontal: 25,
+    borderRadius: 18,
+    padding: 16,
+    borderWidth: 1.5,
+    marginBottom: 20,
+  },
+  officialAssessmentsContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  officialAssessmentsIconBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: '#EDE9FE',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  officialBadgeRow: {
+    flexDirection: 'row',
+    marginBottom: 2,
+  },
+  officialAssessmentsBadge: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#6366F1',
+    letterSpacing: 0.5,
+  },
+  officialAssessmentsTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  officialAssessmentsSubtitle: {
+    fontSize: 12,
+    lineHeight: 16,
+  },
   statsCard: {
     flexDirection: 'row',
     marginHorizontal: 25,

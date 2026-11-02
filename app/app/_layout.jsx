@@ -44,10 +44,12 @@ SplashScreen.preventAutoHideAsync();
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
+    shouldShowAlert: true,
     shouldShowBanner: true,
     shouldShowList: true,
     shouldPlaySound: true,
     shouldSetBadge: false,
+    priority: Notifications.AndroidNotificationPriority?.MAX,
   }),
 });
 
@@ -127,6 +129,18 @@ export default function RootLayout() {
   // =====================================================
 
   useEffect(() => {
+    if (Platform.OS === 'android') {
+      Notifications.setNotificationChannelAsync('default', {
+        name: 'Default',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#008F73',
+        sound: 'default',
+      }).catch((channelErr) => {
+        console.warn('[PUSH] Failed to configure default Android notification channel:', channelErr);
+      });
+    }
+
     GoogleSignin.configure({
       webClientId:
         '777496097951-jb7mabvi6ajftdvf5gvckp8qpuea543g.apps.googleusercontent.com',
