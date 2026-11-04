@@ -288,6 +288,10 @@ export default function RootLayout() {
     const inResetPassword =
       segments[0] === '(auth)' && segments[1] === 'reset-password';
 
+    const isPublicAuthRoute =
+      segments[0] === '(auth)' &&
+      (segments[1] === 'privacy' || segments[1] === 'terms');
+
     if (!user) {
       if (
         !hasFinishedOnboarding &&
@@ -308,6 +312,7 @@ export default function RootLayout() {
     } else if (
       user &&
       !inResetPassword &&
+      !isPublicAuthRoute &&
       (
         inAuthGroup ||
         inOnboarding ||

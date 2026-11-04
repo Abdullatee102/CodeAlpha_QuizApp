@@ -107,7 +107,7 @@ export default function AssessmentInstructionsScreen() {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.background || '#F3F4F6' }]}>
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={theme.primary || '#6366F1'} />
+          <ActivityIndicator size="large" color={theme.primary} />
           <Text style={[styles.loadingText, { color: theme.textSecondary || '#6B7280' }]}>
             Loading assessment details...
           </Text>
@@ -126,7 +126,7 @@ export default function AssessmentInstructionsScreen() {
             {errorMsg || 'Assessment not found'}
           </Text>
           <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: theme.primary || '#6366F1', marginTop: 16 }]}
+            style={[styles.actionButton, { backgroundColor: theme.primary, marginTop: 16 }]}
             onPress={() => router.back()}
           >
             <Text style={styles.actionButtonText}>Go Back</Text>
@@ -193,7 +193,7 @@ export default function AssessmentInstructionsScreen() {
         {/* Key Metrics Grid */}
         <View style={styles.grid}>
           <View style={[styles.gridItem, { backgroundColor: theme.card || '#FFFFFF', borderColor: theme.border || '#E5E7EB' }]}>
-            <MaterialCommunityIcons name="clock-outline" size={24} color="#6366F1" />
+            <MaterialCommunityIcons name="clock-outline" size={24} color={theme.primary} />
             <Text style={[styles.gridValue, { color: theme.text || '#111827' }]}>
               {assessment.durationMinutes}
             </Text>
@@ -307,7 +307,7 @@ export default function AssessmentInstructionsScreen() {
               style={[
                 styles.actionButton,
                 {
-                  backgroundColor: isOngoingAttempt ? '#F59E0B' : (theme.primary || '#6366F1'),
+                  backgroundColor: isOngoingAttempt ? '#F59E0B' : (theme.primary),
                   opacity: isStarting ? 0.7 : 1,
                 },
               ]}
@@ -382,7 +382,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   courseBadge: {
-    backgroundColor: '#EDE9FE',
+    backgroundColor: 'rgba(0, 93, 75, 0.12)',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
@@ -391,7 +391,7 @@ const styles = StyleSheet.create({
   courseBadgeText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#6366F1',
+    color: '#005D4B',
   },
   typeBadge: {
     paddingHorizontal: 10,

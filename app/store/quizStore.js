@@ -1687,6 +1687,70 @@ export const useQuizStore = create(
         }
       },
 
+      fetchAssessmentResults: async (assessmentId) => {
+        try {
+          const response = await api.get(`/auth/assessments/${assessmentId}/results`);
+          return {
+            success: true,
+            data: response.data?.data || null,
+          };
+        } catch (error) {
+          return {
+            success: false,
+            error: formatAxiosError(error),
+          };
+        }
+      },
+
+      fetchStudentAttendance: async (offeringId) => {
+        try {
+          const response = await api.get(`/auth/offerings/${offeringId}/attendance`);
+          return {
+            success: true,
+            data: response.data?.data || null,
+          };
+        } catch (error) {
+          return {
+            success: false,
+            error: formatAxiosError(error),
+          };
+        }
+      },
+
+      fetchCourseMaterials: async (offeringId, category) => {
+        try {
+          const params = category ? { category } : {};
+          const response = await api.get(`/auth/offerings/${offeringId}/materials`, { params });
+          return {
+            success: true,
+            data: response.data?.data || null,
+          };
+        } catch (error) {
+          return {
+            success: false,
+            error: formatAxiosError(error),
+          };
+        }
+      },
+
+      downloadCourseMaterial: async (offeringId, materialId) => {
+        try {
+          const response = await api.get(
+            `/auth/offerings/${offeringId}/materials/${materialId}/download`,
+            { responseType: 'blob' }
+          );
+          return {
+            success: true,
+            data: response.data,
+          };
+        } catch (error) {
+          return {
+            success: false,
+            error: formatAxiosError(error),
+          };
+        }
+      },
+
       // =====================================================
       // CLEAR USER SESSION
       // =====================================================

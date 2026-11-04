@@ -390,7 +390,7 @@ export default function AssessmentExamScreen() {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.background || '#F3F4F6' }]}>
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={theme.primary || '#6366F1'} />
+          <ActivityIndicator size="large" color={theme.primary} />
           <Text style={[styles.loadingText, { color: theme.textSecondary || '#6B7280' }]}>
             Preparing your examination environment...
           </Text>
@@ -412,7 +412,7 @@ export default function AssessmentExamScreen() {
             {initError}
           </Text>
           <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: theme.primary || '#6366F1' }]}
+            style={[styles.actionButton, { backgroundColor: theme.primary }]}
             onPress={() => router.replace('/(assessments)')}
           >
             <Text style={styles.actionButtonText}>Back to Assessments</Text>
@@ -482,7 +482,7 @@ export default function AssessmentExamScreen() {
           </View>
 
           <TouchableOpacity
-            style={[styles.receiptBtn, { backgroundColor: theme.primary || '#6366F1' }]}
+            style={[styles.receiptBtn, { backgroundColor: theme.primary }]}
             onPress={() => router.replace('/(assessments)')}
           >
             <Text style={styles.receiptBtnText}>Return to Assessments</Text>
@@ -519,17 +519,17 @@ export default function AssessmentExamScreen() {
         </TouchableOpacity>
 
         {/* Server-Authoritative Countdown Timer */}
-        <View style={[styles.timerBadge, { backgroundColor: isLowTime ? '#FEE2E2' : (isDarkMode ? '#374151' : '#EEF2FF') }]}>
+        <View style={[styles.timerBadge, { backgroundColor: isLowTime ? '#FEE2E2' : (isDarkMode ? '#374151' : `${theme.primary}12`) }]}>
           <Ionicons
             name="time-outline"
             size={16}
-            color={isLowTime ? '#EF4444' : (theme.primary || '#6366F1')}
+            color={isLowTime ? '#EF4444' : (theme.primary)}
             style={{ marginRight: 4 }}
           />
           <Text
             style={[
               styles.timerText,
-              { color: isLowTime ? '#DC2626' : (theme.primary || '#6366F1'), fontWeight: isLowTime ? '800' : '700' },
+              { color: isLowTime ? '#DC2626' : (theme.primary), fontWeight: isLowTime ? '800' : '700' },
             ]}
           >
             {formatTimer(remainingSeconds)}
@@ -603,10 +603,10 @@ export default function AssessmentExamScreen() {
                         styles.optionCard,
                         {
                           backgroundColor: isSelected
-                            ? (isDarkMode ? '#1E1B4B' : '#EEF2FF')
+                            ? (isDarkMode ? `${theme.primary}20` : `${theme.primary}12`)
                             : (theme.card || '#FFFFFF'),
                           borderColor: isSelected
-                            ? (theme.primary || '#6366F1')
+                            ? (theme.primary)
                             : (theme.border || '#E5E7EB'),
                           borderWidth: isSelected ? 2 : 1,
                         },
@@ -619,7 +619,7 @@ export default function AssessmentExamScreen() {
                           styles.radioCircle,
                           {
                             borderColor: isSelected
-                              ? (theme.primary || '#6366F1')
+                              ? (theme.primary)
                               : (theme.border || '#D1D5DB'),
                           },
                         ]}
@@ -628,7 +628,7 @@ export default function AssessmentExamScreen() {
                           <View
                             style={[
                               styles.radioDot,
-                              { backgroundColor: theme.primary || '#6366F1' },
+                              { backgroundColor: theme.primary },
                             ]}
                           />
                         )}
@@ -637,7 +637,7 @@ export default function AssessmentExamScreen() {
                         style={[
                           styles.optionText,
                           {
-                            color: isSelected ? (theme.primary || '#4338CA') : (theme.text || '#1F2937'),
+                            color: isSelected ? (theme.primary) : (theme.text || '#1F2937'),
                             fontWeight: isSelected ? '600' : '400',
                           },
                         ]}
@@ -720,7 +720,7 @@ export default function AssessmentExamScreen() {
           style={[
             styles.navButton,
             {
-              backgroundColor: theme.primary || '#6366F1',
+              backgroundColor: theme.primary,
               opacity: currentIndex === questions.length - 1 ? 0.4 : 1,
             },
           ]}
@@ -753,7 +753,7 @@ export default function AssessmentExamScreen() {
             {/* Legend */}
             <View style={styles.legendRow}>
               <View style={styles.legendItem}>
-                <View style={[styles.legendBox, { backgroundColor: '#6366F1' }]} />
+                <View style={[styles.legendBox, { backgroundColor: theme.primary }]} />
                 <Text style={[styles.legendText, { color: theme.textSecondary || '#6B7280' }]}>Answered ({summary.answered})</Text>
               </View>
               <View style={styles.legendItem}>
@@ -778,7 +778,7 @@ export default function AssessmentExamScreen() {
                 let borderColor = 'transparent';
 
                 if (hasAnswer) {
-                  itemBg = '#6366F1';
+                  itemBg = theme.primary;
                   textColor = '#FFFFFF';
                 }
                 if (isFlagged) {
@@ -949,7 +949,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   qTypePill: {
-    backgroundColor: '#EDE9FE',
+    backgroundColor: 'rgba(0, 93, 75, 0.12)',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
@@ -957,7 +957,7 @@ const styles = StyleSheet.create({
   qTypePillText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#6366F1',
+    color: theme.primary,
   },
   marksText: {
     fontSize: 12,

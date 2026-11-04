@@ -299,7 +299,7 @@ export default function LeaderboardScreen() {
           </View>
           <TouchableOpacity
             style={[styles.privacyPill, { backgroundColor: isDarkMode ? '#2D3748' : '#EDF2F7' }]}
-            onPress={() => router.push('/privacy')}
+            onPress={() => router.push('/leaderboard-privacy')}
             activeOpacity={0.7}
           >
             <Ionicons name="shield-checkmark-outline" size={16} color={theme.primary} />

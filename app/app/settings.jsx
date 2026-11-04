@@ -361,7 +361,7 @@ export default function SettingsScreen() {
             theme={theme}
             onPress={() =>
               router.push(
-                '/privacy'
+                '/leaderboard-privacy'
               )
             }
             showDivider
@@ -693,7 +693,7 @@ export default function SettingsScreen() {
               },
             ]}
           >
-            Â© 2026 Popoola Abdullateef
+            © 2026 Popoola Abdullateef
           </Text>
         </View>
       </ScrollView>

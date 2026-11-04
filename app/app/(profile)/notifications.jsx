@@ -170,7 +170,14 @@ export default function NotificationsScreen() {
         icon: 'school-outline',
         onPress: () => {
           setSelectedNotification(null);
-          router.push('/(profile)/opportunities');
+          if (notification?.data?.opportunityId) {
+            router.push({
+              pathname: '/(profile)/opportunity-detail',
+              params: { id: String(notification.data.opportunityId) },
+            });
+          } else {
+            router.push('/(profile)/opportunities');
+          }
         },
       };
     }

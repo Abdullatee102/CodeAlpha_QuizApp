@@ -532,12 +532,8 @@ export default function HomeScreen() {
           style={[
             styles.instructionCard,
             {
-              backgroundColor: isDarkMode
-                ? theme.card
-                : '#F0F7FF',
-              borderColor: isDarkMode
-                ? theme.border
-                : '#DCEBFA',
+              backgroundColor: isDarkMode ? theme.card : `${theme.primary}0D`,
+              borderColor: isDarkMode ? theme.border : `${theme.primary}26`,
             },
           ]}
         >
@@ -709,39 +705,57 @@ export default function HomeScreen() {
           style={[
             styles.officialAssessmentsCard,
             {
-              backgroundColor: isDarkMode ? '#1E1B4B' : '#EEF2FF',
-              borderColor: isDarkMode ? '#4338CA' : '#C7D2FE',
+              backgroundColor: isDarkMode ? `${theme.primary}18` : `${theme.primary}0A`,
+              borderColor: isDarkMode ? `${theme.primary}66` : `${theme.primary}33`,
             },
           ]}
           onPress={() => router.push('/(assessments)')}
           activeOpacity={0.8}
         >
           <View style={styles.officialAssessmentsContent}>
-            <View style={styles.officialAssessmentsIconBox}>
-              <MaterialCommunityIcons name="clipboard-text-clock" size={26} color="#4F46E5" />
+            <View
+              style={[
+                styles.officialAssessmentsIconBox,
+                {
+                  backgroundColor: isDarkMode ? `${theme.primary}26` : `${theme.primary}15`,
+                },
+              ]}
+            >
+              <MaterialCommunityIcons name="clipboard-text-clock" size={26} color={theme.primary} />
             </View>
             <View style={{ flex: 1, marginLeft: 12 }}>
               <View style={styles.officialBadgeRow}>
-                <Text style={styles.officialAssessmentsBadge}>ACADEMIC PORTAL</Text>
+                <View
+                  style={[
+                    styles.officialBadgeContainer,
+                    {
+                      backgroundColor: isDarkMode ? `${theme.primary}33` : `${theme.primary}18`,
+                    },
+                  ]}
+                >
+                  <Text style={[styles.officialAssessmentsBadge, { color: theme.primary }]}>
+                    COURSE ASSESSMENTS
+                  </Text>
+                </View>
               </View>
               <Text
                 style={[
                   styles.officialAssessmentsTitle,
-                  { color: isDarkMode ? '#FFFFFF' : '#1E1B4B' },
+                  { color: theme.text },
                 ]}
               >
-                Course Assessments
+                Official Assessments
               </Text>
               <Text
                 style={[
                   styles.officialAssessmentsSubtitle,
-                  { color: isDarkMode ? '#C7D2FE' : '#4338CA' },
+                  { color: theme.textSecondary },
                 ]}
               >
                 Access scheduled tests, CBT exams & assignments
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#6366F1" />
+            <Ionicons name="chevron-forward" size={20} color={theme.primary} />
           </View>
         </TouchableOpacity>
 
@@ -1584,18 +1598,21 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 12,
-    backgroundColor: '#EDE9FE',
     alignItems: 'center',
     justifyContent: 'center',
   },
   officialBadgeRow: {
     flexDirection: 'row',
-    marginBottom: 2,
+    marginBottom: 4,
+  },
+  officialBadgeContainer: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
   },
   officialAssessmentsBadge: {
     fontSize: 10,
-    fontWeight: '800',
-    color: '#6366F1',
+    fontFamily: 'Ubuntu-Bold',
     letterSpacing: 0.5,
   },
   officialAssessmentsTitle: {
