@@ -6,6 +6,7 @@ class SocketService {
   constructor() {
     this.socket = null;
     this.isConnected = false;
+    this.isConnecting = false;
     this.listeners = new Map();
   }
 
@@ -21,7 +22,8 @@ class SocketService {
       return null;
     }
 
-    if (this.socket && this.isConnected) {
+    // Reuse existing connected socket or in-flight connection handshake
+    if (this.socket && (this.isConnected || this.isConnecting)) {
       return this.socket;
     }
 
@@ -30,6 +32,9 @@ class SocketService {
       this.socket.disconnect();
       this.socket = null;
     }
+
+    this.isConnecting = true;
+    this.isConnected = false;
 
     const serverUrl = this.getServerUrl();
     console.log(`[SOCKET] Connecting to ${serverUrl}...`);
@@ -47,16 +52,19 @@ class SocketService {
 
     this.socket.on('connect', () => {
       this.isConnected = true;
-      console.log(`[SOCKET] Connected successfully with ID: ${this.socket.id}`);
+      this.isConnecting = false;
+      console.log(`[SOCKET] Connected successfully with ID: ${this.socket?.id}`);
     });
 
     this.socket.on('disconnect', (reason) => {
       this.isConnected = false;
+      this.isConnecting = false;
       console.log(`[SOCKET] Disconnected. Reason: ${reason}`);
     });
 
     this.socket.on('connect_error', (error) => {
       this.isConnected = false;
+      this.isConnecting = false;
       console.warn(`[SOCKET] Connection error: ${error.message}`);
     });
 
@@ -69,11 +77,12 @@ class SocketService {
       this.socket.disconnect();
       this.socket = null;
       this.isConnected = false;
+      this.isConnecting = false;
     }
   }
 
   getSocket() {
-    if (!this.socket || !this.isConnected) {
+    if (!this.socket || (!this.isConnected && !this.isConnecting)) {
       return this.connect();
     }
     return this.socket;

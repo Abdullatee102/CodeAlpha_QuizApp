@@ -1546,6 +1546,74 @@ export const useQuizStore = create(
       },
 
       // =====================================================
+      // COURSE OFFERINGS & STUDENT ENROLLMENTS
+      // =====================================================
+
+      fetchAvailableOfferings: async () => {
+        try {
+          const response = await api.get('/auth/offerings/available');
+          return {
+            success: true,
+            data: response.data?.data?.offerings || [],
+          };
+        } catch (error) {
+          return {
+            success: false,
+            error: formatAxiosError(error),
+            data: [],
+          };
+        }
+      },
+
+      fetchStudentEnrollments: async () => {
+        try {
+          const response = await api.get('/auth/enrollments');
+          return {
+            success: true,
+            data: response.data?.data?.enrollments || [],
+          };
+        } catch (error) {
+          return {
+            success: false,
+            error: formatAxiosError(error),
+            data: [],
+          };
+        }
+      },
+
+      enrollInOffering: async (offeringId) => {
+        try {
+          const response = await api.post('/auth/offerings/' + offeringId + '/enroll');
+          return {
+            success: true,
+            data: response.data?.data || null,
+            message: response.data?.message || 'Enrolled successfully',
+          };
+        } catch (error) {
+          return {
+            success: false,
+            error: formatAxiosError(error),
+          };
+        }
+      },
+
+      unenrollFromOffering: async (offeringId) => {
+        try {
+          const response = await api.delete('/auth/offerings/' + offeringId + '/enroll');
+          return {
+            success: true,
+            data: response.data?.data || null,
+            message: response.data?.message || 'Unenrolled successfully',
+          };
+        } catch (error) {
+          return {
+            success: false,
+            error: formatAxiosError(error),
+          };
+        }
+      },
+
+      // =====================================================
       // OFFICIAL ACADEMIC ASSESSMENTS (BB-07F.4 DISCOVERY)
       // =====================================================
 
@@ -1742,6 +1810,94 @@ export const useQuizStore = create(
           return {
             success: true,
             data: response.data,
+          };
+        } catch (error) {
+          return {
+            success: false,
+            error: formatAxiosError(error),
+          };
+        }
+      },
+
+      // =====================================================
+      // COURSE ANNOUNCEMENTS & DISCUSSIONS (BB-07I)
+      // =====================================================
+
+      fetchCourseAnnouncements: async (offeringId) => {
+        try {
+          const response = await api.get(`/auth/offerings/${offeringId}/announcements`);
+          return {
+            success: true,
+            data: response.data?.data || null,
+          };
+        } catch (error) {
+          return {
+            success: false,
+            error: formatAxiosError(error),
+          };
+        }
+      },
+
+      fetchCourseDiscussions: async (offeringId) => {
+        try {
+          const response = await api.get(`/auth/offerings/${offeringId}/discussions`);
+          return {
+            success: true,
+            data: response.data?.data || null,
+          };
+        } catch (error) {
+          return {
+            success: false,
+            error: formatAxiosError(error),
+          };
+        }
+      },
+
+      fetchDiscussionDetails: async (offeringId, discussionId) => {
+        try {
+          const response = await api.get(
+            `/auth/offerings/${offeringId}/discussions/${discussionId}`
+          );
+          return {
+            success: true,
+            data: response.data?.data || null,
+          };
+        } catch (error) {
+          return {
+            success: false,
+            error: formatAxiosError(error),
+          };
+        }
+      },
+
+      createCourseDiscussion: async (offeringId, { title, content, announcementId }) => {
+        try {
+          const response = await api.post(`/auth/offerings/${offeringId}/discussions`, {
+            title,
+            content,
+            announcementId,
+          });
+          return {
+            success: true,
+            data: response.data?.data || null,
+          };
+        } catch (error) {
+          return {
+            success: false,
+            error: formatAxiosError(error),
+          };
+        }
+      },
+
+      replyToCourseDiscussion: async (offeringId, discussionId, content) => {
+        try {
+          const response = await api.post(
+            `/auth/offerings/${offeringId}/discussions/${discussionId}/replies`,
+            { content }
+          );
+          return {
+            success: true,
+            data: response.data?.data || null,
           };
         } catch (error) {
           return {

@@ -87,6 +87,7 @@ export default function SupportAttachmentView({
         const safeId = String(attachment.id || Date.now()).replace(/[^a-zA-Z0-9_-]/g, '_');
         const extMatch = (attachment.fileName || '').match(/\.[a-zA-Z0-9]+$/);
         const ext = extMatch ? extMatch[0] : '.jpg';
+        // eslint-disable-next-line import/namespace
         const localPath = `${FileSystem.cacheDirectory}support_att_${safeId}${ext}`;
 
         // Check if file already exists in local cache

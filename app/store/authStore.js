@@ -31,9 +31,10 @@ import { queryClient } from '../data/queryClient';
 import { socketService } from '../services/socket';
 
 
- // Prevent duplicate login and push-token registration requests.
+ // Prevent duplicate login, push-token registration, and profile requests.
 let loginPromise = null;
 let pushRegistrationPromise = null;
+let profileInFlightPromise = null;
 
 export const useAuthStore = create(
   persist(
@@ -700,77 +701,88 @@ export const useAuthStore = create(
           };
         }
 
-        try {
-          const response =
-            await api.get(
-              '/auth/profile'
-            );
+        // Return existing in-flight request to prevent duplicate concurrent network calls
+        if (profileInFlightPromise) {
+          return profileInFlightPromise;
+        }
 
-          if (response.data?.data) {
-            const profileData =
-              response.data.data;
+        profileInFlightPromise = (async () => {
+          try {
+            const response =
+              await api.get(
+                '/auth/profile'
+              );
 
-            // Sanitize legacy "Verified User" backend fallback name
-            if (
-              profileData.fullName === 'Verified User' ||
-              profileData.fullName === 'Verified'
-            ) {
-              profileData.fullName =
-                profileData.username ||
-                'Scholar';
+            if (response.data?.data) {
+              const profileData =
+                response.data.data;
+
+              // Sanitize legacy "Verified User" backend fallback name
+              if (
+                profileData.fullName === 'Verified User' ||
+                profileData.fullName === 'Verified'
+              ) {
+                profileData.fullName =
+                  profileData.username ||
+                  'Scholar';
+              }
+
+              set({
+                profile:
+                  profileData,
+                user:
+                  profileData,
+              });
+
+              return {
+                success: true,
+                data:
+                  profileData,
+              };
             }
-
-            set({
-              profile:
-                profileData,
-              user:
-                profileData,
-            });
-
-            return {
-              success: true,
-              data:
-                profileData,
-            };
-          }
-
-          return {
-            success: false,
-            error:
-              'Profile data was not returned by the server.',
-          };
-        } catch (err) {
-          if (
-            err?.response?.status === 401 ||
-            err?.response?.status === 403
-          ) {
-            console.log(
-              'Session expired or invalid in fetchProfile. Clearing session.'
-            );
-
-            await get().logout();
 
             return {
               success: false,
               error:
-                'Session expired',
+                'Profile data was not returned by the server.',
+            };
+          } catch (err) {
+            if (
+              err?.response?.status === 401 ||
+              err?.response?.status === 403
+            ) {
+              console.log(
+                'Session expired or invalid in fetchProfile. Clearing session.'
+              );
+
+              await get().logout();
+
+              return {
+                success: false,
+                error:
+                  'Session expired',
+              };
+            }
+
+            const formatted =
+              formatAxiosError(err);
+
+            console.error(
+              'Profile fetch error:',
+              formatted.message
+            );
+
+            return {
+              success: false,
+              error:
+                formatted.message,
             };
           }
+        })().finally(() => {
+          profileInFlightPromise = null;
+        });
 
-          const formatted =
-            formatAxiosError(err);
-
-          console.error(
-            'Profile fetch error:',
-            formatted.message
-          );
-
-          return {
-            success: false,
-            error:
-              formatted.message,
-          };
-        }
+        return profileInFlightPromise;
       },
 
       // =====================================================
@@ -2130,6 +2142,7 @@ export const useAuthStore = create(
 
       logout: async () => {
         try {
+          profileInFlightPromise = null;
           /*
            * Disconnect realtime socket immediately.
            */

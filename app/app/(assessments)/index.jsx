@@ -11,6 +11,8 @@ import {
   Platform,
   Modal,
   ScrollView,
+  TextInput,
+  Linking,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -28,6 +30,15 @@ export default function AssessmentsIndexScreen() {
     fetchStudentAttendance,
     fetchCourseMaterials,
     downloadCourseMaterial,
+    fetchCourseAnnouncements,
+    fetchCourseDiscussions,
+    fetchDiscussionDetails,
+    createCourseDiscussion,
+    replyToCourseDiscussion,
+    fetchAvailableOfferings,
+    fetchStudentEnrollments,
+    enrollInOffering,
+    unenrollFromOffering,
   } = useQuizStore();
 
   const [assessments, setAssessments] = useState([]);
@@ -53,6 +64,81 @@ export default function AssessmentsIndexScreen() {
   const [loadingMaterials, setLoadingMaterials] = useState(false);
   const [materialsError, setMaterialsError] = useState(null);
   const [downloadingMaterialId, setDownloadingMaterialId] = useState(null);
+
+  // Course Announcements state (BB-07I)
+  const [selectedAnnouncementsData, setSelectedAnnouncementsData] = useState(null);
+  const [announcementsModalVisible, setAnnouncementsModalVisible] = useState(false);
+  const [loadingAnnouncements, setLoadingAnnouncements] = useState(false);
+  const [announcementsError, setAnnouncementsError] = useState(null);
+
+  // Course Discussions state (BB-07I)
+  const [selectedDiscussionsData, setSelectedDiscussionsData] = useState(null);
+  const [discussionsModalVisible, setDiscussionsModalVisible] = useState(false);
+  const [loadingDiscussions, setLoadingDiscussions] = useState(false);
+  const [discussionsError, setDiscussionsError] = useState(null);
+  const [activeThread, setActiveThread] = useState(null);
+  const [threadReplies, setThreadReplies] = useState([]);
+  const [loadingReplies, setLoadingReplies] = useState(false);
+  const [replyText, setReplyText] = useState('');
+  const [submittingReply, setSubmittingReply] = useState(false);
+  const [isCreatingThread, setIsCreatingThread] = useState(false);
+  const [newThreadTitle, setNewThreadTitle] = useState('');
+  const [newThreadContent, setNewThreadContent] = useState('');
+  const [creatingThread, setCreatingThread] = useState(false);
+
+  // Course Enrollment modal state
+  const [enrollModalVisible, setEnrollModalVisible] = useState(false);
+  const [availableOfferings, setAvailableOfferings] = useState([]);
+  const [loadingOfferings, setLoadingOfferings] = useState(false);
+  const [enrollError, setEnrollError] = useState(null);
+  const [enrollingOfferingId, setEnrollingOfferingId] = useState(null);
+  const [enrollSuccessMsg, setEnrollSuccessMsg] = useState(null);
+
+  const handleOpenEnrollModal = async () => {
+    setEnrollModalVisible(true);
+    setLoadingOfferings(true);
+    setEnrollError(null);
+    setEnrollSuccessMsg(null);
+    const res = await fetchAvailableOfferings();
+    setLoadingOfferings(false);
+    if (res.success && res.data) {
+      setAvailableOfferings(res.data);
+    } else {
+      setEnrollError(res.error?.message || 'Failed to retrieve available course offerings.');
+    }
+  };
+
+  const handleToggleEnrollment = async (offering) => {
+    setEnrollingOfferingId(offering.id);
+    setEnrollError(null);
+    setEnrollSuccessMsg(null);
+
+    if (offering.isEnrolled) {
+      const res = await unenrollFromOffering(offering.id);
+      setEnrollingOfferingId(null);
+      if (res.success) {
+        setEnrollSuccessMsg(`Dropped ${offering.courseCode}.`);
+        setAvailableOfferings((prev) =>
+          prev.map((o) => (o.id === offering.id ? { ...o, isEnrolled: false } : o))
+        );
+        loadAssessments();
+      } else {
+        setEnrollError(res.error?.message || 'Failed to drop course offering.');
+      }
+    } else {
+      const res = await enrollInOffering(offering.id);
+      setEnrollingOfferingId(null);
+      if (res.success) {
+        setEnrollSuccessMsg(`Enrolled in ${offering.courseCode} successfully!`);
+        setAvailableOfferings((prev) =>
+          prev.map((o) => (o.id === offering.id ? { ...o, isEnrolled: true } : o))
+        );
+        loadAssessments();
+      } else {
+        setEnrollError(res.error?.message || 'Failed to enroll in course offering.');
+      }
+    }
+  };
 
   const loadAssessments = useCallback(async () => {
     setErrorMsg(null);
@@ -178,6 +264,112 @@ export default function AssessmentsIndexScreen() {
     const sizes = ['B', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  };
+
+  const handleViewAnnouncements = async (item) => {
+    setSelectedAnnouncementsData({
+      courseCode: item.courseCode,
+      courseTitle: item.courseTitle,
+      offeringId: item.offeringId,
+      announcements: [],
+    });
+    setAnnouncementsModalVisible(true);
+    setLoadingAnnouncements(true);
+    setAnnouncementsError(null);
+
+    const res = await fetchCourseAnnouncements(item.offeringId);
+    setLoadingAnnouncements(false);
+    if (res.success && res.data) {
+      setSelectedAnnouncementsData((prev) => ({
+        ...prev,
+        announcements: res.data.announcements || [],
+      }));
+    } else {
+      setAnnouncementsError(res.error?.message || 'Failed to retrieve course announcements.');
+    }
+  };
+
+  const handleViewDiscussions = async (item) => {
+    setSelectedDiscussionsData({
+      courseCode: item.courseCode,
+      courseTitle: item.courseTitle,
+      offeringId: item.offeringId,
+      discussions: [],
+    });
+    setActiveThread(null);
+    setIsCreatingThread(false);
+    setDiscussionsModalVisible(true);
+    setLoadingDiscussions(true);
+    setDiscussionsError(null);
+
+    const res = await fetchCourseDiscussions(item.offeringId);
+    setLoadingDiscussions(false);
+    if (res.success && res.data) {
+      setSelectedDiscussionsData((prev) => ({
+        ...prev,
+        discussions: res.data.discussions || [],
+      }));
+    } else {
+      setDiscussionsError(res.error?.message || 'Failed to retrieve course discussions.');
+    }
+  };
+
+  const handleOpenThread = async (thread) => {
+    setActiveThread(thread);
+    setLoadingReplies(true);
+    setThreadReplies([]);
+    setReplyText('');
+
+    const res = await fetchDiscussionDetails(selectedDiscussionsData.offeringId, thread.id);
+    setLoadingReplies(false);
+    if (res.success && res.data) {
+      setActiveThread(res.data.discussion);
+      setThreadReplies(res.data.replies || []);
+    }
+  };
+
+  const handleSendReply = async () => {
+    if (!replyText.trim() || !activeThread || submittingReply) return;
+    setSubmittingReply(true);
+
+    const res = await replyToCourseDiscussion(
+      selectedDiscussionsData.offeringId,
+      activeThread.id,
+      replyText.trim()
+    );
+    setSubmittingReply(false);
+    if (res.success && res.data) {
+      setThreadReplies((prev) => [...prev, res.data]);
+      setReplyText('');
+    } else {
+      alert(res.error?.message || 'Failed to post reply.');
+    }
+  };
+
+  const handleCreateThreadSubmit = async () => {
+    if (!newThreadTitle.trim() || !newThreadContent.trim() || creatingThread) return;
+    setCreatingThread(true);
+
+    const res = await createCourseDiscussion(selectedDiscussionsData.offeringId, {
+      title: newThreadTitle.trim(),
+      content: newThreadContent.trim(),
+    });
+    setCreatingThread(false);
+    if (res.success && res.data) {
+      setIsCreatingThread(false);
+      setNewThreadTitle('');
+      setNewThreadContent('');
+      // Refresh discussions
+      const listRes = await fetchCourseDiscussions(selectedDiscussionsData.offeringId);
+      if (listRes.success && listRes.data) {
+        setSelectedDiscussionsData((prev) => ({
+          ...prev,
+          discussions: listRes.data.discussions || [],
+        }));
+      }
+    } else {
+      alert(res.error?.message || 'Failed to create discussion topic.');
+    }
   };
 
   const getStatusBadge = (item) => {
@@ -315,6 +507,22 @@ export default function AssessmentsIndexScreen() {
             <Text style={[styles.attendanceBtnText, { color: '#0284C7' }]}>Materials</Text>
           </TouchableOpacity>
 
+          <TouchableOpacity
+            style={[styles.attendanceBtn, { borderColor: theme.border || '#D1D5DB' }]}
+            onPress={() => handleViewAnnouncements(item)}
+          >
+            <Ionicons name="megaphone-outline" size={15} color="#D97706" style={{ marginRight: 4 }} />
+            <Text style={[styles.attendanceBtnText, { color: '#D97706' }]}>Notices</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.attendanceBtn, { borderColor: theme.border || '#D1D5DB' }]}
+            onPress={() => handleViewDiscussions(item)}
+          >
+            <Ionicons name="chatbubbles-outline" size={15} color="#4F46E5" style={{ marginRight: 4 }} />
+            <Text style={[styles.attendanceBtnText, { color: '#4F46E5' }]}>Discussions</Text>
+          </TouchableOpacity>
+
           {item.studentAttemptStatus === 'IN_PROGRESS' ? (
             <TouchableOpacity
               style={[styles.actionBtn, { backgroundColor: '#F59E0B' }]}
@@ -384,7 +592,14 @@ export default function AssessmentsIndexScreen() {
             Official academic evaluations
           </Text>
         </View>
-        <View style={{ width: 32 }} />
+        <TouchableOpacity
+          style={[styles.headerEnrollBtn, { backgroundColor: theme.primary + '18' }]}
+          onPress={handleOpenEnrollModal}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Ionicons name="school-outline" size={16} color={theme.primary} style={{ marginRight: 4 }} />
+          <Text style={[styles.headerEnrollText, { color: theme.primary }]}>Enroll</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Content */}
@@ -420,6 +635,14 @@ export default function AssessmentsIndexScreen() {
           <Text style={[styles.emptySubtitle, { color: theme.textSecondary || '#6B7280' }]}>
             There are currently no official course assessments scheduled for your enrolled courses.
           </Text>
+          <TouchableOpacity
+            style={[styles.primaryActionBtn, { backgroundColor: theme.primary }]}
+            onPress={handleOpenEnrollModal}
+          >
+            <Ionicons name="school-outline" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+            <Text style={styles.primaryActionBtnText}>Browse & Enroll in Courses</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity
             style={[styles.refreshBtn, { borderColor: theme.border || '#D1D5DB' }]}
             onPress={onRefresh}
@@ -892,6 +1115,949 @@ export default function AssessmentsIndexScreen() {
                 <Text style={styles.modalActionBtnText}>Close</Text>
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Course Announcements Modal (BB-07I) */}
+      <Modal
+        visible={announcementsModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setAnnouncementsModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View
+            style={[
+              styles.modalContent,
+              { backgroundColor: isDarkMode ? '#111827' : '#FFFFFF' },
+            ]}
+          >
+            {/* Modal Header */}
+            <View
+              style={[
+                styles.modalHeader,
+                { borderBottomColor: theme.border || '#E5E7EB' },
+              ]}
+            >
+              <View style={{ flex: 1, marginRight: 8 }}>
+                <Text
+                  style={[styles.modalTitle, { color: theme.text || '#111827' }]}
+                  numberOfLines={1}
+                >
+                  {selectedAnnouncementsData?.courseCode} Announcements
+                </Text>
+                <Text
+                  style={[
+                    styles.modalSubtitle,
+                    { color: theme.textSecondary || '#6B7280' },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {selectedAnnouncementsData?.courseTitle}
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setAnnouncementsModalVisible(false)}
+                style={styles.modalCloseBtn}
+              >
+                <Ionicons
+                  name="close"
+                  size={20}
+                  color={theme.textSecondary || '#6B7280'}
+                />
+              </TouchableOpacity>
+            </View>
+
+            {/* Modal Body */}
+            {loadingAnnouncements ? (
+              <View style={styles.modalLoadingBox}>
+                <ActivityIndicator size="large" color={theme.primary} />
+                <Text
+                  style={[
+                    styles.loadingText,
+                    { color: theme.textSecondary || '#6B7280' },
+                  ]}
+                >
+                  Loading notices...
+                </Text>
+              </View>
+            ) : announcementsError ? (
+              <View style={styles.modalErrorBox}>
+                <Ionicons name="alert-circle-outline" size={36} color="#EF4444" />
+                <Text
+                  style={[styles.errorMessage, { color: theme.text || '#111827' }]}
+                >
+                  {announcementsError}
+                </Text>
+              </View>
+            ) : (
+              <ScrollView
+                style={styles.modalScrollBody}
+                contentContainerStyle={{ paddingBottom: 20 }}
+              >
+                {selectedAnnouncementsData?.announcements?.length === 0 ? (
+                  <View style={styles.emptySessionBox}>
+                    <MaterialCommunityIcons
+                      name="bullhorn-outline"
+                      size={36}
+                      color={theme.textSecondary || '#9CA3AF'}
+                    />
+                    <Text
+                      style={[
+                        styles.emptySessionText,
+                        { color: theme.textSecondary || '#6B7280' },
+                      ]}
+                    >
+                      No published announcements for this course yet.
+                    </Text>
+                  </View>
+                ) : (
+                  selectedAnnouncementsData?.announcements?.map((item) => {
+                    const isUrgent = item.priority === 'URGENT';
+                    const isImportant = item.priority === 'IMPORTANT';
+                    const priorityColor = isUrgent
+                      ? '#DC2626'
+                      : isImportant
+                      ? '#D97706'
+                      : '#6B7280';
+                    const priorityBg = isUrgent
+                      ? '#FEE2E2'
+                      : isImportant
+                      ? '#FEF3C7'
+                      : isDarkMode
+                      ? '#374151'
+                      : '#F3F4F6';
+
+                    return (
+                      <View
+                        key={item.id}
+                        style={[
+                          styles.announcementCard,
+                          {
+                            backgroundColor: isDarkMode ? '#1F2937' : '#F9FAFB',
+                            borderColor: isUrgent
+                              ? '#FCA5A5'
+                              : isImportant
+                              ? '#FCD34D'
+                              : theme.border || '#E5E7EB',
+                          },
+                        ]}
+                      >
+                        <View style={styles.announcementCardHeader}>
+                          <View
+                            style={[
+                              styles.priorityBadge,
+                              { backgroundColor: priorityBg },
+                            ]}
+                          >
+                            <Ionicons
+                              name={
+                                isUrgent
+                                  ? 'flame'
+                                  : isImportant
+                                  ? 'alert-circle'
+                                  : 'information-circle'
+                              }
+                              size={12}
+                              color={priorityColor}
+                              style={{ marginRight: 3 }}
+                            />
+                            <Text
+                              style={[
+                                styles.priorityBadgeText,
+                                { color: priorityColor },
+                              ]}
+                            >
+                              {item.priority}
+                            </Text>
+                          </View>
+                          <Text
+                            style={[
+                              styles.announcementDate,
+                              { color: theme.textSecondary || '#9CA3AF' },
+                            ]}
+                          >
+                            {new Date(
+                              item.publishedAt || item.createdAt
+                            ).toLocaleDateString(undefined, {
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </Text>
+                        </View>
+
+                        <Text
+                          style={[
+                            styles.announcementTitle,
+                            { color: theme.text || '#111827' },
+                          ]}
+                        >
+                          {item.title}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.announcementAuthor,
+                            { color: theme.textSecondary || '#6B7280' },
+                          ]}
+                        >
+                          Posted by {item.author?.fullName || 'Course Lecturer'}
+                        </Text>
+
+                        <Text
+                          style={[
+                            styles.announcementContent,
+                            { color: theme.text || '#374151' },
+                          ]}
+                        >
+                          {item.content}
+                        </Text>
+
+                        {item.attachmentUrl && (
+                          <TouchableOpacity
+                            style={[
+                              styles.attachmentBtn,
+                              { borderColor: theme.border || '#E5E7EB' },
+                            ]}
+                            onPress={() => Linking.openURL(item.attachmentUrl)}
+                          >
+                            <Ionicons
+                              name="link-outline"
+                              size={15}
+                              color={theme.primary}
+                              style={{ marginRight: 4 }}
+                            />
+                            <Text
+                              style={[
+                                styles.attachmentBtnText,
+                                { color: theme.primary },
+                              ]}
+                              numberOfLines={1}
+                            >
+                              {item.attachmentName || 'View Attachment Resource'}
+                            </Text>
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                    );
+                  })
+                )}
+              </ScrollView>
+            )}
+
+            {/* Modal Footer */}
+            <View
+              style={[
+                styles.modalFooter,
+                { borderTopColor: theme.border || '#E5E7EB' },
+              ]}
+            >
+              <TouchableOpacity
+                style={[
+                  styles.modalActionBtn,
+                  { backgroundColor: theme.primary },
+                ]}
+                onPress={() => setAnnouncementsModalVisible(false)}
+              >
+                <Text style={styles.modalActionBtnText}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Course Discussions Modal (BB-07I) */}
+      <Modal
+        visible={discussionsModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => {
+          if (activeThread) {
+            setActiveThread(null);
+          } else {
+            setDiscussionsModalVisible(false);
+          }
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View
+            style={[
+              styles.modalContent,
+              { backgroundColor: isDarkMode ? '#111827' : '#FFFFFF' },
+            ]}
+          >
+            {/* Modal Header */}
+            <View
+              style={[
+                styles.modalHeader,
+                { borderBottomColor: theme.border || '#E5E7EB' },
+              ]}
+            >
+              {activeThread ? (
+                <TouchableOpacity
+                  onPress={() => setActiveThread(null)}
+                  style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}
+                >
+                  <Ionicons
+                    name="arrow-back"
+                    size={20}
+                    color={theme.text || '#111827'}
+                    style={{ marginRight: 8 }}
+                  />
+                  <Text
+                    style={[
+                      styles.modalTitle,
+                      { color: theme.text || '#111827', flex: 1 },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {activeThread.title}
+                  </Text>
+                </TouchableOpacity>
+              ) : (
+                <View style={{ flex: 1, marginRight: 8 }}>
+                  <Text
+                    style={[styles.modalTitle, { color: theme.text || '#111827' }]}
+                    numberOfLines={1}
+                  >
+                    {selectedDiscussionsData?.courseCode} Discussions
+                  </Text>
+                  <Text
+                    style={[
+                      styles.modalSubtitle,
+                      { color: theme.textSecondary || '#6B7280' },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {selectedDiscussionsData?.courseTitle}
+                  </Text>
+                </View>
+              )}
+              <TouchableOpacity
+                onPress={() => setDiscussionsModalVisible(false)}
+                style={styles.modalCloseBtn}
+              >
+                <Ionicons
+                  name="close"
+                  size={20}
+                  color={theme.textSecondary || '#6B7280'}
+                />
+              </TouchableOpacity>
+            </View>
+
+            {/* Modal Body */}
+            {loadingDiscussions ? (
+              <View style={styles.modalLoadingBox}>
+                <ActivityIndicator size="large" color={theme.primary} />
+                <Text
+                  style={[
+                    styles.loadingText,
+                    { color: theme.textSecondary || '#6B7280' },
+                  ]}
+                >
+                  Loading discussions...
+                </Text>
+              </View>
+            ) : discussionsError ? (
+              <View style={styles.modalErrorBox}>
+                <Ionicons name="alert-circle-outline" size={36} color="#EF4444" />
+                <Text
+                  style={[styles.errorMessage, { color: theme.text || '#111827' }]}
+                >
+                  {discussionsError}
+                </Text>
+              </View>
+            ) : activeThread ? (
+              /* Thread Detail & Replies View */
+              <View style={{ flex: 1 }}>
+                <ScrollView
+                  style={styles.modalScrollBody}
+                  contentContainerStyle={{ paddingBottom: 20 }}
+                >
+                  {/* Topic Prompt Card */}
+                  <View
+                    style={[
+                      styles.discussionCard,
+                      {
+                        backgroundColor: isDarkMode ? '#1F2937' : '#F9FAFB',
+                        borderColor: theme.border || '#E5E7EB',
+                      },
+                    ]}
+                  >
+                    <View style={styles.announcementCardHeader}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Text
+                          style={[
+                            styles.threadAuthorName,
+                            { color: theme.text || '#111827' },
+                          ]}
+                        >
+                          {activeThread.author?.fullName}
+                        </Text>
+                        <View
+                          style={[
+                            styles.rolePill,
+                            {
+                              backgroundColor:
+                                activeThread.authorRole === 'LECTURER'
+                                  ? '#EDE9FE'
+                                  : isDarkMode
+                                  ? '#374151'
+                                  : '#E5E7EB',
+                            },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.rolePillText,
+                              {
+                                color:
+                                  activeThread.authorRole === 'LECTURER'
+                                    ? '#7C3AED'
+                                    : '#4B5563',
+                              },
+                            ]}
+                          >
+                            {activeThread.authorRole}
+                          </Text>
+                        </View>
+                      </View>
+                      <Text
+                        style={[
+                          styles.announcementDate,
+                          { color: theme.textSecondary || '#9CA3AF' },
+                        ]}
+                      >
+                        {new Date(activeThread.createdAt).toLocaleDateString()}
+                      </Text>
+                    </View>
+
+                    <Text
+                      style={[
+                        styles.announcementContent,
+                        { color: theme.text || '#1F2937', marginTop: 8 },
+                      ]}
+                    >
+                      {activeThread.content}
+                    </Text>
+                  </View>
+
+                  <Text
+                    style={[
+                      styles.sectionHeading,
+                      { color: theme.text || '#111827', marginTop: 12 },
+                    ]}
+                  >
+                    Replies ({threadReplies.length})
+                  </Text>
+
+                  {loadingReplies ? (
+                    <ActivityIndicator size="small" color={theme.primary} style={{ marginVertical: 12 }} />
+                  ) : threadReplies.length === 0 ? (
+                    <Text
+                      style={[
+                        styles.emptySessionText,
+                        { color: theme.textSecondary || '#6B7280', marginVertical: 12 },
+                      ]}
+                    >
+                      No replies yet. Join the conversation below!
+                    </Text>
+                  ) : (
+                    threadReplies.map((r) => (
+                      <View
+                        key={r.id}
+                        style={[
+                          styles.replyCard,
+                          {
+                            backgroundColor:
+                              r.authorRole === 'LECTURER'
+                                ? isDarkMode
+                                  ? '#2E1065'
+                                  : '#FAF5FF'
+                                : isDarkMode
+                                ? '#1F2937'
+                                : '#F3F4F6',
+                            borderColor:
+                              r.authorRole === 'LECTURER'
+                                ? '#DDD6FE'
+                                : theme.border || '#E5E7EB',
+                          },
+                        ]}
+                      >
+                        <View style={styles.announcementCardHeader}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <Text
+                              style={[
+                                styles.replyAuthorName,
+                                { color: theme.text || '#111827' },
+                              ]}
+                            >
+                              {r.author?.fullName}
+                            </Text>
+                            <View
+                              style={[
+                                styles.rolePill,
+                                {
+                                  backgroundColor:
+                                    r.authorRole === 'LECTURER'
+                                      ? '#EDE9FE'
+                                      : isDarkMode
+                                      ? '#374151'
+                                      : '#E5E7EB',
+                                },
+                              ]}
+                            >
+                              <Text
+                                style={[
+                                  styles.rolePillText,
+                                  {
+                                    color:
+                                      r.authorRole === 'LECTURER'
+                                        ? '#7C3AED'
+                                        : '#4B5563',
+                                  },
+                                ]}
+                              >
+                                {r.authorRole}
+                              </Text>
+                            </View>
+                          </View>
+                          <Text
+                            style={[
+                              styles.announcementDate,
+                              { color: theme.textSecondary || '#9CA3AF' },
+                            ]}
+                          >
+                            {new Date(r.createdAt).toLocaleDateString(undefined, {
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </Text>
+                        </View>
+                        <Text
+                          style={[
+                            styles.replyContent,
+                            { color: theme.text || '#374151', marginTop: 4 },
+                          ]}
+                        >
+                          {r.content}
+                        </Text>
+                      </View>
+                    ))
+                  )}
+                </ScrollView>
+
+                {/* Reply Composer or Locked Banner */}
+                {activeThread.isLocked ? (
+                  <View style={styles.lockedBanner}>
+                    <Ionicons name="lock-closed" size={16} color="#D97706" style={{ marginRight: 6 }} />
+                    <Text style={styles.lockedBannerText}>
+                      This topic is locked by the lecturer. Replies are disabled.
+                    </Text>
+                  </View>
+                ) : (
+                  <View
+                    style={[
+                      styles.composerBox,
+                      {
+                        borderTopColor: theme.border || '#E5E7EB',
+                        backgroundColor: isDarkMode ? '#111827' : '#FFFFFF',
+                      },
+                    ]}
+                  >
+                    <TextInput
+                      style={[
+                        styles.composerInput,
+                        {
+                          backgroundColor: isDarkMode ? '#1F2937' : '#F9FAFB',
+                          color: theme.text || '#111827',
+                          borderColor: theme.border || '#D1D5DB',
+                        },
+                      ]}
+                      placeholder="Write a reply..."
+                      placeholderTextColor={theme.textSecondary || '#9CA3AF'}
+                      value={replyText}
+                      onChangeText={setReplyText}
+                      multiline
+                    />
+                    <TouchableOpacity
+                      style={[
+                        styles.composerSendBtn,
+                        { backgroundColor: theme.primary },
+                      ]}
+                      disabled={!replyText.trim() || submittingReply}
+                      onPress={handleSendReply}
+                    >
+                      {submittingReply ? (
+                        <ActivityIndicator size="small" color="#FFFFFF" />
+                      ) : (
+                        <Ionicons name="send" size={16} color="#FFFFFF" />
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+            ) : (
+              /* Threads List & Create Topic View */
+              <ScrollView
+                style={styles.modalScrollBody}
+                contentContainerStyle={{ paddingBottom: 20 }}
+              >
+                {/* Header Action: Start New Discussion */}
+                {!isCreatingThread ? (
+                  <TouchableOpacity
+                    style={[
+                      styles.newTopicTriggerBtn,
+                      {
+                        borderColor: theme.border || '#D1D5DB',
+                        backgroundColor: isDarkMode ? '#1F2937' : '#F9FAFB',
+                      },
+                    ]}
+                    onPress={() => setIsCreatingThread(true)}
+                  >
+                    <Ionicons name="add-circle-outline" size={18} color={theme.primary} style={{ marginRight: 6 }} />
+                    <Text style={[styles.newTopicTriggerText, { color: theme.primary }]}>
+                      Start a New Discussion Topic
+                    </Text>
+                  </TouchableOpacity>
+                ) : (
+                  <View
+                    style={[
+                      styles.createTopicBox,
+                      {
+                        backgroundColor: isDarkMode ? '#1F2937' : '#F9FAFB',
+                        borderColor: theme.border || '#E5E7EB',
+                      },
+                    ]}
+                  >
+                    <Text style={[styles.createTopicHeading, { color: theme.text || '#111827' }]}>
+                      New Discussion Topic
+                    </Text>
+                    <TextInput
+                      style={[
+                        styles.formInput,
+                        {
+                          backgroundColor: isDarkMode ? '#111827' : '#FFFFFF',
+                          color: theme.text || '#111827',
+                          borderColor: theme.border || '#D1D5DB',
+                        },
+                      ]}
+                      placeholder="Topic Title (e.g. Question on Lecture 3)"
+                      placeholderTextColor={theme.textSecondary || '#9CA3AF'}
+                      value={newThreadTitle}
+                      onChangeText={setNewThreadTitle}
+                    />
+                    <TextInput
+                      style={[
+                        styles.formInput,
+                        {
+                          backgroundColor: isDarkMode ? '#111827' : '#FFFFFF',
+                          color: theme.text || '#111827',
+                          borderColor: theme.border || '#D1D5DB',
+                          height: 80,
+                          textAlignVertical: 'top',
+                          marginTop: 8,
+                        },
+                      ]}
+                      placeholder="What would you like to discuss with the class?"
+                      placeholderTextColor={theme.textSecondary || '#9CA3AF'}
+                      value={newThreadContent}
+                      onChangeText={setNewThreadContent}
+                      multiline
+                    />
+                    <View style={styles.createTopicBtnRow}>
+                      <TouchableOpacity
+                        style={[styles.smallBtn, { borderColor: theme.border || '#D1D5DB' }]}
+                        onPress={() => {
+                          setIsCreatingThread(false);
+                          setNewThreadTitle('');
+                          setNewThreadContent('');
+                        }}
+                      >
+                        <Text style={[styles.smallBtnText, { color: theme.textSecondary || '#6B7280' }]}>
+                          Cancel
+                        </Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={[styles.smallActionBtn, { backgroundColor: theme.primary }]}
+                        disabled={!newThreadTitle.trim() || !newThreadContent.trim() || creatingThread}
+                        onPress={handleCreateThreadSubmit}
+                      >
+                        {creatingThread ? (
+                          <ActivityIndicator size="small" color="#FFFFFF" />
+                        ) : (
+                          <Text style={styles.smallActionBtnText}>Post Topic</Text>
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                )}
+
+                {/* Discussions List */}
+                {selectedDiscussionsData?.discussions?.length === 0 ? (
+                  <View style={styles.emptySessionBox}>
+                    <MaterialCommunityIcons
+                      name="chat-question-outline"
+                      size={36}
+                      color={theme.textSecondary || '#9CA3AF'}
+                    />
+                    <Text
+                      style={[
+                        styles.emptySessionText,
+                        { color: theme.textSecondary || '#6B7280' },
+                      ]}
+                    >
+                      No discussions in this course yet. Be the first to start a conversation!
+                    </Text>
+                  </View>
+                ) : (
+                  selectedDiscussionsData?.discussions?.map((d) => (
+                    <TouchableOpacity
+                      key={d.id}
+                      style={[
+                        styles.discussionCard,
+                        {
+                          backgroundColor: isDarkMode ? '#1F2937' : '#F9FAFB',
+                          borderColor: d.isPinned ? '#818CF8' : theme.border || '#E5E7EB',
+                        },
+                      ]}
+                      activeOpacity={0.7}
+                      onPress={() => handleOpenThread(d)}
+                    >
+                      <View style={styles.announcementCardHeader}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                          {d.isPinned && (
+                            <View style={styles.pinnedPill}>
+                              <Ionicons name="pin" size={11} color="#4F46E5" />
+                              <Text style={styles.pinnedPillText}>PINNED</Text>
+                            </View>
+                          )}
+                          {d.isLocked && (
+                            <View style={styles.lockedPill}>
+                              <Ionicons name="lock-closed" size={11} color="#D97706" />
+                              <Text style={styles.lockedPillText}>LOCKED</Text>
+                            </View>
+                          )}
+                          <Text
+                            style={[
+                              styles.threadAuthorName,
+                              { color: theme.textSecondary || '#6B7280' },
+                            ]}
+                          >
+                            {d.author?.fullName}
+                          </Text>
+                        </View>
+
+                        <View style={styles.replyCountPill}>
+                          <Ionicons name="chatbubble-outline" size={11} color="#4F46E5" style={{ marginRight: 3 }} />
+                          <Text style={styles.replyCountText}>{d.replyCount}</Text>
+                        </View>
+                      </View>
+
+                      <Text
+                        style={[
+                          styles.discussionTitle,
+                          { color: theme.text || '#111827' },
+                        ]}
+                        numberOfLines={2}
+                      >
+                        {d.title}
+                      </Text>
+
+                      <Text
+                        style={[
+                          styles.discussionSnippet,
+                          { color: theme.textSecondary || '#6B7280' },
+                        ]}
+                        numberOfLines={2}
+                      >
+                        {d.content}
+                      </Text>
+                    </TouchableOpacity>
+                  ))
+                )}
+              </ScrollView>
+            )}
+
+            {/* Modal Footer (only when not in thread detail to maximize space) */}
+            {!activeThread && (
+              <View
+                style={[
+                  styles.modalFooter,
+                  { borderTopColor: theme.border || '#E5E7EB' },
+                ]}
+              >
+                <TouchableOpacity
+                  style={[
+                    styles.modalActionBtn,
+                    { backgroundColor: theme.primary },
+                  ]}
+                  onPress={() => setDiscussionsModalVisible(false)}
+                >
+                  <Text style={styles.modalActionBtnText}>Close</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        </View>
+      </Modal>
+      {/* Course Enrollment Modal */}
+      <Modal
+        visible={enrollModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setEnrollModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View
+            style={[
+              styles.modalContent,
+              { backgroundColor: isDarkMode ? '#111827' : '#FFFFFF' },
+            ]}
+          >
+            {/* Modal Header */}
+            <View
+              style={[
+                styles.modalHeader,
+                { borderBottomColor: theme.border || '#E5E7EB' },
+              ]}
+            >
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={[
+                    styles.modalTitle,
+                    { color: theme.text || '#111827' },
+                  ]}
+                >
+                  Course Enrollment
+                </Text>
+                <Text
+                  style={[
+                    styles.modalSubtitle,
+                    { color: theme.textSecondary || '#6B7280' },
+                  ]}
+                >
+                  Select and enroll in your academic course offerings
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setEnrollModalVisible(false)}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                style={styles.closeBtn}
+              >
+                <Ionicons
+                  name="close"
+                  size={24}
+                  color={theme.textSecondary || '#6B7280'}
+                />
+              </TouchableOpacity>
+            </View>
+
+            {/* Notifications / Errors */}
+            {enrollError ? (
+              <View style={styles.enrollErrorBox}>
+                <Ionicons name="alert-circle" size={18} color="#EF4444" style={{ marginRight: 6 }} />
+                <Text style={styles.enrollErrorText}>{enrollError}</Text>
+              </View>
+            ) : null}
+
+            {enrollSuccessMsg ? (
+              <View style={styles.enrollSuccessBox}>
+                <Ionicons name="checkmark-circle" size={18} color="#10B981" style={{ marginRight: 6 }} />
+                <Text style={styles.enrollSuccessText}>{enrollSuccessMsg}</Text>
+              </View>
+            ) : null}
+
+            {/* Modal Body */}
+            {loadingOfferings ? (
+              <View style={[styles.centered, { paddingVertical: 48 }]}>
+                <ActivityIndicator size="large" color={theme.primary} />
+                <Text style={[styles.loadingText, { color: theme.textSecondary || '#6B7280', marginTop: 12 }]}>
+                  Loading academic offerings...
+                </Text>
+              </View>
+            ) : availableOfferings.length === 0 ? (
+              <View style={[styles.centered, { paddingVertical: 48 }]}>
+                <MaterialCommunityIcons name="book-open-page-variant-outline" size={54} color={theme.textSecondary || '#9CA3AF'} />
+                <Text style={[styles.emptyTitle, { color: theme.text || '#111827', marginTop: 12 }]}>
+                  No Offerings Available
+                </Text>
+                <Text style={[styles.emptySubtitle, { color: theme.textSecondary || '#6B7280' }]}>
+                  There are currently no active course offerings available for enrollment.
+                </Text>
+              </View>
+            ) : (
+              <FlatList
+                data={availableOfferings}
+                keyExtractor={(item) => item.id}
+                contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
+                renderItem={({ item }) => (
+                  <View
+                    style={[
+                      styles.enrollmentCard,
+                      {
+                        backgroundColor: isDarkMode ? '#1F2937' : '#F9FAFB',
+                        borderColor: item.isEnrolled ? (theme.primary + '50') : (theme.border || '#E5E7EB'),
+                      },
+                    ]}
+                  >
+                    <View style={{ flex: 1, marginRight: 12 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                        <Text style={[styles.enrollCardCode, { color: theme.text || '#111827' }]}>
+                          {item.courseCode}
+                        </Text>
+                        {item.isEnrolled ? (
+                          <View style={styles.enrolledBadge}>
+                            <Ionicons name="checkmark-circle" size={12} color="#059669" />
+                            <Text style={styles.enrolledBadgeText}>Enrolled</Text>
+                          </View>
+                        ) : null}
+                      </View>
+                      <Text style={[styles.enrollCardTitle, { color: theme.textSecondary || '#4B5563' }]} numberOfLines={2}>
+                        {item.courseTitle}
+                      </Text>
+                      <Text style={[styles.enrollCardMeta, { color: theme.textSecondary || '#9CA3AF' }]}>
+                        Level {item.level} • {item.semester} Sem • {item.academicSession}
+                      </Text>
+                      {item.departmentName ? (
+                        <Text style={[styles.enrollCardDept, { color: theme.primary }]}>
+                          {item.departmentName}
+                        </Text>
+                      ) : null}
+                    </View>
+
+                    <TouchableOpacity
+                      style={[
+                        styles.enrollActionBtn,
+                        item.isEnrolled
+                          ? { backgroundColor: 'transparent', borderColor: '#EF4444', borderWidth: 1 }
+                          : { backgroundColor: theme.primary },
+                      ]}
+                      disabled={enrollingOfferingId === item.id}
+                      onPress={() => handleToggleEnrollment(item)}
+                    >
+                      {enrollingOfferingId === item.id ? (
+                        <ActivityIndicator size="small" color={item.isEnrolled ? '#EF4444' : '#FFFFFF'} />
+                      ) : (
+                        <Text
+                          style={[
+                            styles.enrollActionBtnText,
+                            item.isEnrolled ? { color: '#EF4444' } : { color: '#FFFFFF' },
+                          ]}
+                        >
+                          {item.isEnrolled ? 'Drop' : 'Enroll'}
+                        </Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                )}
+              />
+            )}
           </View>
         </View>
       </Modal>
@@ -1388,6 +2554,366 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  modalLoadingBox: {
+    padding: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalErrorBox: {
+    padding: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  announcementCard: {
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 12,
+  },
+  announcementCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  priorityBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  priorityBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  announcementDate: {
+    fontSize: 10,
+  },
+  announcementTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  announcementAuthor: {
+    fontSize: 11,
+    marginBottom: 6,
+  },
+  announcementContent: {
+    fontSize: 12,
+    lineHeight: 18,
+    marginBottom: 8,
+  },
+  attachmentBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignSelf: 'flex-start',
+    marginTop: 4,
+  },
+  attachmentBtnText: {
+    fontSize: 11,
+    fontWeight: '600',
+    maxWidth: 240,
+  },
+  discussionCard: {
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 10,
+  },
+  threadAuthorName: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  rolePill: {
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 4,
+  },
+  rolePillText: {
+    fontSize: 9,
+    fontWeight: '700',
+  },
+  replyCard: {
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginBottom: 8,
+  },
+  replyAuthorName: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  replyContent: {
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  lockedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF3C7',
+    padding: 10,
+    borderRadius: 8,
+    margin: 12,
+  },
+  lockedBannerText: {
+    fontSize: 11,
+    color: '#92400E',
+    fontWeight: '600',
+    flex: 1,
+  },
+  composerBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 10,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    gap: 8,
+  },
+  composerInput: {
+    flex: 1,
+    minHeight: 38,
+    maxHeight: 80,
+    borderRadius: 10,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 12,
+  },
+  composerSendBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  newTopicTriggerBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginBottom: 14,
+  },
+  newTopicTriggerText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  createTopicBox: {
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 14,
+  },
+  createTopicHeading: {
+    fontSize: 13,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  formInput: {
+    borderRadius: 8,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    fontSize: 12,
+  },
+  createTopicBtnRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 8,
+    marginTop: 10,
+  },
+  smallBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  smallBtnText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  smallActionBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  smallActionBtnText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  pinnedPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    backgroundColor: '#EEF2FF',
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 4,
+  },
+  pinnedPillText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#4F46E5',
+  },
+  lockedPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 4,
+  },
+  lockedPillText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#D97706',
+  },
+  replyCountPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EEF2FF',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+  },
+  replyCountText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#4F46E5',
+  },
+  discussionTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    marginBottom: 3,
+  },
+  discussionSnippet: {
+    fontSize: 11,
+    lineHeight: 16,
+  },
+  headerEnrollBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  headerEnrollText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  primaryActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    marginTop: 18,
+    marginBottom: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  primaryActionBtnText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  enrollErrorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEE2E2',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginHorizontal: 16,
+    marginTop: 12,
+    borderRadius: 8,
+  },
+  enrollErrorText: {
+    color: '#B91C1C',
+    fontSize: 12,
+    fontWeight: '500',
+    flex: 1,
+  },
+  enrollSuccessBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#D1FAE5',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginHorizontal: 16,
+    marginTop: 12,
+    borderRadius: 8,
+  },
+  enrollSuccessText: {
+    color: '#065F46',
+    fontSize: 12,
+    fontWeight: '500',
+    flex: 1,
+  },
+  enrollmentCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 10,
+  },
+  enrollCardCode: {
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  enrollCardTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  enrollCardMeta: {
+    fontSize: 11,
+    marginBottom: 2,
+  },
+  enrollCardDept: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  enrolledBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#D1FAE5',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    gap: 3,
+  },
+  enrolledBadgeText: {
+    color: '#059669',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  enrollActionBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+    minWidth: 70,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  enrollActionBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
   },
 });
 

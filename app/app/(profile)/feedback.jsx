@@ -457,7 +457,7 @@ export default function FeedbackScreen() {
                 2. Which features have you used? Rate their usefulness:
               </Text>
               <Text style={[styles.helperText, { color: theme.textSecondary }]}>
-                Unchecked features will be marked as "Have Not Used".
+                Unchecked features will be marked as &quot;Have Not Used&quot;.
               </Text>
 
               {FEATURES_LIST.map((feat) => {
@@ -678,7 +678,7 @@ export default function FeedbackScreen() {
                 8. Technical Difficulties & Frictions
               </Text>
               <Text style={[styles.helperText, { color: theme.textSecondary }]}>
-                Select any issues you have experienced (mutually exclusive with "None"):
+                Select any issues you have experienced (mutually exclusive with &quot;None&quot;):
               </Text>
 
               {TECHNICAL_FRICTIONS.map((fric) => {

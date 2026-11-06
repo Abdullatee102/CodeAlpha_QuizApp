@@ -124,6 +124,44 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
+    // Automatic retry for transient cold-start / network failures on idempotent GET requests.
+    const isIdempotentGet = originalRequest.method?.toUpperCase() === 'GET';
+    const isNetworkOrTimeout =
+      error.code === 'ERR_NETWORK' ||
+      error.code === 'ECONNABORTED' ||
+      error.code === 'ETIMEDOUT' ||
+      error.message === 'Network Error' ||
+      (!error.response && Boolean(error.request));
+    const isTransientGatewayStatus =
+      status === 502 || status === 503 || status === 504;
+
+    const MAX_NETWORK_RETRIES = 2;
+    const currentRetries = originalRequest._networkRetryCount || 0;
+
+    if (
+      isIdempotentGet &&
+      (isNetworkOrTimeout || isTransientGatewayStatus) &&
+      currentRetries < MAX_NETWORK_RETRIES
+    ) {
+      originalRequest._networkRetryCount = currentRetries + 1;
+      const delayMs = originalRequest._networkRetryCount * 2000;
+
+      console.log(
+        `[API] Transient error / cold start detected (${error.code || status || error.message}). ` +
+        `Retrying GET ${requestUrl} (attempt ${originalRequest._networkRetryCount}/${MAX_NETWORK_RETRIES}) in ${delayMs}ms...`
+      );
+
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+
+      const currentToken = storage.getString('userToken');
+      if (currentToken) {
+        originalRequest.headers = originalRequest.headers || {};
+        originalRequest.headers.Authorization = `Bearer ${currentToken}`;
+      }
+
+      return api(originalRequest);
+    }
+
     // Only refresh an authenticated request after a 401.
     if (
       status === 401 &&

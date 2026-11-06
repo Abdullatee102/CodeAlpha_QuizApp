@@ -574,7 +574,7 @@ export default function AssessmentExamScreen() {
           {/* Question Metadata Bar */}
           <View style={styles.questionMetaRow}>
             <View style={styles.qTypePill}>
-              <Text style={styles.qTypePillText}>
+              <Text style={[styles.qTypePillText, { color: theme.primary }]}>
                 {String(currentQuestion.type).toUpperCase()}
               </Text>
             </View>
@@ -957,7 +957,7 @@ const styles = StyleSheet.create({
   qTypePillText: {
     fontSize: 11,
     fontWeight: '700',
-    color: theme.primary,
+    color: '#005D4B',
   },
   marksText: {
     fontSize: 12,

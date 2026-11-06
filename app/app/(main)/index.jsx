@@ -1174,7 +1174,7 @@ export default function HomeScreen() {
                   },
                 ]}
               >
-                We couldn't load the faculties right now.
+                We couldn&apos;t load the faculties right now.
               </Text>
 
               <TouchableOpacity
