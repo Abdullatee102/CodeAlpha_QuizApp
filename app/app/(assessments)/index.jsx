@@ -39,9 +39,13 @@ export default function AssessmentsIndexScreen() {
     fetchStudentEnrollments,
     enrollInOffering,
     unenrollFromOffering,
+    markSelfAttendance,
   } = useQuizStore();
 
   const [assessments, setAssessments] = useState([]);
+  const [enrollments, setEnrollments] = useState([]);
+  const [activeTab, setActiveTab] = useState('courses'); // 'courses' | 'assessments'
+  const [markingAttendanceSessionId, setMarkingAttendanceSessionId] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
@@ -121,7 +125,7 @@ export default function AssessmentsIndexScreen() {
         setAvailableOfferings((prev) =>
           prev.map((o) => (o.id === offering.id ? { ...o, isEnrolled: false } : o))
         );
-        loadAssessments();
+        loadData();
       } else {
         setEnrollError(res.error?.message || 'Failed to drop course offering.');
       }
@@ -133,7 +137,7 @@ export default function AssessmentsIndexScreen() {
         setAvailableOfferings((prev) =>
           prev.map((o) => (o.id === offering.id ? { ...o, isEnrolled: true } : o))
         );
-        loadAssessments();
+        loadData();
       } else {
         setEnrollError(res.error?.message || 'Failed to enroll in course offering.');
       }
@@ -153,12 +157,12 @@ export default function AssessmentsIndexScreen() {
   }, [fetchAvailableAssessments]);
 
   useEffect(() => {
-    loadAssessments();
+    loadData();
   }, [loadAssessments]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    loadAssessments();
+    loadData();
   }, [loadAssessments]);
 
   const formatSchedule = (isoString) => {
@@ -416,6 +420,179 @@ export default function AssessmentsIndexScreen() {
     });
   };
 
+  const renderCourseCard = ({ item }) => {
+    const courseAssessments = assessments.filter((a) => a.offeringId === item.offeringId);
+    const hasLiveAssessment = courseAssessments.some(
+      (a) => a.operationalStatus === 'AVAILABLE_NOW' || a.studentAttemptStatus === 'IN_PROGRESS'
+    );
+
+    return (
+      <View
+        style={[
+          styles.card,
+          {
+            backgroundColor: theme.card || '#FFFFFF',
+            borderColor: theme.border || '#E5E7EB',
+          },
+        ]}
+      >
+        <View style={styles.cardHeader}>
+          <View style={styles.courseBadge}>
+            <Text style={styles.courseBadgeText}>{item.courseCode || 'COURSE'}</Text>
+          </View>
+          <View style={[styles.courseLevelBadge, { backgroundColor: isDarkMode ? '#374151' : '#F3F4F6' }]}>
+            <Text style={[styles.courseLevelBadgeText, { color: theme.textSecondary || '#6B7280' }]}>
+              {item.level ? `${item.level}L` : 'Level'} {item.semester ? `• Sem ${item.semester}` : ''}
+            </Text>
+          </View>
+          <View style={[styles.statusBadge, { backgroundColor: '#D1FAE5' }]}>
+            <Ionicons name="checkmark-circle" size={13} color="#059669" style={{ marginRight: 3 }} />
+            <Text style={[styles.statusBadgeText, { color: '#059669' }]}>
+              {item.enrollmentStatus || 'ENROLLED'}
+            </Text>
+          </View>
+        </View>
+
+        <Text style={[styles.cardTitle, { color: theme.text || '#111827' }]} numberOfLines={2}>
+          {item.courseTitle}
+        </Text>
+
+        <Text style={[styles.cardSubtitle, { color: theme.textSecondary || '#6B7280' }]}>
+          {item.departmentName || 'Academic Department'} • Session {item.academicSession || 'Current'}
+        </Text>
+
+        {hasLiveAssessment && (
+          <TouchableOpacity
+            style={styles.liveAssessmentBanner}
+            onPress={() => setActiveTab('assessments')}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="radio-button-on" size={14} color="#059669" style={{ marginRight: 6 }} />
+            <Text style={styles.liveAssessmentBannerText}>
+              Active assessment open now — Tap to take
+            </Text>
+            <Ionicons name="chevron-forward" size={14} color="#059669" />
+          </TouchableOpacity>
+        )}
+
+        {/* 4 Academic Quick Actions */}
+        <View style={styles.courseActionGrid}>
+          <TouchableOpacity
+            style={[
+              styles.courseActionTile,
+              {
+                backgroundColor: isDarkMode ? '#1E293B' : '#EFF6FF',
+                borderColor: isDarkMode ? '#334155' : '#BFDBFE',
+              },
+            ]}
+            onPress={() =>
+              handleViewAttendance({
+                offeringId: item.offeringId,
+                courseCode: item.courseCode,
+                courseTitle: item.courseTitle,
+              })
+            }
+            activeOpacity={0.7}
+          >
+            <Ionicons name="calendar" size={18} color="#2563EB" />
+            <Text style={[styles.courseActionTileText, { color: '#1E40AF' }]}>Attendance</Text>
+            <Text style={[styles.courseActionTileSub, { color: '#3B82F6' }]}>Check-in & stats</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.courseActionTile,
+              {
+                backgroundColor: isDarkMode ? '#064E3B22' : '#F0FDF4',
+                borderColor: isDarkMode ? '#065F46' : '#BBF7D0',
+              },
+            ]}
+            onPress={() =>
+              handleViewMaterials({
+                offeringId: item.offeringId,
+                courseCode: item.courseCode,
+                courseTitle: item.courseTitle,
+              })
+            }
+            activeOpacity={0.7}
+          >
+            <Ionicons name="folder-open" size={18} color="#16A34A" />
+            <Text style={[styles.courseActionTileText, { color: '#15803D' }]}>Materials</Text>
+            <Text style={[styles.courseActionTileSub, { color: '#22C55E' }]}>Slides & notes</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.courseActionTile,
+              {
+                backgroundColor: isDarkMode ? '#78350F22' : '#FFFBEB',
+                borderColor: isDarkMode ? '#92400E' : '#FDE68A',
+              },
+            ]}
+            onPress={() =>
+              handleViewAnnouncements({
+                offeringId: item.offeringId,
+                courseCode: item.courseCode,
+                courseTitle: item.courseTitle,
+              })
+            }
+            activeOpacity={0.7}
+          >
+            <Ionicons name="megaphone" size={18} color="#D97706" />
+            <Text style={[styles.courseActionTileText, { color: '#B45309' }]}>Notices</Text>
+            <Text style={[styles.courseActionTileSub, { color: '#F59E0B' }]}>Announcements</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.courseActionTile,
+              {
+                backgroundColor: isDarkMode ? '#312E8122' : '#F5F3FF',
+                borderColor: isDarkMode ? '#4C1D95' : '#DDD6FE',
+              },
+            ]}
+            onPress={() =>
+              handleViewDiscussions({
+                offeringId: item.offeringId,
+                courseCode: item.courseCode,
+                courseTitle: item.courseTitle,
+              })
+            }
+            activeOpacity={0.7}
+          >
+            <Ionicons name="chatbubbles" size={18} color="#7C3AED" />
+            <Text style={[styles.courseActionTileText, { color: '#6D28D9' }]}>Discussions</Text>
+            <Text style={[styles.courseActionTileSub, { color: '#8B5CF6' }]}>Ask & engage</Text>
+          </TouchableOpacity>
+        </View>
+
+        {courseAssessments.length > 0 && (
+          <TouchableOpacity
+            style={[
+              styles.courseAssessmentsBtn,
+              {
+                borderColor: isDarkMode ? '#374151' : '#E5E7EB',
+                backgroundColor: isDarkMode ? '#1F2937' : '#F9FAFB',
+              },
+            ]}
+            onPress={() => setActiveTab('assessments')}
+          >
+            <MaterialCommunityIcons
+              name="format-list-checks"
+              size={16}
+              color={theme.primary}
+              style={{ marginRight: 6 }}
+            />
+            <Text style={[styles.courseAssessmentsBtnText, { color: theme.primary }]}>
+              View {courseAssessments.length} Assessment{courseAssessments.length > 1 ? 's' : ''} for {item.courseCode}
+            </Text>
+            <Ionicons name="chevron-forward" size={14} color={theme.primary} />
+          </TouchableOpacity>
+        )}
+      </View>
+    );
+  };
+
   const renderAssessmentCard = ({ item }) => {
     const badge = getStatusBadge(item);
     const canAttempt =
@@ -586,10 +763,10 @@ export default function AssessmentsIndexScreen() {
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
           <Text style={[styles.headerTitle, { color: theme.text || '#111827' }]}>
-            Course Assessments
+            Academic Course Hub
           </Text>
           <Text style={[styles.headerSubtitle, { color: theme.textSecondary || '#6B7280' }]}>
-            Official academic evaluations
+            Courses, attendance, materials & exams
           </Text>
         </View>
         <TouchableOpacity
@@ -602,30 +779,140 @@ export default function AssessmentsIndexScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* Segmented Tab Bar */}
+      <View style={[styles.tabBar, { borderBottomColor: theme.border || '#E5E7EB', backgroundColor: theme.card || '#FFFFFF' }]}>
+        <TouchableOpacity
+          style={[
+            styles.tabBtn,
+            activeTab === 'courses' && [styles.tabBtnActive, { borderBottomColor: theme.primary }],
+          ]}
+          onPress={() => setActiveTab('courses')}
+        >
+          <Ionicons
+            name="school-outline"
+            size={16}
+            color={activeTab === 'courses' ? theme.primary : (theme.textSecondary || '#6B7280')}
+            style={{ marginRight: 6 }}
+          />
+          <Text
+            style={[
+              styles.tabBtnText,
+              { color: activeTab === 'courses' ? theme.primary : (theme.textSecondary || '#6B7280') },
+              activeTab === 'courses' && styles.tabBtnTextActive,
+            ]}
+          >
+            My Courses ({enrollments.length})
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.tabBtn,
+            activeTab === 'assessments' && [styles.tabBtnActive, { borderBottomColor: theme.primary }],
+          ]}
+          onPress={() => setActiveTab('assessments')}
+        >
+          <Ionicons
+            name="document-text-outline"
+            size={16}
+            color={activeTab === 'assessments' ? theme.primary : (theme.textSecondary || '#6B7280')}
+            style={{ marginRight: 6 }}
+          />
+          <Text
+            style={[
+              styles.tabBtnText,
+              { color: activeTab === 'assessments' ? theme.primary : (theme.textSecondary || '#6B7280') },
+              activeTab === 'assessments' && styles.tabBtnTextActive,
+            ]}
+          >
+            Assessments ({assessments.length})
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       {/* Content */}
       {isLoading ? (
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={theme.primary} />
           <Text style={[styles.loadingText, { color: theme.textSecondary || '#6B7280' }]}>
-            Loading your assessments...
+            Loading your academic portal...
           </Text>
         </View>
       ) : errorMsg ? (
         <View style={styles.centered}>
           <MaterialCommunityIcons name="alert-circle-outline" size={48} color="#EF4444" />
           <Text style={[styles.errorTitle, { color: theme.text || '#111827' }]}>
-            Unable to load assessments
+            Unable to load academic portal
           </Text>
           <Text style={[styles.errorMessage, { color: theme.textSecondary || '#6B7280' }]}>
             {errorMsg}
           </Text>
           <TouchableOpacity
             style={[styles.retryBtn, { backgroundColor: theme.primary }]}
-            onPress={loadAssessments}
+            onPress={loadData}
           >
             <Text style={styles.retryBtnText}>Retry</Text>
           </TouchableOpacity>
         </View>
+      ) : activeTab === 'courses' ? (
+        enrollments.length === 0 ? (
+          <View style={styles.centered}>
+            <MaterialCommunityIcons name="school-outline" size={64} color={theme.textSecondary || '#9CA3AF'} />
+            <Text style={[styles.emptyTitle, { color: theme.text || '#111827' }]}>
+              No Courses Enrolled Yet
+            </Text>
+            <Text style={[styles.emptySubtitle, { color: theme.textSecondary || '#6B7280' }]}>
+              You have not enrolled in any course offerings for the current session. Enrolling gives you direct access to attendance check-in, course materials, lecturer announcements, and exams.
+            </Text>
+            <TouchableOpacity
+              style={[styles.primaryActionBtn, { backgroundColor: theme.primary }]}
+              onPress={handleOpenEnrollModal}
+            >
+              <Ionicons name="school-outline" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+              <Text style={styles.primaryActionBtnText}>Browse & Enroll in Courses</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.refreshBtn, { borderColor: theme.border || '#D1D5DB' }]}
+              onPress={onRefresh}
+            >
+              <Ionicons name="refresh" size={16} color={theme.text || '#111827'} style={{ marginRight: 6 }} />
+              <Text style={[styles.refreshBtnText, { color: theme.text || '#111827' }]}>Refresh</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <FlatList
+            data={enrollments}
+            keyExtractor={(item) => String(item.enrollmentId || item.offeringId)}
+            renderItem={renderCourseCard}
+            contentContainerStyle={[styles.listContent, { paddingBottom: Math.max(insets.bottom + 16, 32) }]}
+            ListFooterComponent={
+              <TouchableOpacity
+                style={[
+                  styles.addCourseFooterBtn,
+                  {
+                    borderColor: theme.border || '#E5E7EB',
+                    backgroundColor: isDarkMode ? '#1F2937' : '#FFFFFF',
+                  },
+                ]}
+                onPress={handleOpenEnrollModal}
+              >
+                <Ionicons name="add-circle-outline" size={18} color={theme.primary} style={{ marginRight: 6 }} />
+                <Text style={[styles.addCourseFooterText, { color: theme.primary }]}>
+                  Browse & Enroll in More Courses
+                </Text>
+              </TouchableOpacity>
+            }
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor={theme.primary}
+                colors={[theme.primary]}
+              />
+            }
+          />
+        )
       ) : assessments.length === 0 ? (
         <View style={styles.centered}>
           <MaterialCommunityIcons name="clipboard-text-outline" size={64} color={theme.textSecondary || '#9CA3AF'} />
@@ -633,14 +920,14 @@ export default function AssessmentsIndexScreen() {
             No Assessments Available
           </Text>
           <Text style={[styles.emptySubtitle, { color: theme.textSecondary || '#6B7280' }]}>
-            There are currently no official course assessments scheduled for your enrolled courses.
+            There are currently no official tests, CBT exams or assignments scheduled for your enrolled courses.
           </Text>
           <TouchableOpacity
             style={[styles.primaryActionBtn, { backgroundColor: theme.primary }]}
-            onPress={handleOpenEnrollModal}
+            onPress={() => setActiveTab('courses')}
           >
             <Ionicons name="school-outline" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
-            <Text style={styles.primaryActionBtnText}>Browse & Enroll in Courses</Text>
+            <Text style={styles.primaryActionBtnText}>View My Enrolled Courses</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -943,10 +1230,38 @@ export default function AssessmentsIndexScreen() {
                             </Text>
                           ) : null}
                         </View>
-                        <View style={[styles.sessionBadge, { backgroundColor: statusBg }]}>
-                          <Text style={[styles.sessionBadgeText, { color: statusColor }]}>
-                            {session.status}
-                          </Text>
+                        <View style={{ alignItems: 'flex-end', gap: 6 }}>
+                          <View style={[styles.sessionBadge, { backgroundColor: statusBg }]}>
+                            <Text style={[styles.sessionBadgeText, { color: statusColor }]}>
+                              {session.status}
+                            </Text>
+                          </View>
+                          {session.sessionStatus === 'OPEN' && session.status !== 'PRESENT' && (
+                            <TouchableOpacity
+                              style={styles.markAttendanceBtn}
+                              disabled={markingAttendanceSessionId === session.sessionId}
+                              onPress={() =>
+                                handleSelfMarkAttendance(
+                                  selectedAttendanceData.offeringId,
+                                  session.sessionId
+                                )
+                              }
+                            >
+                              {markingAttendanceSessionId === session.sessionId ? (
+                                <ActivityIndicator size="small" color="#FFFFFF" />
+                              ) : (
+                                <>
+                                  <Ionicons
+                                    name="checkmark-circle"
+                                    size={13}
+                                    color="#FFFFFF"
+                                    style={{ marginRight: 3 }}
+                                  />
+                                  <Text style={styles.markAttendanceBtnText}>Mark Present</Text>
+                                </>
+                              )}
+                            </TouchableOpacity>
+                          )}
                         </View>
                       </View>
                     );
@@ -2913,6 +3228,122 @@ const styles = StyleSheet.create({
   },
   enrollActionBtnText: {
     fontSize: 12,
+    fontWeight: '700',
+  },
+  tabBar: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    paddingHorizontal: 16,
+  },
+  tabBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  tabBtnActive: {
+    borderBottomWidth: 2,
+  },
+  tabBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  tabBtnTextActive: {
+    fontWeight: '800',
+  },
+  courseLevelBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    marginRight: 6,
+  },
+  courseLevelBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  liveAssessmentBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#D1FAE5',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  liveAssessmentBannerText: {
+    color: '#065F46',
+    fontSize: 12,
+    fontWeight: '700',
+    flex: 1,
+  },
+  courseActionGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 12,
+  },
+  courseActionTile: {
+    flex: 1,
+    minWidth: '46%',
+    padding: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  courseActionTileText: {
+    fontSize: 12,
+    fontWeight: '800',
+    marginTop: 4,
+  },
+  courseActionTileSub: {
+    fontSize: 10,
+    fontWeight: '500',
+    marginTop: 1,
+  },
+  courseAssessmentsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginTop: 10,
+  },
+  courseAssessmentsBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    flex: 1,
+  },
+  addCourseFooterBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    marginTop: 8,
+    marginBottom: 20,
+  },
+  addCourseFooterText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  markAttendanceBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#059669',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  markAttendanceBtnText: {
+    color: '#FFFFFF',
+    fontSize: 11,
     fontWeight: '700',
   },
 });

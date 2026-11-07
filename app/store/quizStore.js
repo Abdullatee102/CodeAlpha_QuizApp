@@ -1785,6 +1785,22 @@ export const useQuizStore = create(
         }
       },
 
+      markSelfAttendance: async (offeringId, sessionId) => {
+        try {
+          const response = await api.post('/auth/offerings/' + offeringId + '/attendance/' + sessionId + '/check-in');
+          return {
+            success: true,
+            data: response.data?.data || null,
+            message: response.data?.message || 'Attendance marked successfully',
+          };
+        } catch (error) {
+          return {
+            success: false,
+            error: formatAxiosError(error),
+          };
+        }
+      },
+
       fetchCourseMaterials: async (offeringId, category) => {
         try {
           const params = category ? { category } : {};

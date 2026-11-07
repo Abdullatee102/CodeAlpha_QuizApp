@@ -734,7 +734,7 @@ export default function HomeScreen() {
                   ]}
                 >
                   <Text style={[styles.officialAssessmentsBadge, { color: theme.primary }]}>
-                    COURSE ASSESSMENTS
+                    ACADEMIC COURSE HUB
                   </Text>
                 </View>
               </View>
@@ -744,7 +744,7 @@ export default function HomeScreen() {
                   { color: theme.text },
                 ]}
               >
-                Official Assessments
+                My Courses & Assessments
               </Text>
               <Text
                 style={[
@@ -752,7 +752,7 @@ export default function HomeScreen() {
                   { color: theme.textSecondary },
                 ]}
               >
-                Access scheduled tests, CBT exams & assignments
+                Access enrolled courses, attendance check-in, materials & exams
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={theme.primary} />
