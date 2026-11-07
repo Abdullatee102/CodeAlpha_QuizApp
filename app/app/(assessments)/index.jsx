@@ -17,11 +17,13 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useThemeStore } from '../../store/themeStore';
 import { useQuizStore } from '../../store/quizStore';
+import { useAuthStore } from '../../store/authStore';
 
 export default function AssessmentsIndexScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { theme, isDarkMode } = useThemeStore();
+  const { user } = useAuthStore();
   const {
     fetchAvailableAssessments,
     fetchAssessmentResults,
@@ -56,9 +58,19 @@ export default function AssessmentsIndexScreen() {
 
   const handleOpenEnrollModal = async () => {
     setEnrollModalVisible(true);
-    setLoadingOfferings(true);
     setEnrollError(null);
     setEnrollSuccessMsg(null);
+
+    if (user?.role && user.role !== 'STUDENT') {
+      setLoadingOfferings(false);
+      setAvailableOfferings([]);
+      setEnrollError(
+        `Signed in as ${user.role}. Course enrollment is reserved for student accounts. Please sign in with your student account to enroll.`
+      );
+      return;
+    }
+
+    setLoadingOfferings(true);
     const res = await fetchAvailableOfferings();
     setLoadingOfferings(false);
     if (res.success && res.data) {
@@ -69,6 +81,13 @@ export default function AssessmentsIndexScreen() {
   };
 
   const handleToggleEnrollment = async (offering) => {
+    if (user?.role && user.role !== 'STUDENT') {
+      setEnrollError(
+        `Signed in as ${user.role}. Course self-enrollment is reserved for student accounts.`
+      );
+      return;
+    }
+
     setEnrollingOfferingId(offering.id);
     setEnrollError(null);
     setEnrollSuccessMsg(null);
