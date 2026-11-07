@@ -144,26 +144,54 @@ export default function AssessmentsIndexScreen() {
     }
   };
 
-  const loadAssessments = useCallback(async () => {
+  const loadData = useCallback(async () => {
     setErrorMsg(null);
-    const result = await fetchAvailableAssessments();
-    if (result.success) {
-      setAssessments(result.data || []);
+    const [assessmentsRes, enrollmentsRes] = await Promise.all([
+      fetchAvailableAssessments(),
+      fetchStudentEnrollments(),
+    ]);
+
+    if (assessmentsRes.success) {
+      setAssessments(assessmentsRes.data || []);
     } else {
-      setErrorMsg(result.error?.message || 'Failed to load assessments');
+      setErrorMsg(assessmentsRes.error?.message || 'Failed to load assessments');
     }
+
+    if (enrollmentsRes.success) {
+      setEnrollments(enrollmentsRes.data || []);
+    }
+
     setIsLoading(false);
     setRefreshing(false);
-  }, [fetchAvailableAssessments]);
+  }, [fetchAvailableAssessments, fetchStudentEnrollments]);
 
   useEffect(() => {
     loadData();
-  }, [loadAssessments]);
+  }, [loadData]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     loadData();
-  }, [loadAssessments]);
+  }, [loadData]);
+
+  const handleSelfMarkAttendance = async (offeringId, sessionId) => {
+    setMarkingAttendanceSessionId(sessionId);
+    const res = await markSelfAttendance(offeringId, sessionId);
+    setMarkingAttendanceSessionId(null);
+    if (res.success) {
+      const refreshed = await fetchStudentAttendance(offeringId);
+      if (refreshed.success && refreshed.data) {
+        setSelectedAttendanceData((prev) => ({
+          ...prev,
+          offering: refreshed.data.offering,
+          summary: refreshed.data.summary,
+          history: refreshed.data.history || [],
+        }));
+      }
+    } else {
+      setAttendanceError(res.error?.message || 'Failed to mark attendance.');
+    }
+  };
 
   const formatSchedule = (isoString) => {
     if (!isoString) return 'N/A';
