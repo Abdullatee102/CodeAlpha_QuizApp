@@ -125,6 +125,7 @@ export default function AssessmentsIndexScreen() {
         setAvailableOfferings((prev) =>
           prev.map((o) => (o.id === offering.id ? { ...o, isEnrolled: false } : o))
         );
+        setEnrollments((prev) => prev.filter((e) => e.offeringId !== offering.id));
         loadData();
       } else {
         setEnrollError(res.error?.message || 'Failed to drop course offering.');
@@ -158,7 +159,10 @@ export default function AssessmentsIndexScreen() {
     }
 
     if (enrollmentsRes.success) {
-      setEnrollments(enrollmentsRes.data || []);
+      const activeEnrollments = (enrollmentsRes.data || []).filter(
+        (e) => !e.enrollmentStatus || e.enrollmentStatus === 'ENROLLED'
+      );
+      setEnrollments(activeEnrollments);
     }
 
     setIsLoading(false);
