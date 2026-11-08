@@ -1395,6 +1395,94 @@ export default function ProfileScreen() {
                 color={theme.textSecondary}
               />
             </TouchableOpacity>
+
+            <View
+              style={[
+                styles.menuDivider,
+                { backgroundColor: theme.border },
+              ]}
+            />
+
+            {/* BRAIN BUZZ PREMIUM & PASSES (BB-05C) */}
+            <TouchableOpacity
+              style={styles.menuRow}
+              onPress={() => router.push('/premium')}
+              activeOpacity={0.7}
+            >
+              <View
+                style={[
+                  styles.menuIconWrap,
+                  {
+                    backgroundColor: '#4F46E518',
+                  },
+                ]}
+              >
+                <MaterialCommunityIcons
+                  name="crown-outline"
+                  size={20}
+                  color="#4F46E5"
+                />
+              </View>
+
+              <View style={styles.menuInfo}>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 6,
+                    minWidth: 0,
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.menuTitle,
+                      {
+                        color: theme.text,
+                        flexShrink: 1,
+                      },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    Brain Buzz Premium & Passes
+                  </Text>
+
+                  <View
+                    style={{
+                      backgroundColor: '#4F46E5',
+                      paddingHorizontal: 6,
+                      paddingVertical: 2,
+                      borderRadius: 4,
+                      flexShrink: 0,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: '#FFFFFF',
+                        fontFamily: 'Ubuntu-Bold',
+                        fontSize: 9,
+                      }}
+                    >
+                      UPGRADES
+                    </Text>
+                  </View>
+                </View>
+
+                <Text
+                  style={[
+                    styles.menuSubtitle,
+                    { color: theme.textSecondary },
+                  ]}
+                >
+                  Semester passes, mock exams & AI tutor packs
+                </Text>
+              </View>
+
+              <Ionicons
+                name="chevron-forward"
+                size={18}
+                color={theme.textSecondary}
+              />
+            </TouchableOpacity>
           </View>
         </View>
 
