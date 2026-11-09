@@ -33,7 +33,6 @@ export default function PremiumScreen() {
     activeEntitlements,
     orders,
     isLoadingProducts,
-    isLoadingEntitlements,
     isProcessingPayment,
     fetchProducts,
     fetchActiveEntitlements,
@@ -100,7 +99,7 @@ export default function PremiumScreen() {
 
             try {
               // Open Paystack Checkout
-              const result = await WebBrowser.openBrowserAsync(initRes.authorizationUrl, {
+              await WebBrowser.openBrowserAsync(initRes.authorizationUrl, {
                 presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
                 toolbarColor: isDarkMode ? '#0f172a' : '#4f46e5',
                 controlsColor: '#ffffff',
