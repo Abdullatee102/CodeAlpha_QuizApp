@@ -136,11 +136,15 @@ export default function AssessmentInstructionsScreen() {
     );
   }
 
-  const isOngoingAttempt = assessment.studentAttemptStatus === 'IN_PROGRESS';
+  const isOngoingAttempt = assessment.studentAttemptStatus === 'IN_PROGRESS' || assessment.canResume;
   const isSubmitted = assessment.studentAttemptStatus === 'SUBMITTED';
   const isTimedOut = assessment.studentAttemptStatus === 'TIMED_OUT';
+  const isOpen =
+    assessment.operationalStatus === 'OPEN' ||
+    assessment.operationalStatus === 'AVAILABLE_NOW' ||
+    assessment.operationalStatus === 'AVAILABLE';
   const canStart =
-    (assessment.operationalStatus === 'AVAILABLE_NOW' || isOngoingAttempt) &&
+    (isOpen || assessment.canStart || isOngoingAttempt) &&
     !isSubmitted &&
     !isTimedOut;
 
@@ -203,7 +207,7 @@ export default function AssessmentInstructionsScreen() {
           <View style={[styles.gridItem, { backgroundColor: theme.card || '#FFFFFF', borderColor: theme.border || '#E5E7EB' }]}>
             <MaterialCommunityIcons name="help-circle-outline" size={24} color="#10B981" />
             <Text style={[styles.gridValue, { color: theme.text || '#111827' }]}>
-              {assessment.questionsCount || 0}
+              {assessment.questionsCount ?? assessment.questionCount ?? assessment.totalQuestions ?? 0}
             </Text>
             <Text style={[styles.gridLabel, { color: theme.textSecondary || '#6B7280' }]}>Questions</Text>
           </View>
@@ -211,7 +215,7 @@ export default function AssessmentInstructionsScreen() {
           <View style={[styles.gridItem, { backgroundColor: theme.card || '#FFFFFF', borderColor: theme.border || '#E5E7EB' }]}>
             <MaterialCommunityIcons name="star-outline" size={24} color="#F59E0B" />
             <Text style={[styles.gridValue, { color: theme.text || '#111827' }]}>
-              {assessment.totalPoints || 0}
+              {assessment.totalPoints ?? assessment.totalMarks ?? 0}
             </Text>
             <Text style={[styles.gridLabel, { color: theme.textSecondary || '#6B7280' }]}>Points</Text>
           </View>
@@ -219,7 +223,7 @@ export default function AssessmentInstructionsScreen() {
           <View style={[styles.gridItem, { backgroundColor: theme.card || '#FFFFFF', borderColor: theme.border || '#E5E7EB' }]}>
             <MaterialCommunityIcons name="repeat" size={24} color="#8B5CF6" />
             <Text style={[styles.gridValue, { color: theme.text || '#111827' }]}>
-              {assessment.existingAttemptsCount || 0}/{assessment.maxAttempts || 1}
+              {assessment.existingAttemptsCount ?? assessment.attemptsCount ?? 0}/{assessment.maxAttempts || 1}
             </Text>
             <Text style={[styles.gridLabel, { color: theme.textSecondary || '#6B7280' }]}>Attempts</Text>
           </View>

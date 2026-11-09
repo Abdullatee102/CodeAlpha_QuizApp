@@ -456,7 +456,11 @@ export default function AssessmentsIndexScreen() {
   const renderAssessmentCard = ({ item }) => {
     const badge = getStatusBadge(item);
     const canAttempt =
-      (item.operationalStatus === 'AVAILABLE_NOW' || item.studentAttemptStatus === 'IN_PROGRESS') &&
+      (item.canStart ||
+        item.canResume ||
+        item.operationalStatus === 'OPEN' ||
+        item.operationalStatus === 'AVAILABLE_NOW' ||
+        item.studentAttemptStatus === 'IN_PROGRESS') &&
       item.studentAttemptStatus !== 'SUBMITTED' &&
       item.studentAttemptStatus !== 'TIMED_OUT';
 
@@ -501,14 +505,14 @@ export default function AssessmentsIndexScreen() {
           <View style={styles.metaItem}>
             <MaterialCommunityIcons name="help-circle-outline" size={16} color={theme.textSecondary || '#6B7280'} />
             <Text style={[styles.metaText, { color: theme.textSecondary || '#6B7280' }]}>
-              {item.questionsCount || item.totalQuestions || 0} Qs
+              {item.questionsCount ?? item.questionCount ?? item.totalQuestions ?? 0} Qs
             </Text>
           </View>
 
           <View style={styles.metaItem}>
             <MaterialCommunityIcons name="star-outline" size={16} color={theme.textSecondary || '#6B7280'} />
             <Text style={[styles.metaText, { color: theme.textSecondary || '#6B7280' }]}>
-              {item.totalPoints || 0} pts
+              {item.totalPoints ?? item.totalMarks ?? 0} pts
             </Text>
           </View>
 

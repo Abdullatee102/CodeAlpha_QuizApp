@@ -97,7 +97,7 @@ export default function AchievementScreen() {
           title: 'Fast Learner',
           desc: 'Complete 5 quizzes',
           icon: 'speedometer',
-          color: '#4834D4',
+          color: '#005D4B',
         },
         {
           id: '2',
@@ -472,7 +472,7 @@ export default function AchievementScreen() {
             size="large"
             color={
               theme.primary ||
-              '#4834D4'
+              '#005D4B'
             }
           />
         </View>

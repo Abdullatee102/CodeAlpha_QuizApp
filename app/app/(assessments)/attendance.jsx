@@ -231,17 +231,31 @@ export default function CourseAttendanceScreen() {
                 </Text>
               </View>
 
-              <View
-                style={[
-                  styles.breakdownCol,
-                  { backgroundColor: isDarkMode ? '#3B2914' : '#FFFBEB' },
-                ]}
-              >
-                <Text style={[styles.breakdownLabel, { color: '#D97706' }]}>Late</Text>
-                <Text style={[styles.breakdownVal, { color: '#D97706' }]}>
-                  {summary?.lateCount ?? 0}
-                </Text>
-              </View>
+              {(summary?.pendingCount ?? 0) > 0 ? (
+                <View
+                  style={[
+                    styles.breakdownCol,
+                    { backgroundColor: isDarkMode ? '#064E3B' : '#ECFDF5' },
+                  ]}
+                >
+                  <Text style={[styles.breakdownLabel, { color: '#10B981' }]}>Open Now</Text>
+                  <Text style={[styles.breakdownVal, { color: '#10B981' }]}>
+                    {summary?.pendingCount ?? 0}
+                  </Text>
+                </View>
+              ) : (
+                <View
+                  style={[
+                    styles.breakdownCol,
+                    { backgroundColor: isDarkMode ? '#3B2914' : '#FFFBEB' },
+                  ]}
+                >
+                  <Text style={[styles.breakdownLabel, { color: '#D97706' }]}>Late</Text>
+                  <Text style={[styles.breakdownVal, { color: '#D97706' }]}>
+                    {summary?.lateCount ?? 0}
+                  </Text>
+                </View>
+              )}
 
               <View
                 style={[
@@ -288,6 +302,17 @@ export default function CourseAttendanceScreen() {
               const isPresent = session.status === 'PRESENT';
               const isLate = session.status === 'LATE';
               const isExcused = session.status === 'EXCUSED';
+              const isPending = session.status === 'PENDING' || (session.sessionStatus === 'OPEN' && !isPresent);
+
+              const statusLabel = isPresent
+                ? 'PRESENT'
+                : isLate
+                ? 'LATE'
+                : isExcused
+                ? 'EXCUSED'
+                : isPending
+                ? 'CHECK-IN OPEN'
+                : 'ABSENT';
 
               const statusColor = isPresent
                 ? '#059669'
@@ -295,6 +320,8 @@ export default function CourseAttendanceScreen() {
                 ? '#D97706'
                 : isExcused
                 ? '#7C3AED'
+                : isPending
+                ? '#10B981'
                 : '#DC2626';
 
               const statusBg = isPresent
@@ -303,9 +330,11 @@ export default function CourseAttendanceScreen() {
                 ? isDarkMode ? '#78350F' : '#FEF3C7'
                 : isExcused
                 ? isDarkMode ? '#4C1D95' : '#EDE9FE'
+                : isPending
+                ? isDarkMode ? '#064E3B' : '#ECFDF5'
                 : isDarkMode ? '#7F1D1D' : '#FEE2E2';
 
-              const isOpenForSelfCheckIn = session.sessionStatus === 'OPEN' && !isPresent;
+              const isOpenForSelfCheckIn = (session.sessionStatus === 'OPEN' || isPending) && !isPresent;
 
               return (
                 <View
@@ -331,7 +360,7 @@ export default function CourseAttendanceScreen() {
 
                     <View style={[styles.sessionBadge, { backgroundColor: statusBg }]}>
                       <Text style={[styles.sessionBadgeText, { color: statusColor }]}>
-                        {session.status || 'UNRECORDED'}
+                        {statusLabel}
                       </Text>
                     </View>
                   </View>

@@ -41,9 +41,9 @@ export default function ProfileScreen() {
   const [uploading, setUploading] = useState(false);
 
   // Queries
-  const { data: profile } = useProfileQuery();
-  const { data: history = [] } = useQuizHistoryQuery();
-  const { data: achievements = [] } = useAchievementsQuery();
+  const { data: profile, isLoading: isProfileLoading } = useProfileQuery();
+  const { data: history = [], isLoading: isHistoryLoading } = useQuizHistoryQuery();
+  const { data: achievements = [], isLoading: isAchievementsLoading } = useAchievementsQuery();
 
   // =====================================================
   // DERIVED TRUTHFUL METRICS
@@ -699,14 +699,22 @@ export default function ProfileScreen() {
                 />
               </View>
 
-              <Text
-                style={[
-                  styles.metricNumber,
-                  { color: theme.text },
-                ]}
-              >
-                {totalQuizzes}
-              </Text>
+              {isHistoryLoading && history.length === 0 ? (
+                <ActivityIndicator
+                  size="small"
+                  color={theme.primary || '#005D4B'}
+                  style={{ marginVertical: 4 }}
+                />
+              ) : (
+                <Text
+                  style={[
+                    styles.metricNumber,
+                    { color: theme.text },
+                  ]}
+                >
+                  {totalQuizzes}
+                </Text>
+              )}
 
               <Text
                 style={[
@@ -741,14 +749,22 @@ export default function ProfileScreen() {
                 />
               </View>
 
-              <Text
-                style={[
-                  styles.metricNumber,
-                  { color: theme.text },
-                ]}
-              >
-                {averageScore}%
-              </Text>
+              {isHistoryLoading && history.length === 0 ? (
+                <ActivityIndicator
+                  size="small"
+                  color={theme.primary || '#005D4B'}
+                  style={{ marginVertical: 4 }}
+                />
+              ) : (
+                <Text
+                  style={[
+                    styles.metricNumber,
+                    { color: theme.text },
+                  ]}
+                >
+                  {averageScore}%
+                </Text>
+              )}
 
               <Text
                 style={[
@@ -783,14 +799,22 @@ export default function ProfileScreen() {
                 />
               </View>
 
-              <Text
-                style={[
-                  styles.metricNumber,
-                  { color: theme.text },
-                ]}
-              >
-                {bestScore}%
-              </Text>
+              {isHistoryLoading && history.length === 0 ? (
+                <ActivityIndicator
+                  size="small"
+                  color={theme.primary || '#005D4B'}
+                  style={{ marginVertical: 4 }}
+                />
+              ) : (
+                <Text
+                  style={[
+                    styles.metricNumber,
+                    { color: theme.text },
+                  ]}
+                >
+                  {bestScore}%
+                </Text>
+              )}
 
               <Text
                 style={[
@@ -825,14 +849,22 @@ export default function ProfileScreen() {
                 />
               </View>
 
-              <Text
-                style={[
-                  styles.metricNumber,
-                  { color: theme.text },
-                ]}
-              >
-                {streak}
-              </Text>
+              {isHistoryLoading && history.length === 0 ? (
+                <ActivityIndicator
+                  size="small"
+                  color={theme.primary || '#005D4B'}
+                  style={{ marginVertical: 4 }}
+                />
+              ) : (
+                <Text
+                  style={[
+                    styles.metricNumber,
+                    { color: theme.text },
+                  ]}
+                >
+                  {streak}
+                </Text>
+              )}
 
               <Text
                 style={[
@@ -873,12 +905,35 @@ export default function ProfileScreen() {
                   { color: theme.primary },
                 ]}
               >
-                View All ({achievements.length})
+                View All ({isAchievementsLoading && achievements.length === 0 ? '...' : achievements.length})
               </Text>
             </TouchableOpacity>
           </View>
 
-          {achievements.length === 0 ? (
+          {isAchievementsLoading && achievements.length === 0 ? (
+            <View
+              style={[
+                styles.emptySectionCard,
+                {
+                  backgroundColor: theme.card,
+                  borderColor: theme.border,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  paddingVertical: 24,
+                },
+              ]}
+            >
+              <ActivityIndicator size="small" color={theme.primary || '#005D4B'} />
+              <Text
+                style={[
+                  styles.emptySectionText,
+                  { color: theme.textSecondary, marginTop: 8 },
+                ]}
+              >
+                Loading achievements...
+              </Text>
+            </View>
+          ) : achievements.length === 0 ? (
             <View
               style={[
                 styles.emptySectionCard,

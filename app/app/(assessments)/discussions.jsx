@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -44,6 +44,7 @@ export default function CourseDiscussionsScreen() {
   const [loadingThread, setLoadingThread] = useState(false);
   const [replyText, setReplyText] = useState('');
   const [submittingReply, setSubmittingReply] = useState(false);
+  const threadScrollRef = useRef(null);
 
   // New Topic Modal
   const [newTopicModalOpen, setNewTopicModalOpen] = useState(false);
@@ -83,7 +84,17 @@ export default function CourseDiscussionsScreen() {
     const res = await fetchDiscussionDetails(offeringId, disc.id);
     setLoadingThread(false);
     if (res.success && res.data) {
-      setActiveThread(res.data.discussion);
+      const discData = res.data.discussion || {};
+      const replies = res.data.replies || discData.replies || [];
+      setActiveThread({
+        ...disc,
+        ...discData,
+        replies,
+        replyCount: replies.length || discData.replyCount || disc.replyCount || 0,
+      });
+      setTimeout(() => {
+        threadScrollRef.current?.scrollToEnd({ animated: false });
+      }, 100);
     }
   };
 
@@ -101,18 +112,25 @@ export default function CourseDiscussionsScreen() {
 
     if (res.success && res.data) {
       setReplyText('');
+      const newReply = res.data.reply;
       // Update thread replies locally
-      setActiveThread((prev) => ({
-        ...prev,
-        replies: [...(prev?.replies || []), res.data.reply],
-        replyCount: (prev?.replyCount || 0) + 1,
-      }));
+      setActiveThread((prev) => {
+        const nextReplies = [...(prev?.replies || []), newReply];
+        return {
+          ...prev,
+          replies: nextReplies,
+          replyCount: nextReplies.length,
+        };
+      });
       // Update discussions list reply count
       setDiscussions((prev) =>
         prev.map((d) =>
           d.id === activeThread.id ? { ...d, replyCount: (d.replyCount || 0) + 1 } : d
         )
       );
+      setTimeout(() => {
+        threadScrollRef.current?.scrollToEnd({ animated: true });
+      }, 150);
     } else {
       Alert.alert('Reply Failed', res.error?.message || 'Unable to post reply.');
     }
@@ -211,13 +229,16 @@ export default function CourseDiscussionsScreen() {
       {/* ======================================================== */}
       {activeThread ? (
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 20}
           style={{ flex: 1 }}
         >
           <ScrollView
+            ref={threadScrollRef}
             style={styles.scrollView}
-            contentContainerStyle={styles.scrollContent}
+            contentContainerStyle={[styles.scrollContent, { paddingBottom: 24 }]}
             showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
           >
             {/* Original Topic Card */}
             <View
