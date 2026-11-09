@@ -111,6 +111,7 @@ api.interceptors.response.use(
       status: status ?? null,
       code: error.code ?? null,
       message: error.message,
+      serverMessage: error.response?.data?.message || null,
       hasResponse: Boolean(error.response),
       hasRequest: Boolean(error.request),
     });
