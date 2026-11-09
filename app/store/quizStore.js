@@ -1828,9 +1828,19 @@ export const useQuizStore = create(
             data: response.data,
           };
         } catch (error) {
+          let formatted = formatAxiosError(error);
+          if (error.response?.data && typeof error.response.data.text === 'function') {
+            try {
+              const text = await error.response.data.text();
+              const parsed = JSON.parse(text);
+              if (parsed?.message) {
+                formatted = { ...formatted, message: parsed.message };
+              }
+            } catch {}
+          }
           return {
             success: false,
-            error: formatAxiosError(error),
+            error: formatted,
           };
         }
       },
