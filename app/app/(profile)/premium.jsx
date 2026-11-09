@@ -135,27 +135,27 @@ export default function PremiumScreen() {
   }, [products, selectedCategory]);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['bottom', 'left', 'right']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['bottom', 'left', 'right']}>
       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
 
       {/* Header */}
-      <View style={[styles.header, { paddingTop: topInset + 8, borderBottomColor: theme.colors.border }]}>
+      <View style={[styles.header, { paddingTop: topInset + 8, borderBottomColor: theme.border }]}>
         <TouchableOpacity
           onPress={() => router.back()}
           style={[styles.backBtn, { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)' }]}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         >
-          <Ionicons name="arrow-back" size={20} color={theme.colors.text} />
+          <Ionicons name="arrow-back" size={20} color={theme.text} />
         </TouchableOpacity>
         <View style={styles.headerTitleWrap}>
-          <Text style={[styles.headerTitle, { color: theme.colors.text }]}>Premium & Passes</Text>
-          <Text style={[styles.headerSubtitle, { color: theme.colors.textSecondary }]}>Optional Student Learning Upgrades</Text>
+          <Text style={[styles.headerTitle, { color: theme.text }]}>Premium & Passes</Text>
+          <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>Optional Student Learning Upgrades</Text>
         </View>
         <TouchableOpacity
           onPress={handleRefresh}
           style={[styles.backBtn, { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)' }]}
         >
-          <Ionicons name="refresh" size={18} color={theme.colors.text} />
+          <Ionicons name="refresh" size={18} color={theme.text} />
         </TouchableOpacity>
       </View>
 
@@ -169,13 +169,13 @@ export default function PremiumScreen() {
             <MaterialCommunityIcons name="shield-check" size={22} color="#4f46e5" />
             <Text style={styles.equityTitle}>Educational Equity Guarantee</Text>
           </View>
-          <Text style={[styles.equityText, { color: theme.colors.textSecondary }]}>
+          <Text style={[styles.equityText, { color: theme.textSecondary }]}>
             All official course assessments, continuous evaluations, submissions, attendance check-ins, lecturer announcements, and curriculum materials are <Text style={styles.boldText}>100% free forever</Text>. Premium passes are strictly optional for advanced mock tests, AI explanations, and accelerated revision.
           </Text>
         </View>
 
         {/* Current Active Status Card */}
-        <View style={[styles.statusCard, { backgroundColor: isDarkMode ? '#1e293b' : '#ffffff', borderColor: theme.colors.border }]}>
+        <View style={[styles.statusCard, { backgroundColor: isDarkMode ? '#1e293b' : '#ffffff', borderColor: theme.border }]}>
           <View style={styles.statusHeader}>
             <View style={styles.statusBadgeRow}>
               <MaterialCommunityIcons
@@ -183,7 +183,7 @@ export default function PremiumScreen() {
                 size={20}
                 color={activeSemesterPass ? '#f59e0b' : '#10b981'}
               />
-              <Text style={[styles.statusCardTitle, { color: theme.colors.text }]}>
+              <Text style={[styles.statusCardTitle, { color: theme.text }]}>
                 {activeSemesterPass ? 'Semester Pass Active' : activeExamPrepPass ? 'Exam Prep Pass Active' : 'Free Student Tier'}
               </Text>
             </View>
@@ -196,8 +196,8 @@ export default function PremiumScreen() {
 
           {activeSemesterPass ? (
             <View style={styles.entitlementDetails}>
-              <Text style={[styles.sessionText, { color: theme.colors.textSecondary }]}>
-                Session: <Text style={[styles.boldText, { color: theme.colors.text }]}>{activeSemesterPass.academicSession || '2026/2027'}</Text> · Semester: <Text style={[styles.boldText, { color: theme.colors.text }]}>{(activeSemesterPass.semester || 'Harmattan').toUpperCase()}</Text>
+              <Text style={[styles.sessionText, { color: theme.textSecondary }]}>
+                Session: <Text style={[styles.boldText, { color: theme.text }]}>{activeSemesterPass.academicSession || '2026/2027'}</Text> · Semester: <Text style={[styles.boldText, { color: theme.text }]}>{(activeSemesterPass.semester || 'Harmattan').toUpperCase()}</Text>
               </Text>
               <View style={styles.expiryRow}>
                 <Ionicons name="time-outline" size={16} color="#4f46e5" />
@@ -206,16 +206,16 @@ export default function PremiumScreen() {
                 </Text>
               </View>
               <View style={styles.unlockedList}>
-                <Text style={[styles.unlockedHeader, { color: theme.colors.text }]}>Included Benefits:</Text>
-                <Text style={[styles.benefitItem, { color: theme.colors.textSecondary }]}>✓ Unlimited AI-Powered Question Explanations</Text>
-                <Text style={[styles.benefitItem, { color: theme.colors.textSecondary }]}>✓ Full-Length Timed Examination Simulations</Text>
-                <Text style={[styles.benefitItem, { color: theme.colors.textSecondary }]}>✓ Advanced Performance & Weakness Diagnostics</Text>
-                <Text style={[styles.benefitItem, { color: theme.colors.textSecondary }]}>✓ Priority High-Yield Revision Modules</Text>
+                <Text style={[styles.unlockedHeader, { color: theme.text }]}>Included Benefits:</Text>
+                <Text style={[styles.benefitItem, { color: theme.textSecondary }]}>✓ Unlimited AI-Powered Question Explanations</Text>
+                <Text style={[styles.benefitItem, { color: theme.textSecondary }]}>✓ Full-Length Timed Examination Simulations</Text>
+                <Text style={[styles.benefitItem, { color: theme.textSecondary }]}>✓ Advanced Performance & Weakness Diagnostics</Text>
+                <Text style={[styles.benefitItem, { color: theme.textSecondary }]}>✓ Priority High-Yield Revision Modules</Text>
               </View>
             </View>
           ) : (
             <View style={styles.freeTierContent}>
-              <Text style={[styles.freeTierDesc, { color: theme.colors.textSecondary }]}>
+              <Text style={[styles.freeTierDesc, { color: theme.textSecondary }]}>
                 You have standard free access to all enrolled courses and tests. Upgrade anytime to unlock AI-assisted learning and full CBT exam preparation.
               </Text>
             </View>
@@ -245,13 +245,13 @@ export default function PremiumScreen() {
               style={[
                 styles.tabBtn,
                 selectedCategory === cat && styles.activeTabBtn,
-                { borderColor: theme.colors.border },
+                { borderColor: theme.border },
               ]}
             >
               <Text
                 style={[
                   styles.tabBtnText,
-                  selectedCategory === cat ? styles.activeTabBtnText : { color: theme.colors.textSecondary },
+                  selectedCategory === cat ? styles.activeTabBtnText : { color: theme.textSecondary },
                 ]}
               >
                 {cat === 'ALL' ? 'All Passes' : cat === 'SEMESTER_PASS' ? 'Semester' : cat === 'EXAM_PREP' ? 'Exam Prep' : 'AI Packs'}
@@ -262,17 +262,17 @@ export default function PremiumScreen() {
 
         {/* Product Cards List */}
         <View style={styles.productsSection}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Available Learning Passes</Text>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>Available Learning Passes</Text>
 
           {isLoadingProducts ? (
             <View style={styles.loadingWrap}>
               <ActivityIndicator size="large" color="#4f46e5" />
-              <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading available passes...</Text>
+              <Text style={[styles.loadingText, { color: theme.textSecondary }]}>Loading available passes...</Text>
             </View>
           ) : filteredProducts.length === 0 ? (
             <View style={styles.emptyWrap}>
-              <MaterialCommunityIcons name="tag-off-outline" size={36} color={theme.colors.textSecondary} />
-              <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>No products found in this category.</Text>
+              <MaterialCommunityIcons name="tag-off-outline" size={36} color={theme.textSecondary} />
+              <Text style={[styles.emptyText, { color: theme.textSecondary }]}>No products found in this category.</Text>
             </View>
           ) : (
             filteredProducts.map((prod) => {
@@ -284,17 +284,17 @@ export default function PremiumScreen() {
                   key={prod.id}
                   style={[
                     styles.productCard,
-                    { backgroundColor: isDarkMode ? '#1e293b' : '#ffffff', borderColor: theme.colors.border },
+                    { backgroundColor: isDarkMode ? '#1e293b' : '#ffffff', borderColor: theme.border },
                   ]}
                 >
                   <View style={styles.productHeader}>
                     <View style={styles.productTitleWrap}>
-                      <Text style={[styles.productTitle, { color: theme.colors.text }]}>{prod.title}</Text>
-                      <Text style={[styles.productDesc, { color: theme.colors.textSecondary }]}>{prod.description}</Text>
+                      <Text style={[styles.productTitle, { color: theme.text }]}>{prod.title}</Text>
+                      <Text style={[styles.productDesc, { color: theme.textSecondary }]}>{prod.description}</Text>
                     </View>
                     <View style={styles.priceWrap}>
                       <Text style={styles.priceAmount}>₦{(prod.amount / 100).toLocaleString()}</Text>
-                      <Text style={[styles.priceSub, { color: theme.colors.textSecondary }]}>
+                      <Text style={[styles.priceSub, { color: theme.textSecondary }]}>
                         {prod.durationDays ? `${prod.durationDays} days` : 'Per Term'}
                       </Text>
                     </View>
@@ -306,7 +306,7 @@ export default function PremiumScreen() {
                       {prod.benefits.map((b, idx) => (
                         <View key={idx} style={styles.benefitRow}>
                           <Ionicons name="checkmark-circle" size={15} color="#10b981" />
-                          <Text style={[styles.benefitRowText, { color: theme.colors.text }]}>{b}</Text>
+                          <Text style={[styles.benefitRowText, { color: theme.text }]}>{b}</Text>
                         </View>
                       ))}
                     </View>
@@ -339,24 +339,24 @@ export default function PremiumScreen() {
         {/* Order History Section */}
         {orders.length > 0 && (
           <View style={styles.historySection}>
-            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Purchase History</Text>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>Purchase History</Text>
             {orders.map((ord) => (
               <View
                 key={ord.id}
                 style={[
                   styles.orderRow,
-                  { backgroundColor: isDarkMode ? '#1e293b' : '#ffffff', borderColor: theme.colors.border },
+                  { backgroundColor: isDarkMode ? '#1e293b' : '#ffffff', borderColor: theme.border },
                 ]}
               >
                 <View style={styles.orderMain}>
-                  <Text style={[styles.orderTitle, { color: theme.colors.text }]}>{ord.title || ord.productId}</Text>
-                  <Text style={[styles.orderRef, { color: theme.colors.textSecondary }]}>Ref: {ord.orderReference}</Text>
-                  <Text style={[styles.orderDate, { color: theme.colors.textSecondary }]}>
+                  <Text style={[styles.orderTitle, { color: theme.text }]}>{ord.title || ord.productId}</Text>
+                  <Text style={[styles.orderRef, { color: theme.textSecondary }]}>Ref: {ord.orderReference}</Text>
+                  <Text style={[styles.orderDate, { color: theme.textSecondary }]}>
                     {new Date(ord.createdAt).toLocaleDateString()}
                   </Text>
                 </View>
                 <View style={styles.orderEnd}>
-                  <Text style={[styles.orderAmount, { color: theme.colors.text }]}>₦{(ord.amount / 100).toLocaleString()}</Text>
+                  <Text style={[styles.orderAmount, { color: theme.text }]}>₦{(ord.amount / 100).toLocaleString()}</Text>
                   <View
                     style={[
                       styles.orderStatusPill,
