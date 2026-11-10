@@ -8,6 +8,7 @@ import {
   Image,
   TouchableOpacity,
   ScrollView,
+  RefreshControl,
   Alert,
   ActivityIndicator,
   StatusBar,
@@ -39,11 +40,28 @@ export default function ProfileScreen() {
   const { theme, isDarkMode } = useThemeStore();
 
   const [uploading, setUploading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Queries
-  const { data: profile, isLoading: isProfileLoading } = useProfileQuery();
-  const { data: history = [], isLoading: isHistoryLoading } = useQuizHistoryQuery();
-  const { data: achievements = [], isLoading: isAchievementsLoading } = useAchievementsQuery();
+  const { data: profile, isLoading: isProfileLoading, refetch: refetchProfile } = useProfileQuery();
+  const { data: history = [], isLoading: isHistoryLoading, refetch: refetchHistory } = useQuizHistoryQuery();
+  const { data: achievements = [], isLoading: isAchievementsLoading, refetch: refetchAchievements } = useAchievementsQuery();
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await Promise.allSettled([
+        refetchProfile(),
+        refetchHistory(),
+        refetchAchievements(),
+        queryClient.invalidateQueries({ queryKey: ['userEntitlements'] }),
+        queryClient.invalidateQueries({ queryKey: ['gamificationSummary'] }),
+        queryClient.invalidateQueries({ queryKey: ['userStreaks'] }),
+      ]);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   // =====================================================
   // DERIVED TRUTHFUL METRICS
@@ -308,9 +326,25 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      <ScrollView
+      {isProfileLoading && !profile && !user ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 }}>
+          <ActivityIndicator size="large" color={theme.primary || '#005D4B'} />
+          <Text style={{ marginTop: 14, fontSize: 13, fontWeight: '500', color: theme.textSecondary || '#6B7280' }}>
+            Loading scholar profile...
+          </Text>
+        </View>
+      ) : (
+        <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[theme.primary || '#005D4B']}
+            tintColor={theme.primary || '#005D4B'}
+          />
+        }
       >
         {/* =====================================================
             1. PROFILE HEADER
@@ -1663,6 +1697,7 @@ export default function ProfileScreen() {
           </View>
         </View>
       </ScrollView>
+      )}
     </SafeAreaView>
   );
 }

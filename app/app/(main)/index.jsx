@@ -4,6 +4,7 @@ import {
   Text,
   StyleSheet,
   ScrollView,
+  RefreshControl,
   TouchableOpacity,
   Image,
   FlatList,
@@ -21,6 +22,7 @@ import { useThemeStore } from '../../store/themeStore';
 import { useNotificationsQuery } from '../../hooks/useNotificationsQuery';
 import { useProfileQuery } from '../../hooks/useProfileQuery';
 import { useRecommendedCoursesQuery } from '../../hooks/useRecommendedCoursesQuery';
+import { useQueryClient } from '@tanstack/react-query';
 import { Colors } from '../../constants/colors';
 import {
   getFacultyMeta,
@@ -30,11 +32,14 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 export default function HomeScreen() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const insets = useSafeAreaInsets();
   const topInset = Math.max(
     insets.top,
     Platform.OS === 'android' ? StatusBar.currentHeight || 24 : 0
   );
+
+  const [refreshing, setRefreshing] = useState(false);
 
   // =====================================================
   // AUTH / SESSION STATE
@@ -85,6 +90,22 @@ export default function HomeScreen() {
   useEffect(() => {
     fetchFaculties();
   }, [fetchFaculties]);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await Promise.allSettled([
+        fetchFaculties(),
+        queryClient.invalidateQueries({ queryKey: ['profile'] }),
+        queryClient.invalidateQueries({ queryKey: ['notifications'] }),
+        queryClient.invalidateQueries({ queryKey: ['recommendedCourses'] }),
+        queryClient.invalidateQueries({ queryKey: ['gamificationSummary'] }),
+        queryClient.invalidateQueries({ queryKey: ['userStreaks'] }),
+      ]);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   // =====================================================
   // RECOMMENDED COURSES & PERSONALIZED ACADEMIC AREA
@@ -524,6 +545,14 @@ export default function HomeScreen() {
         contentContainerStyle={{
           paddingBottom: 30,
         }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[theme.primary || '#005D4B']}
+            tintColor={theme.primary || '#005D4B'}
+          />
+        }
       >
 
         {/* How to Play */}

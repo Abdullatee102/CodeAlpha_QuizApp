@@ -83,7 +83,7 @@ export default function PremiumScreen() {
 
     Alert.alert(
       'Confirm Pass Purchase',
-      `You are selecting the ${product.title} for ₦${(product.amount / 100).toLocaleString()}.\n\nThis transaction runs in Paystack Test Mode for demonstration.`,
+      `You are selecting the ${product.title} for ₦${(product.amount / 100).toLocaleString()}.\n\nThis transaction runs in Paystack secure checkout.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -101,7 +101,7 @@ export default function PremiumScreen() {
               // Open Paystack Checkout
               await WebBrowser.openBrowserAsync(initRes.authorizationUrl, {
                 presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
-                toolbarColor: isDarkMode ? '#0f172a' : '#4f46e5',
+                toolbarColor: isDarkMode ? '#0f172a' : '#005D4B',
                 controlsColor: '#ffffff',
               });
 
@@ -111,13 +111,24 @@ export default function PremiumScreen() {
                 if (verifyRes.success) {
                   Alert.alert(
                     'Payment Successful! 🎉',
-                    `Your ${product.title} is now active on your account! Enjoy enhanced AI tutoring and revision features.`
+                    `Your ${product.title} is now active on your account! Your learning materials, mock tests, and AI explanations are unlocked.`
                   );
+                  loadAllData();
                 } else {
                   Alert.alert(
                     'Payment Verification',
                     'Your payment has been recorded. Tap "Verify Recent Payment" or pull to refresh once completed.'
                   );
+                }
+              }
+            } catch (err) {
+              console.warn('[WebBrowser Error]', err);
+            }
+          },
+        },
+      ]
+    );
+  };
                 }
               }
             } catch (err) {
@@ -161,7 +172,7 @@ export default function PremiumScreen() {
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={['#4f46e5']} tintColor="#4f46e5" />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={[theme.primary || '#005D4B']} tintColor={theme.primary || '#005D4B'} />}
       >
         {/* Educational Equity Guarantee Banner */}
         <View style={[styles.equityCard, { borderColor: isDarkMode ? 'rgba(79, 70, 229, 0.3)' : 'rgba(79, 70, 229, 0.2)' }]}>
@@ -211,6 +222,36 @@ export default function PremiumScreen() {
                 <Text style={[styles.benefitItem, { color: theme.textSecondary }]}>✓ Full-Length Timed Examination Simulations</Text>
                 <Text style={[styles.benefitItem, { color: theme.textSecondary }]}>✓ Advanced Performance & Weakness Diagnostics</Text>
                 <Text style={[styles.benefitItem, { color: theme.textSecondary }]}>✓ Priority High-Yield Revision Modules</Text>
+              </View>
+
+              {/* 1-Tap Direct Benefit Shortcuts */}
+              <View style={styles.shortcutsGrid}>
+                <TouchableOpacity
+                  style={[styles.shortcutBtn, { backgroundColor: isDarkMode ? '#0f172a' : '#f1f5f9', borderColor: theme.border }]}
+                  onPress={() => router.push('/(assessments)')}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="document-text-outline" size={16} color={theme.primary || '#005D4B'} />
+                  <Text style={[styles.shortcutText, { color: theme.text }]}>Study Handouts</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.shortcutBtn, { backgroundColor: isDarkMode ? '#0f172a' : '#f1f5f9', borderColor: theme.border }]}
+                  onPress={() => router.push('/(assessments)')}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="school-outline" size={16} color={theme.primary || '#005D4B'} />
+                  <Text style={[styles.shortcutText, { color: theme.text }]}>Mock CBT Exam</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.shortcutBtn, { backgroundColor: isDarkMode ? '#0f172a' : '#f1f5f9', borderColor: theme.border }]}
+                  onPress={() => router.push('/(assessments)/discussions')}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="chatbubbles-outline" size={16} color={theme.primary || '#005D4B'} />
+                  <Text style={[styles.shortcutText, { color: theme.text }]}>AI Tutor Help</Text>
+                </TouchableOpacity>
               </View>
             </View>
           ) : (
@@ -276,8 +317,11 @@ export default function PremiumScreen() {
             </View>
           ) : (
             filteredProducts.map((prod) => {
-              const isPurchased =
-                prod.id === 'SEMESTER_PASS_HARMATTAN_2026' && activeSemesterPass?.semester === 'harmattan';
+              const isPurchased = activeEntitlements.some(
+                (e) =>
+                  (e.productId === prod.id || (e.featureKey && e.featureKey === prod.featureKey)) &&
+                  e.status === 'ACTIVE'
+              );
 
               return (
                 <View
@@ -313,23 +357,38 @@ export default function PremiumScreen() {
                   )}
 
                   {/* Purchase CTA */}
-                  <TouchableOpacity
-                    style={[
-                      styles.purchaseBtn,
-                      isPurchased && styles.purchasedBtn,
-                      isProcessingPayment && styles.disabledBtn,
-                    ]}
-                    onPress={() => handlePurchase(prod)}
-                    disabled={isProcessingPayment || isPurchased}
-                  >
-                    {isProcessingPayment ? (
-                      <ActivityIndicator size="small" color="#ffffff" />
-                    ) : (
-                      <Text style={styles.purchaseBtnText}>
-                        {isPurchased ? 'Current Active Pass' : `Get Pass · ₦${(prod.amount / 100).toLocaleString()}`}
-                      </Text>
-                    )}
-                  </TouchableOpacity>
+                  {isPurchased ? (
+                    <View style={styles.purchasedActionRow}>
+                      <View style={[styles.purchaseBtn, styles.purchasedBtn, { flex: 1, flexDirection: 'row', gap: 6 }]}>
+                        <Ionicons name="checkmark-circle" size={16} color="#ffffff" />
+                        <Text style={styles.purchaseBtnText}>Active Pass</Text>
+                      </View>
+                      <TouchableOpacity
+                        style={[styles.purchaseBtn, { flex: 1.25, backgroundColor: theme.primary || '#005D4B' }]}
+                        onPress={() => router.push('/(assessments)')}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={styles.purchaseBtnText}>Access Benefits ➔</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <TouchableOpacity
+                      style={[
+                        styles.purchaseBtn,
+                        isProcessingPayment && styles.disabledBtn,
+                      ]}
+                      onPress={() => handlePurchase(prod)}
+                      disabled={isProcessingPayment}
+                    >
+                      {isProcessingPayment ? (
+                        <ActivityIndicator size="small" color="#ffffff" />
+                      ) : (
+                        <Text style={styles.purchaseBtnText}>
+                          {`Get Pass · ₦${(prod.amount / 100).toLocaleString()}`}
+                        </Text>
+                      )}
+                    </TouchableOpacity>
+                  )}
                 </View>
               );
             })
@@ -518,6 +577,31 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: 'rgba(148, 163, 184, 0.2)',
     paddingTop: 10,
+  },
+  shortcutsGrid: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 12,
+  },
+  shortcutBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    paddingVertical: 9,
+    paddingHorizontal: 6,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  shortcutText: {
+    fontSize: 10.5,
+    fontWeight: '700',
+  },
+  purchasedActionRow: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
   },
   unlockedHeader: {
     fontSize: 12,

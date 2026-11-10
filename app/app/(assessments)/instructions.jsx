@@ -136,17 +136,33 @@ export default function AssessmentInstructionsScreen() {
     );
   }
 
-  const isOngoingAttempt = assessment.studentAttemptStatus === 'IN_PROGRESS' || assessment.canResume;
+  const qCount = assessment.questionsCount ?? assessment.questionCount ?? assessment.totalQuestions ?? 0;
+  const hasQuestions = qCount > 0;
+  const isOngoingAttempt = assessment.studentAttemptStatus === 'IN_PROGRESS' || Boolean(assessment.canResume);
   const isSubmitted = assessment.studentAttemptStatus === 'SUBMITTED';
   const isTimedOut = assessment.studentAttemptStatus === 'TIMED_OUT';
+  const attemptsCount = assessment.existingAttemptsCount ?? assessment.attemptsCount ?? 0;
+  const maxAttempts = assessment.maxAttempts || 1;
+  const isAttemptsExhausted = attemptsCount >= maxAttempts && !isOngoingAttempt;
+
+  const nowMs = Date.now();
+  const startMs = assessment.startTime ? new Date(assessment.startTime).getTime() : 0;
+  const endMs = assessment.endTime ? new Date(assessment.endTime).getTime() : 0;
+  const isBeforeStart = startMs > 0 && nowMs < startMs;
+  const isAfterEnd = endMs > 0 && nowMs > endMs;
+  const isWithinWindow = startMs > 0 && endMs > 0 ? (nowMs >= startMs && nowMs <= endMs) : false;
+
   const isOpen =
     assessment.operationalStatus === 'OPEN' ||
     assessment.operationalStatus === 'AVAILABLE_NOW' ||
-    assessment.operationalStatus === 'AVAILABLE';
+    assessment.operationalStatus === 'AVAILABLE' ||
+    isWithinWindow;
+
   const canStart =
     (isOpen || assessment.canStart || isOngoingAttempt) &&
     !isSubmitted &&
-    !isTimedOut;
+    !isTimedOut &&
+    !isAttemptsExhausted;
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background || '#F3F4F6' }]}>
@@ -306,6 +322,20 @@ export default function AssessmentInstructionsScreen() {
                 This assessment session has expired.
               </Text>
             </View>
+          ) : isAttemptsExhausted ? (
+            <View style={[styles.completedBanner, { backgroundColor: '#FEF3C7' }]}>
+              <Ionicons name="alert-circle-outline" size={24} color="#D97706" style={{ marginRight: 8 }} />
+              <Text style={[styles.completedBannerText, { color: '#92400E' }]}>
+                Maximum attempt limit reached ({attemptsCount}/{maxAttempts}).
+              </Text>
+            </View>
+          ) : !hasQuestions ? (
+            <View style={[styles.completedBanner, { backgroundColor: '#FEF3C7' }]}>
+              <Ionicons name="document-text-outline" size={24} color="#D97706" style={{ marginRight: 8 }} />
+              <Text style={[styles.completedBannerText, { color: '#92400E' }]}>
+                No questions have been assembled for this assessment yet. Please notify your presiding lecturer.
+              </Text>
+            </View>
           ) : canStart ? (
             <TouchableOpacity
               style={[
@@ -334,6 +364,20 @@ export default function AssessmentInstructionsScreen() {
                 </>
               )}
             </TouchableOpacity>
+          ) : isBeforeStart ? (
+            <View style={[styles.completedBanner, { backgroundColor: '#DBEAFE' }]}>
+              <Ionicons name="calendar-outline" size={24} color="#2563EB" style={{ marginRight: 8 }} />
+              <Text style={[styles.completedBannerText, { color: '#1E40AF' }]}>
+                Scheduled examination window opens on {formatSchedule(assessment.startTime)}.
+              </Text>
+            </View>
+          ) : isAfterEnd ? (
+            <View style={[styles.completedBanner, { backgroundColor: '#F3F4F6' }]}>
+              <Ionicons name="lock-closed-outline" size={24} color="#6B7280" style={{ marginRight: 8 }} />
+              <Text style={[styles.completedBannerText, { color: '#4B5563' }]}>
+                This assessment examination window closed on {formatSchedule(assessment.endTime)}.
+              </Text>
+            </View>
           ) : (
             <View style={[styles.completedBanner, { backgroundColor: '#F3F4F6' }]}>
               <Ionicons name="alert-circle-outline" size={24} color="#6B7280" style={{ marginRight: 8 }} />

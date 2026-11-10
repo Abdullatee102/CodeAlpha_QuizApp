@@ -455,14 +455,28 @@ export default function AssessmentsIndexScreen() {
 
   const renderAssessmentCard = ({ item }) => {
     const badge = getStatusBadge(item);
+    const nowMs = Date.now();
+    const startMs = item.startTime ? new Date(item.startTime).getTime() : 0;
+    const endMs = item.endTime ? new Date(item.endTime).getTime() : 0;
+    const isWithinWindow = startMs > 0 && endMs > 0 ? (nowMs >= startMs && nowMs <= endMs) : false;
+    const isOngoing = item.studentAttemptStatus === 'IN_PROGRESS' || Boolean(item.canResume);
+    const isSubmitted = item.studentAttemptStatus === 'SUBMITTED';
+    const isTimedOut = item.studentAttemptStatus === 'TIMED_OUT';
+    const attemptsCount = item.existingAttemptsCount ?? item.attemptsCount ?? 0;
+    const maxAttempts = item.maxAttempts || 1;
+    const isAttemptsExhausted = attemptsCount >= maxAttempts && !isOngoing;
+
     const canAttempt =
       (item.canStart ||
         item.canResume ||
         item.operationalStatus === 'OPEN' ||
         item.operationalStatus === 'AVAILABLE_NOW' ||
-        item.studentAttemptStatus === 'IN_PROGRESS') &&
-      item.studentAttemptStatus !== 'SUBMITTED' &&
-      item.studentAttemptStatus !== 'TIMED_OUT';
+        item.operationalStatus === 'AVAILABLE' ||
+        isWithinWindow ||
+        isOngoing) &&
+      !isSubmitted &&
+      !isTimedOut &&
+      !isAttemptsExhausted;
 
     return (
       <TouchableOpacity

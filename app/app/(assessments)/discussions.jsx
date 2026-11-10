@@ -85,16 +85,27 @@ export default function CourseDiscussionsScreen() {
     setLoadingThread(false);
     if (res.success && res.data) {
       const discData = res.data.discussion || {};
-      const replies = res.data.replies || discData.replies || [];
+      const rawReplies = res.data.replies || discData.replies || [];
+      const replies = rawReplies.map((r) => ({
+        ...r,
+        authorName: r.authorName || r.author?.fullName || (r.authorRole === 'LECTURER' ? 'Lecturer' : 'Student'),
+        authorAvatar: r.authorAvatar || r.author?.avatarUrl || null,
+      }));
       setActiveThread({
         ...disc,
         ...discData,
+        authorName: discData.authorName || discData.author?.fullName || disc.authorName || 'Participant',
         replies,
         replyCount: replies.length || discData.replyCount || disc.replyCount || 0,
       });
       setTimeout(() => {
         threadScrollRef.current?.scrollToEnd({ animated: false });
       }, 100);
+    } else {
+      Alert.alert(
+        'Unable to Load Thread',
+        res.error?.message || 'Could not retrieve full thread replies. Please check your connection and retry.'
+      );
     }
   };
 

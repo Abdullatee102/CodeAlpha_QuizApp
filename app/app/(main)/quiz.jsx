@@ -2026,54 +2026,11 @@ export default function QuizScreen() {
           theoryMessage += `\n\nRubric Feedback:\n${feedback}`;
         }
 
-        Alert.alert(
-          'Theory Assessment Evaluation',
-          theoryMessage,
-          [
-            {
-              text: 'Share Report',
-              onPress: () => handleDownloadReport(),
-            },
-            {
-              text: 'Done',
-              onPress: () => {
-                abandonQuiz();
-                router.replace('/(main)');
-              },
-            },
-          ],
-          {
-            cancelable: false,
-          }
-        );
+        setIsResultShown(true);
         return;
       }
 
-      Alert.alert(
-        'Quiz Completed!',
-        `Score: ${finalScore}%\n\nPoints: ${scorePoints}/${totalQuestions * 10}\n\nCorrect: ${correctCount}/${totalQuestions}\n\nWrong: ${wrongCount}`,
-        [
-          {
-            text:
-              'Share Report',
-            onPress: () =>
-              handleDownloadReport(),
-          },
-          {
-            text: 'Done',
-            onPress: () => {
-              abandonQuiz();
-              router.replace(
-                '/(main)'
-              );
-            },
-          },
-        ],
-        {
-          cancelable:
-            false,
-        }
-      );
+      setIsResultShown(true);
     };
 
   // =========================================================
@@ -2298,6 +2255,78 @@ export default function QuizScreen() {
               </View>
             </View>
 
+            {/* Gamification Reward & Course Daily Cap Feedback */}
+            <View
+              style={{
+                width: '100%',
+                backgroundColor: isDarkMode ? '#1e293b' : '#f0fdf4',
+                borderColor: '#10b981',
+                borderWidth: 1,
+                borderRadius: 14,
+                padding: 12,
+                marginTop: 16,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 10,
+              }}
+            >
+              <View
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 18,
+                  backgroundColor: '#10b98120',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Ionicons name="sparkles" size={18} color="#10b981" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: theme.text }}>
+                  +{serverGrading?.earnedXp || Math.round(finalScore * 0.5) || 25} Practice XP Awarded
+                </Text>
+                <Text style={{ fontSize: 11, color: theme.textSecondary, marginTop: 2 }}>
+                  {courseCode ? `${Array.isArray(courseCode) ? courseCode[0] : courseCode}` : 'Course'} · 500 XP daily course practice limit (WAT)
+                </Text>
+              </View>
+            </View>
+
+            {/* Theory Rubric Breakdown if applicable */}
+            {Boolean(serverGrading?.matchedConcepts?.length || serverGrading?.missingConcepts?.length || serverGrading?.feedback) && (
+              <View
+                style={{
+                  width: '100%',
+                  backgroundColor: isDarkMode ? '#1e293b' : '#f8fafc',
+                  borderColor: theme.border,
+                  borderWidth: 1,
+                  borderRadius: 14,
+                  padding: 12,
+                  marginTop: 12,
+                  gap: 8,
+                }}
+              >
+                <Text style={{ fontSize: 12, fontWeight: '700', color: theme.text }}>
+                  Theory Rubric Evaluation
+                </Text>
+                {Boolean(serverGrading?.matchedConcepts?.length) && (
+                  <Text style={{ fontSize: 11, color: '#059669', lineHeight: 16 }}>
+                    ✓ Matched: {serverGrading.matchedConcepts.slice(0, 4).join(', ')}
+                  </Text>
+                )}
+                {Boolean(serverGrading?.missingConcepts?.length) && (
+                  <Text style={{ fontSize: 11, color: '#dc2626', lineHeight: 16 }}>
+                    ✗ Missing: {serverGrading.missingConcepts.slice(0, 4).join(', ')}
+                  </Text>
+                )}
+                {Boolean(serverGrading?.feedback) && (
+                  <Text style={{ fontSize: 11, color: theme.textSecondary, fontStyle: 'italic', lineHeight: 16 }}>
+                    "{serverGrading.feedback}"
+                  </Text>
+                )}
+              </View>
+            )}
+
             <View style={styles.resultActions}>
               <TouchableOpacity
                 style={[
@@ -2334,7 +2363,7 @@ export default function QuizScreen() {
                     },
                   ]}
                 >
-                  Back to Courses
+                  Back to Dashboard
                 </Text>
               </TouchableOpacity>
             </View>
