@@ -129,16 +129,6 @@ export default function PremiumScreen() {
       ]
     );
   };
-                }
-              }
-            } catch (err) {
-              console.warn('[WebBrowser Error]', err);
-            }
-          },
-        },
-      ]
-    );
-  };
 
   const filteredProducts = useMemo(() => {
     if (selectedCategory === 'ALL') return products;
