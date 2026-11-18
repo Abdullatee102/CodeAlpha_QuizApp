@@ -10,11 +10,13 @@ import {
   StatusBar,
   Platform,
   RefreshControl,
+  Modal,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
+import * as Linking from 'expo-linking';
 
 import { useThemeStore } from '../../store/themeStore';
 import { usePaymentStore } from '../../store/paymentStore';
@@ -44,6 +46,8 @@ export default function PremiumScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [activePendingRef, setActivePendingRef] = useState(null);
+  const [selectedOrderForDetail, setSelectedOrderForDetail] = useState(null);
+  const [isVerifyingSelected, setIsVerifyingSelected] = useState(false);
 
   useEffect(() => {
     loadAllData();
@@ -55,6 +59,25 @@ export default function PremiumScreen() {
       fetchActiveEntitlements(),
       fetchOrders(),
     ]);
+  };
+
+  const handleVerifySelectedOrder = async (reference) => {
+    if (!reference) return;
+    setIsVerifyingSelected(true);
+    try {
+      const res = await verifyPayment(reference);
+      if (res?.success) {
+        Alert.alert('Payment Confirmed!', 'Your entitlement has been activated successfully.');
+        await loadAllData();
+        setSelectedOrderForDetail((prev) => (prev ? { ...prev, status: 'COMPLETED' } : null));
+      } else {
+        Alert.alert('Status Update', res?.message || 'Payment is still awaiting confirmation from Paystack.');
+      }
+    } catch (err) {
+      Alert.alert('Verification Notice', 'Could not verify payment status at this moment. Please try again later.');
+    } finally {
+      setIsVerifyingSelected(false);
+    }
   };
 
   const handleRefresh = async () => {
@@ -95,19 +118,28 @@ export default function PremiumScreen() {
               return;
             }
 
-            setActivePendingRef(initRes.reference);
+            const targetRef = initRes.reference;
+            setActivePendingRef(targetRef);
 
-            try {
-              // Open Paystack Checkout
-              await WebBrowser.openBrowserAsync(initRes.authorizationUrl, {
-                presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
-                toolbarColor: isDarkMode ? '#0f172a' : '#005D4B',
-                controlsColor: '#ffffff',
-              });
+            let deepLinkSubscription = null;
+            let hasVerified = false;
 
-              // Automatically verify transaction upon browser closure
-              if (initRes.reference) {
-                const verifyRes = await verifyPayment(initRes.reference);
+            const executeVerification = async (refToVerify) => {
+              if (hasVerified) return;
+              hasVerified = true;
+
+              if (deepLinkSubscription) {
+                deepLinkSubscription.remove();
+                deepLinkSubscription = null;
+              }
+
+              try {
+                await WebBrowser.dismissBrowser();
+              } catch {}
+
+              const verifyRef = refToVerify || targetRef;
+              if (verifyRef) {
+                const verifyRes = await verifyPayment(verifyRef);
                 if (verifyRes.success) {
                   Alert.alert(
                     'Payment Successful! 🎉',
@@ -121,8 +153,53 @@ export default function PremiumScreen() {
                   );
                 }
               }
+            };
+
+            try {
+              // 1. Listen for deep-link return from browser / intent (brainbuzz-app:// or brainbuzz://)
+              deepLinkSubscription = Linking.addEventListener('url', async (event) => {
+                const url = event?.url;
+                if (url && (url.includes('payment-callback') || url.includes('reference='))) {
+                  try {
+                    const parsed = Linking.parse(url);
+                    const queryRef = parsed.queryParams?.reference;
+                    await executeVerification(queryRef || targetRef);
+                  } catch {
+                    await executeVerification(targetRef);
+                  }
+                }
+              });
+
+              // 2. Open Paystack Checkout using openAuthSessionAsync
+              // Intercepts return to brainbuzz-app://payment-callback and closes the browser automatically
+              const authResult = await WebBrowser.openAuthSessionAsync(
+                initRes.authorizationUrl,
+                'brainbuzz-app://payment-callback',
+                {
+                  toolbarColor: isDarkMode ? '#0f172a' : '#005D4B',
+                  controlsColor: '#ffffff',
+                }
+              );
+
+              // 3. Process outcome if not already verified via deep link
+              if (authResult?.type === 'success' && authResult?.url) {
+                const parsed = Linking.parse(authResult.url);
+                const queryRef = parsed.queryParams?.reference;
+                await executeVerification(queryRef || targetRef);
+              } else if (!hasVerified && targetRef) {
+                // If user dismissed browser sheet or completed without redirect callback
+                await executeVerification(targetRef);
+              }
             } catch (err) {
               console.warn('[WebBrowser Error]', err);
+              if (!hasVerified && targetRef) {
+                await executeVerification(targetRef);
+              }
+            } finally {
+              if (deepLinkSubscription) {
+                deepLinkSubscription.remove();
+                deepLinkSubscription = null;
+              }
             }
           },
         },
@@ -390,8 +467,10 @@ export default function PremiumScreen() {
           <View style={styles.historySection}>
             <Text style={[styles.sectionTitle, { color: theme.text }]}>Purchase History</Text>
             {orders.map((ord) => (
-              <View
+              <TouchableOpacity
                 key={ord.id}
+                activeOpacity={0.7}
+                onPress={() => setSelectedOrderForDetail(ord)}
                 style={[
                   styles.orderRow,
                   { backgroundColor: isDarkMode ? '#1e293b' : '#ffffff', borderColor: theme.border },
@@ -435,8 +514,9 @@ export default function PremiumScreen() {
                       {ord.status}
                     </Text>
                   </View>
+                  <Ionicons name="chevron-forward" size={14} color={theme.textSecondary} style={{ marginTop: 2 }} />
                 </View>
-              </View>
+              </TouchableOpacity>
             ))}
           </View>
         )}
@@ -447,6 +527,170 @@ export default function PremiumScreen() {
           <Text style={styles.sandboxText}>Paystack Test Mode Sandbox · Zero real charges incurred</Text>
         </View>
       </ScrollView>
+
+      {/* Transaction Details Modal */}
+      <Modal
+        visible={!!selectedOrderForDetail}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setSelectedOrderForDetail(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View
+            style={[
+              styles.modalContent,
+              { backgroundColor: isDarkMode ? '#0f172a' : '#ffffff', borderColor: theme.border },
+            ]}
+          >
+            {/* Modal Header */}
+            <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Ionicons name="receipt-outline" size={20} color="#008F73" />
+                <Text style={[styles.modalTitle, { color: theme.text }]}>Payment Details</Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setSelectedOrderForDetail(null)}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Ionicons name="close" size={22} color={theme.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            {selectedOrderForDetail && (
+              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 14 }}>
+                {/* Amount & Status Card */}
+                <View style={[styles.detailHero, { backgroundColor: isDarkMode ? '#1e293b' : '#f8fafc' }]}>
+                  <Text style={[styles.detailHeroAmount, { color: theme.text }]}>
+                    ₦{(selectedOrderForDetail.amount / 100).toLocaleString()}
+                  </Text>
+                  <View
+                    style={[
+                      styles.orderStatusPill,
+                      {
+                        backgroundColor:
+                          selectedOrderForDetail.status === 'COMPLETED'
+                            ? '#d1fae5'
+                            : selectedOrderForDetail.status === 'PENDING'
+                            ? '#fef3c7'
+                            : '#fee2e2',
+                        marginTop: 6,
+                        alignSelf: 'center',
+                        paddingHorizontal: 10,
+                        paddingVertical: 4,
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.orderStatusText,
+                        {
+                          color:
+                            selectedOrderForDetail.status === 'COMPLETED'
+                              ? '#065f46'
+                              : selectedOrderForDetail.status === 'PENDING'
+                              ? '#92400e'
+                              : '#991b1b',
+                          fontSize: 11,
+                        },
+                      ]}
+                    >
+                      {selectedOrderForDetail.status}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Purpose Section */}
+                <View style={styles.detailSection}>
+                  <Text style={[styles.detailSectionLabel, { color: theme.textSecondary }]}>
+                    WHAT THIS PAYMENT IS FOR
+                  </Text>
+                  <Text style={[styles.detailProductTitle, { color: theme.text }]}>
+                    {selectedOrderForDetail.title || selectedOrderForDetail.productId}
+                  </Text>
+                  <Text style={[styles.detailProductDesc, { color: theme.textSecondary }]}>
+                    {selectedOrderForDetail.description ||
+                      'Grants full verified access to Brain Buzz academic curriculum, untimed CBT mock trials, detailed question solutions, and study passes.'}
+                  </Text>
+                </View>
+
+                {/* Order Details List */}
+                <View style={[styles.detailSection, { borderTopWidth: 1, borderTopColor: theme.border, paddingTop: 12 }]}>
+                  <View style={styles.detailRow}>
+                    <Text style={[styles.detailRowKey, { color: theme.textSecondary }]}>Account ID</Text>
+                    <Text
+                      selectable={true}
+                      style={[styles.detailRowValue, { color: '#008F73', fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', fontWeight: 'bold' }]}
+                    >
+                      {selectedOrderForDetail.studentDisplayId ||
+                       user?.displayId ||
+                       user?.customId ||
+                       (user?.id ? `BB-STU-${String(user.id).replace(/-/g, '').slice(-4).toUpperCase()}` : 'BB-STU-001')}
+                    </Text>
+                  </View>
+
+                  <View style={styles.detailRow}>
+                    <Text style={[styles.detailRowKey, { color: theme.textSecondary }]}>Order Reference</Text>
+                    <Text
+                      selectable={true}
+                      style={[styles.detailRowValue, { color: '#008F73', fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }]}
+                    >
+                      {selectedOrderForDetail.orderReference}
+                    </Text>
+                  </View>
+
+                  <View style={styles.detailRow}>
+                    <Text style={[styles.detailRowKey, { color: theme.textSecondary }]}>Payment Method</Text>
+                    <Text style={[styles.detailRowValue, { color: theme.text }]}>Paystack Checkout</Text>
+                  </View>
+
+                  <View style={styles.detailRow}>
+                    <Text style={[styles.detailRowKey, { color: theme.textSecondary }]}>Gateway Ref</Text>
+                    <Text
+                      selectable={true}
+                      style={[styles.detailRowValue, { color: theme.text, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', fontSize: 11 }]}
+                    >
+                      {selectedOrderForDetail.gatewayTransactionId || selectedOrderForDetail.gatewayReference || '—'}
+                    </Text>
+                  </View>
+
+                  <View style={styles.detailRow}>
+                    <Text style={[styles.detailRowKey, { color: theme.textSecondary }]}>Date & Time</Text>
+                    <Text style={[styles.detailRowValue, { color: theme.text }]}>
+                      {new Date(selectedOrderForDetail.createdAt).toLocaleString()}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Pending Resolution CTA */}
+                {selectedOrderForDetail.status === 'PENDING' && (
+                  <TouchableOpacity
+                    style={styles.verifyBtn}
+                    disabled={isVerifyingSelected}
+                    onPress={() => handleVerifySelectedOrder(selectedOrderForDetail.orderReference)}
+                  >
+                    {isVerifyingSelected ? (
+                      <ActivityIndicator color="#ffffff" size="small" />
+                    ) : (
+                      <>
+                        <Ionicons name="refresh" size={16} color="#ffffff" />
+                        <Text style={styles.verifyBtnText}>Verify / Confirm Payment Status</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                )}
+              </ScrollView>
+            )}
+
+            {/* Close Button */}
+            <TouchableOpacity
+              style={[styles.modalCloseBtn, { borderColor: theme.border }]}
+              onPress={() => setSelectedOrderForDetail(null)}
+            >
+              <Text style={[styles.modalCloseText, { color: theme.text }]}>Dismiss</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -794,5 +1038,102 @@ const styles = StyleSheet.create({
   sandboxText: {
     fontSize: 11,
     color: '#64748b',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    width: '100%',
+    maxHeight: '85%',
+    borderRadius: 20,
+    borderWidth: 1,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  detailHero: {
+    padding: 16,
+    borderRadius: 14,
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  detailHeroAmount: {
+    fontSize: 26,
+    fontWeight: '800',
+  },
+  detailSection: {
+    marginBottom: 12,
+  },
+  detailSectionLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  detailProductTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  detailProductDesc: {
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 5,
+  },
+  detailRowKey: {
+    fontSize: 12,
+  },
+  detailRowValue: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  verifyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#008F73',
+    paddingVertical: 12,
+    borderRadius: 12,
+    marginTop: 14,
+  },
+  verifyBtnText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  modalCloseBtn: {
+    borderWidth: 1,
+    paddingVertical: 11,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 6,
+  },
+  modalCloseText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
 });

@@ -431,6 +431,46 @@ export default function ProfileScreen() {
             </Text>
           ) : null}
 
+          {/* Brain Buzz Account ID Pill */}
+          {(() => {
+            const displayId =
+              profile?.displayId ||
+              profile?.customId ||
+              user?.displayId ||
+              user?.customId ||
+              (user?.id ? `BB-STU-${String(user.id).replace(/-/g, '').slice(-4).toUpperCase()}` : null);
+            if (!displayId) return null;
+            return (
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 5,
+                  marginTop: 6,
+                  paddingHorizontal: 10,
+                  paddingVertical: 3,
+                  borderRadius: 12,
+                  backgroundColor: isDarkMode ? '#1E293B' : '#EEF2FF',
+                  borderWidth: 1,
+                  borderColor: isDarkMode ? '#334155' : '#C7D2FE',
+                }}
+              >
+                <Ionicons name="card-outline" size={12} color={theme.primary} />
+                <Text
+                  selectable={true}
+                  style={{
+                    fontFamily: 'Ubuntu-Bold',
+                    fontSize: 11,
+                    color: theme.primary,
+                    letterSpacing: 0.5,
+                  }}
+                >
+                  Account ID: {displayId}
+                </Text>
+              </View>
+            );
+          })()}
+
           {profile?.bio ? (
             <Text
               style={[

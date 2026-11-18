@@ -309,11 +309,35 @@ export default function AssessmentInstructionsScreen() {
         {/* Start / Resume Action */}
         <View style={styles.bottomActionArea}>
           {isSubmitted ? (
-            <View style={styles.completedBanner}>
-              <Ionicons name="checkmark-circle" size={24} color="#10B981" style={{ marginRight: 8 }} />
-              <Text style={styles.completedBannerText}>
-                You have already submitted this assessment.
-              </Text>
+            <View>
+              <View style={styles.completedBanner}>
+                <Ionicons name="checkmark-circle" size={24} color="#10B981" style={{ marginRight: 8 }} />
+                <Text style={styles.completedBannerText}>
+                  You have already submitted this assessment.
+                </Text>
+              </View>
+              {assessment.resultsPublicationStatus === 'PUBLISHED' ? (
+                <TouchableOpacity
+                  style={[styles.actionButton, { backgroundColor: '#059669', marginTop: 12 }]}
+                  onPress={() => {
+                    router.push({
+                      pathname: '/(assessments)',
+                      params: {
+                        tab: 'assessments',
+                        assessmentId: assessment.id,
+                        viewResult: 'true',
+                      },
+                    });
+                  }}
+                >
+                  <Ionicons name="ribbon-outline" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
+                  <Text style={styles.actionButtonText}>View Published Results</Text>
+                </TouchableOpacity>
+              ) : (
+                <Text style={[styles.ruleText, { color: isDarkMode ? '#94A3B8' : '#64748B', marginTop: 8, textAlign: 'center' }]}>
+                  Your submission has been recorded. Official scores will be available once published by your course lecturer.
+                </Text>
+              )}
             </View>
           ) : isTimedOut ? (
             <View style={[styles.completedBanner, { backgroundColor: '#FEE2E2' }]}>

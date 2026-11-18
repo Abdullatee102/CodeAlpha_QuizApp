@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,7 @@ import {
   Modal,
   ScrollView,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useThemeStore } from '../../store/themeStore';
@@ -21,6 +21,7 @@ import { useAuthStore } from '../../store/authStore';
 
 export default function AssessmentsIndexScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams();
   const insets = useSafeAreaInsets();
   const { theme, isDarkMode } = useThemeStore();
   const { user } = useAuthStore();
@@ -35,7 +36,7 @@ export default function AssessmentsIndexScreen() {
 
   const [assessments, setAssessments] = useState([]);
   const [enrollments, setEnrollments] = useState([]);
-  const [activeTab, setActiveTab] = useState('courses'); // 'courses' | 'assessments'
+  const [activeTab, setActiveTab] = useState(params?.tab === 'assessments' ? 'assessments' : 'courses'); // 'courses' | 'assessments'
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
@@ -170,7 +171,7 @@ export default function AssessmentsIndexScreen() {
     }
   };
 
-  const handleViewResults = async (item) => {
+  const handleViewResults = useCallback(async (item) => {
     setSelectedResultData({ assessment: item, result: null, isPending: true });
     setResultModalVisible(true);
     setLoadingResult(true);
@@ -190,7 +191,38 @@ export default function AssessmentsIndexScreen() {
     } else {
       setResultError(res.error?.message || 'Failed to retrieve assessment results.');
     }
-  };
+  }, [fetchAssessmentResults]);
+
+  // Synchronize tab when navigation parameter changes
+  useEffect(() => {
+    if (params?.tab === 'assessments') {
+      setActiveTab('assessments');
+    } else if (params?.tab === 'courses') {
+      setActiveTab('courses');
+    }
+  }, [params?.tab]);
+
+  // Auto-open assessment results modal when targeted by notification deep-link
+  const hasAutoOpenedResultRef = useRef(false);
+  useEffect(() => {
+    if (
+      !isLoading &&
+      params?.assessmentId &&
+      (params?.viewResult === 'true' || params?.openResult === 'true') &&
+      !hasAutoOpenedResultRef.current
+    ) {
+      hasAutoOpenedResultRef.current = true;
+      setActiveTab('assessments');
+      const target = assessments.find((a) => String(a.id) === String(params.assessmentId));
+      handleViewResults(
+        target || {
+          id: String(params.assessmentId),
+          title: params?.title || 'Official Assessment Results',
+          courseCode: params?.courseCode || 'COURSE',
+        }
+      );
+    }
+  }, [isLoading, params?.assessmentId, params?.viewResult, params?.openResult, params?.title, params?.courseCode, assessments, handleViewResults]);
 
   const handleViewAttendance = (item) => {
     router.push({

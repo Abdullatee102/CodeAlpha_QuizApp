@@ -79,6 +79,7 @@ const formatFullDate = (dateString) => {
 const getNotificationIconInfo = (notification) => {
   const type = (notification?.type || notification?.data?.type || '').toLowerCase();
   const title = (notification?.title || '').toLowerCase();
+  const body = (notification?.body || '').toLowerCase();
 
   if (type === 'support_update' || title.includes('support')) {
     return { name: 'chatbubbles', family: 'Ionicons', color: '#0284C7', label: 'Support Ticket' };
@@ -86,8 +87,30 @@ const getNotificationIconInfo = (notification) => {
   if (type === 'achievement_unlocked' || title.includes('achievement')) {
     return { name: 'trophy', family: 'Ionicons', color: '#F59E0B', label: 'Achievement' };
   }
-  if (type === 'quiz_completed' || title.includes('quiz') || title.includes('exam')) {
-    return { name: 'school', family: 'Ionicons', color: '#10B981', label: 'Academic' };
+  if (
+    type === 'assessment_results_published' ||
+    title.includes('results published') ||
+    title.includes('result approved') ||
+    (notification?.data?.assessmentId && (title.includes('result') || body.includes('result') || body.includes('gradebook')))
+  ) {
+    return { name: 'ribbon', family: 'Ionicons', color: '#059669', label: 'Results Released' };
+  }
+  if (
+    type.startsWith('assessment') ||
+    title.includes('assessment') ||
+    Boolean(notification?.data?.assessmentId)
+  ) {
+    return { name: 'document-text', family: 'Ionicons', color: '#0D9488', label: 'Academic Assessment' };
+  }
+  if (
+    type === 'course_announcement' ||
+    type === 'course_notice' ||
+    Boolean(notification?.data?.offeringId)
+  ) {
+    return { name: 'megaphone', family: 'Ionicons', color: '#8B5CF6', label: 'Course Notice' };
+  }
+  if (type === 'quiz_completed' || title.includes('quiz')) {
+    return { name: 'school', family: 'Ionicons', color: '#10B981', label: 'Practice Quiz' };
   }
   if (type === 'announcement' || title.includes('schedule') || title.includes('timetable') || title.includes('maintenance')) {
     return { name: 'megaphone', family: 'Ionicons', color: '#8B5CF6', label: 'Announcement' };
@@ -182,13 +205,101 @@ export default function NotificationsScreen() {
       };
     }
 
+    // 1. Assessment Results Published Notification
+    const isResultsPublished =
+      type === 'assessment_results_published' ||
+      title.includes('results published') ||
+      title.includes('result approved') ||
+      (Boolean(notification?.data?.assessmentId) &&
+        (title.includes('result') || body.includes('result') || body.includes('gradebook')));
+
+    if (isResultsPublished) {
+      return {
+        label: 'View Published Results',
+        icon: 'ribbon-outline',
+        onPress: () => {
+          setSelectedNotification(null);
+          router.push({
+            pathname: '/(assessments)',
+            params: {
+              tab: 'assessments',
+              assessmentId: notification?.data?.assessmentId ? String(notification.data.assessmentId) : '',
+              viewResult: 'true',
+            },
+          });
+        },
+      };
+    }
+
+    // 2. Assessment Scheduled / Rescheduled / Instructions Notification
+    const isAssessmentNotification =
+      type.startsWith('assessment.') ||
+      type === 'assessment_published' ||
+      type === 'assessment_rescheduled' ||
+      type === 'assessment_cancelled' ||
+      title.includes('assessment') ||
+      Boolean(notification?.data?.assessmentId);
+
+    if (isAssessmentNotification) {
+      const assessmentId = notification?.data?.assessmentId;
+      return {
+        label: assessmentId ? 'View Assessment Briefing' : 'Go to Assessments',
+        icon: 'document-text-outline',
+        onPress: () => {
+          setSelectedNotification(null);
+          if (assessmentId) {
+            router.push({
+              pathname: '/(assessments)/instructions',
+              params: {
+                assessmentId: String(assessmentId),
+              },
+            });
+          } else {
+            router.push({
+              pathname: '/(assessments)',
+              params: {
+                tab: 'assessments',
+              },
+            });
+          }
+        },
+      };
+    }
+
+    // 3. Course Announcement / Offering Notice Notification
+    if (
+      type === 'course_announcement' ||
+      type === 'course_notice' ||
+      Boolean(notification?.data?.offeringId && !notification?.data?.assessmentId)
+    ) {
+      return {
+        label: 'View Course Notices',
+        icon: 'megaphone-outline',
+        onPress: () => {
+          setSelectedNotification(null);
+          if (notification?.data?.offeringId) {
+            router.push({
+              pathname: '/(assessments)/notices',
+              params: {
+                offeringId: String(notification.data.offeringId),
+                courseCode: notification.data?.courseCode || '',
+              },
+            });
+          } else {
+            router.push({
+              pathname: '/(assessments)',
+              params: { tab: 'courses' },
+            });
+          }
+        },
+      };
+    }
+
+    // 4. Practice Quiz / Non-academic Courses Fallback
     if (
       type === 'quiz_completed' ||
       title.includes('quiz') ||
-      title.includes('exam') ||
-      title.includes('timetable') ||
-      body.includes('harmattan') ||
-      body.includes('semester')
+      title.includes('practice')
     ) {
       return {
         label: 'Go to Courses & Practice',
