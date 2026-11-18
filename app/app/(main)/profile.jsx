@@ -434,10 +434,10 @@ export default function ProfileScreen() {
           {/* Brain Buzz Account ID Pill */}
           {(() => {
             const displayId =
-              profile?.displayId ||
-              profile?.customId ||
-              user?.displayId ||
-              user?.customId ||
+              (profile?.displayId && profile.displayId.startsWith('BB-') ? profile.displayId : null) ||
+              (profile?.customId && profile.customId.startsWith('BB-') ? profile.customId : null) ||
+              (user?.displayId && user.displayId.startsWith('BB-') ? user.displayId : null) ||
+              (user?.customId && user.customId.startsWith('BB-') ? user.customId : null) ||
               (user?.id ? `BB-STU-${String(user.id).replace(/-/g, '').slice(-4).toUpperCase()}` : null);
             if (!displayId) return null;
             return (

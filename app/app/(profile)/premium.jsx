@@ -621,9 +621,9 @@ export default function PremiumScreen() {
                       selectable={true}
                       style={[styles.detailRowValue, { color: '#008F73', fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', fontWeight: 'bold' }]}
                     >
-                      {selectedOrderForDetail.studentDisplayId ||
-                       user?.displayId ||
-                       user?.customId ||
+                      {(selectedOrderForDetail.studentDisplayId && selectedOrderForDetail.studentDisplayId.startsWith('BB-') ? selectedOrderForDetail.studentDisplayId : null) ||
+                       (user?.displayId && user.displayId.startsWith('BB-') ? user.displayId : null) ||
+                       (user?.customId && user.customId.startsWith('BB-') ? user.customId : null) ||
                        (user?.id ? `BB-STU-${String(user.id).replace(/-/g, '').slice(-4).toUpperCase()}` : 'BB-STU-001')}
                     </Text>
                   </View>
