@@ -1192,9 +1192,12 @@ export const useAuthStore = create(
           const isEmail =
             safeIdentifier.includes('@');
 
+          const cleanFullName = (fullName || '').replace(/^[@\s'"`\-_.]+/, '').trim();
+          const cleanUsername = (username || '').replace(/^@+/, '').trim().toLowerCase();
+
           const payload = {
-            fullName,
-            username,
+            fullName: cleanFullName,
+            username: cleanUsername,
             password,
 
             acceptedTerms:

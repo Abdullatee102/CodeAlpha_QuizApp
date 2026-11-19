@@ -227,10 +227,11 @@ export default function HomeScreen() {
         'Scholar'
       : rawInitialName;
 
-  const userInitial = cleanInitialName
-    .split(' ')[0]
-    .charAt(0)
-    .toUpperCase();
+  const userInitial = (
+    cleanInitialName
+      .replace(/^[@\s'"`\-_.]+/, '')
+      .charAt(0) || 'S'
+  ).toUpperCase();
 
   const profileImage = profile?.photoURL || user?.photoURL;
 
@@ -452,7 +453,8 @@ export default function HomeScreen() {
                     'Scholar'
                   : rawName;
 
-              return cleanName.split(' ')[0];
+              const sanitized = String(cleanName || '').replace(/^[@\s'"`\-_.]+/, '');
+              return (sanitized || 'Scholar').split(' ')[0];
             })()}
           </Text>
         </View>

@@ -556,15 +556,13 @@ export default function ConversationScreen() {
       String(item?.senderId) ===
       String(currentUserId);
 
-    const senderName =
+    const rawSenderName =
       item?.sender?.fullName ||
       item?.sender?.name ||
       'Scholar';
 
-    const senderInitial =
-      senderName
-        .charAt(0)
-        .toUpperCase();
+    const cleanSenderName = String(rawSenderName).replace(/^[@\s'"`\-_.]+/, '').trim();
+    const senderInitial = (cleanSenderName.charAt(0) || 'S').toUpperCase();
 
     const isPersonalMention =
       !isMe &&
@@ -896,10 +894,11 @@ export default function ConversationScreen() {
                       },
                     ]}
                   >
-                    {member.name
-                      ?.charAt(0)
-                      ?.toUpperCase() ||
-                      'S'}
+                    {(
+                      String(member.name || member.fullName || member.username || 'S')
+                        .replace(/^[@\s'"`\-_.]+/, '')
+                        .charAt(0) || 'S'
+                    ).toUpperCase()}
                   </Text>
                 )}
               </View>

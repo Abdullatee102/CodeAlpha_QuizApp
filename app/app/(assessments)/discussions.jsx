@@ -264,7 +264,7 @@ export default function CourseDiscussionsScreen() {
               <View style={styles.authorRow}>
                 <View style={[styles.authorAvatar, { backgroundColor: theme.primary + '20' }]}>
                   <Text style={[styles.authorAvatarText, { color: theme.primary }]}>
-                    {activeThread.authorName ? activeThread.authorName.charAt(0).toUpperCase() : 'U'}
+                    {String(activeThread.authorName || '').replace(/^[@\s'"`\-_.]+/, '').charAt(0).toUpperCase() || 'U'}
                   </Text>
                 </View>
                 <View style={{ flex: 1 }}>
@@ -374,7 +374,7 @@ export default function CourseDiscussionsScreen() {
                           },
                         ]}
                       >
-                        {reply.authorName ? reply.authorName.charAt(0).toUpperCase() : 'U'}
+                        {String(reply.authorName || '').replace(/^[@\s'"`\-_.]+/, '').charAt(0).toUpperCase() || 'U'}
                       </Text>
                     </View>
                     <View style={{ flex: 1 }}>
@@ -601,7 +601,7 @@ export default function CourseDiscussionsScreen() {
                       <View style={styles.authorRow}>
                         <View style={[styles.authorAvatarSmall, { backgroundColor: theme.primary + '15' }]}>
                           <Text style={[styles.authorAvatarSmallText, { color: theme.primary }]}>
-                            {topic.authorName ? topic.authorName.charAt(0).toUpperCase() : 'U'}
+                            {String(topic.authorName || '').replace(/^[@\s'"`\-_.]+/, '').charAt(0).toUpperCase() || 'U'}
                           </Text>
                         </View>
                         <Text style={[styles.authorName, { color: theme.text || '#111827' }]}>

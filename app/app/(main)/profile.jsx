@@ -148,14 +148,15 @@ export default function ProfileScreen() {
   }, [history]);
 
   // Identity
-  const userInitial = (
+  const rawInitialName =
     profile?.fullName ||
     user?.fullName ||
     user?.displayName ||
-    'S'
-  )
-    .charAt(0)
-    .toUpperCase();
+    profile?.username ||
+    user?.username ||
+    'Scholar';
+  const cleanInitialName = String(rawInitialName).replace(/^[@\s'"`\-_.]+/, '').trim();
+  const userInitial = (cleanInitialName.charAt(0) || 'S').toUpperCase();
 
   const profileImage = profile?.photoURL || user?.photoURL;
   const username = profile?.username || user?.username;
@@ -415,9 +416,11 @@ export default function ProfileScreen() {
             ]}
             numberOfLines={1}
           >
-            {profile?.fullName ||
-              user?.fullName ||
-              'LAUTECH Scholar'}
+            {String(
+              profile?.fullName ||
+                user?.fullName ||
+                'LAUTECH Scholar'
+            ).replace(/^[@\s'"`\-_.]+/, '').trim() || 'LAUTECH Scholar'}
           </Text>
 
           {profile?.email ? (

@@ -73,11 +73,14 @@ export default function SignUpScreen() {
       return;
     }
 
+    const cleanFullName = fullName.replace(/^[@\s'"`\-_.]+/, '').trim();
+    const cleanUsername = username.replace(/^@+/, '').trim().toLowerCase();
+
     const res = await signUp({
       identifier,
       password,
-      fullName,
-      username,
+      fullName: cleanFullName,
+      username: cleanUsername,
       acceptedTerms,
     });
 

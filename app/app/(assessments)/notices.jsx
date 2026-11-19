@@ -277,7 +277,7 @@ export default function CourseNoticesScreen() {
                     <View style={styles.authorRow}>
                       <View style={[styles.authorAvatar, { backgroundColor: theme.primary + '20' }]}>
                         <Text style={[styles.authorAvatarText, { color: theme.primary }]}>
-                          {notice.authorName ? notice.authorName.charAt(0).toUpperCase() : 'L'}
+                          {String(notice.authorName || '').replace(/^[@\s'"`\-_.]+/, '').charAt(0).toUpperCase() || 'L'}
                         </Text>
                       </View>
                       <View>

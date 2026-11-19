@@ -147,9 +147,9 @@ export default function LeaderboardScreen() {
         (isCurrentUser ? profile?.facultyName || profile?.departmentName : ''),
     });
 
-    const userInitial = (item.fullName || item.username || 'U')
-      .charAt(0)
-      .toUpperCase();
+    const rawInitialName = item.fullName || item.username || 'U';
+    const cleanInitialName = String(rawInitialName).replace(/^[@\s'"`\-_.]+/, '').trim();
+    const userInitial = (cleanInitialName.charAt(0) || 'U').toUpperCase();
 
     // Display Name handling
     let displayName = `@${item.username || 'user'}`;
