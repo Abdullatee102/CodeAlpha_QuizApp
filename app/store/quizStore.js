@@ -1555,12 +1555,14 @@ export const useQuizStore = create(
           return {
             success: true,
             data: response.data?.data?.offerings || [],
+            hasActiveSubscription: Boolean(response.data?.data?.hasActiveSubscription),
           };
         } catch (error) {
           return {
             success: false,
             error: formatAxiosError(error),
             data: [],
+            hasActiveSubscription: false,
           };
         }
       },

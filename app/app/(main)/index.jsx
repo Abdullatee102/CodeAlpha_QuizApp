@@ -793,7 +793,38 @@ export default function HomeScreen() {
         {/* Personalized Academic Area & Recommended Courses */}
 
         <View style={styles.sectionContainer}>
-          {recResponse?.hasAcademicProfile ? (
+          {(isLoadingRecs || isProfileLoading) && !recResponse ? (
+            <View>
+              <Text
+                style={[
+                  styles.sectionTitle,
+                  {
+                    color: theme.text,
+                    marginBottom: 2,
+                  },
+                ]}
+              >
+                Recommended Courses
+              </Text>
+              <View style={styles.loadingFaculties}>
+                <ActivityIndicator
+                  size="small"
+                  color={theme.primary}
+                />
+
+                <Text
+                  style={[
+                    styles.loadingText,
+                    {
+                      color: theme.textSecondary,
+                    },
+                  ]}
+                >
+                  Loading recommended courses...
+                </Text>
+              </View>
+            </View>
+          ) : recResponse?.hasAcademicProfile ? (
             <View>
               <View style={styles.recHeaderRow}>
                 <View style={{ flex: 1 }}>
@@ -1846,10 +1877,10 @@ const styles = StyleSheet.create({
   },
 
   recLoadingBox: {
-    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 32,
     gap: 8,
-    paddingVertical: 20,
   },
 
   recLoadingText: {

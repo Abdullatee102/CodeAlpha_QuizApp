@@ -20,6 +20,7 @@ import * as Linking from 'expo-linking';
 
 import { useThemeStore } from '../../store/themeStore';
 import { usePaymentStore } from '../../store/paymentStore';
+import { useAuthStore } from '../../store/authStore';
 
 export default function PremiumScreen() {
   const insets = useSafeAreaInsets();
@@ -29,6 +30,7 @@ export default function PremiumScreen() {
   );
   const router = useRouter();
   const { theme, isDarkMode } = useThemeStore();
+  const { user } = useAuthStore();
 
   const {
     products,

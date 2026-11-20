@@ -485,12 +485,24 @@ export default function CourseDiscussionsScreen() {
               <Text style={[styles.errorSubtitle, { color: theme.textSecondary || '#6B7280' }]}>
                 {errorMsg}
               </Text>
-              <TouchableOpacity
-                style={[styles.retryBtn, { backgroundColor: theme.primary }]}
-                onPress={() => loadDiscussions(false)}
-              >
-                <Text style={styles.retryBtnText}>Retry</Text>
-              </TouchableOpacity>
+              <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
+                <TouchableOpacity
+                  style={[styles.retryBtn, { backgroundColor: theme.primary }]}
+                  onPress={() => loadDiscussions(false)}
+                >
+                  <Text style={styles.retryBtnText}>Retry</Text>
+                </TouchableOpacity>
+                {(errorMsg.toLowerCase().includes('subscription') ||
+                  errorMsg.toLowerCase().includes('pass') ||
+                  errorMsg.toLowerCase().includes('premium')) && (
+                  <TouchableOpacity
+                    style={[styles.retryBtn, { backgroundColor: '#D97706' }]}
+                    onPress={() => router.push('/premium')}
+                  >
+                    <Text style={styles.retryBtnText}>Get Semester Pass</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
           ) : (
             <ScrollView

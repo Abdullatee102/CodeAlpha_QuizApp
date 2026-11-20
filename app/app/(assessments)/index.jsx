@@ -52,6 +52,7 @@ export default function AssessmentsIndexScreen() {
   // Course Enrollment modal state
   const [enrollModalVisible, setEnrollModalVisible] = useState(false);
   const [availableOfferings, setAvailableOfferings] = useState([]);
+  const [hasActiveSubscription, setHasActiveSubscription] = useState(true);
   const [loadingOfferings, setLoadingOfferings] = useState(false);
   const [enrollError, setEnrollError] = useState(null);
   const [enrollingOfferingId, setEnrollingOfferingId] = useState(null);
@@ -76,6 +77,9 @@ export default function AssessmentsIndexScreen() {
     setLoadingOfferings(false);
     if (res.success && res.data) {
       setAvailableOfferings(res.data);
+      if (typeof res.hasActiveSubscription === 'boolean') {
+        setHasActiveSubscription(res.hasActiveSubscription);
+      }
     } else {
       setEnrollError(res.error?.message || 'Failed to retrieve available course offerings.');
     }
@@ -85,6 +89,24 @@ export default function AssessmentsIndexScreen() {
     if (user?.role && user.role !== 'STUDENT') {
       setEnrollError(
         `Signed in as ${user.role}. Course self-enrollment is reserved for student accounts.`
+      );
+      return;
+    }
+
+    if (!offering.isEnrolled && !hasActiveSubscription) {
+      Alert.alert(
+        'Semester Pass Required',
+        'An active Brain Buzz semester subscription is required to enroll in and access lecturer-assigned courses.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Get Semester Pass',
+            onPress: () => {
+              setEnrollModalVisible(false);
+              router.push('/premium');
+            },
+          },
+        ]
       );
       return;
     }
@@ -116,7 +138,30 @@ export default function AssessmentsIndexScreen() {
         );
         loadData();
       } else {
-        setEnrollError(res.error?.message || 'Failed to enroll in course offering.');
+        const errMsg = res.error?.message || 'Failed to enroll in course offering.';
+        if (
+          res.error?.code === 'PREMIUM_ENTITLEMENT_REQUIRED' ||
+          res.error?.status === 403 ||
+          errMsg.toLowerCase().includes('subscription') ||
+          errMsg.toLowerCase().includes('premium')
+        ) {
+          Alert.alert(
+            'Semester Pass Required',
+            errMsg,
+            [
+              { text: 'Cancel', style: 'cancel' },
+              {
+                text: 'Get Semester Pass',
+                onPress: () => {
+                  setEnrollModalVisible(false);
+                  router.push('/premium');
+                },
+              },
+            ]
+          );
+        } else {
+          setEnrollError(errMsg);
+        }
       }
     }
   };
@@ -1058,6 +1103,66 @@ export default function AssessmentsIndexScreen() {
                 />
               </TouchableOpacity>
             </View>
+
+            {/* Subscription Notice */}
+            {!hasActiveSubscription && (
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: isDarkMode ? '#78350f35' : '#fef3c7',
+                  borderWidth: 1,
+                  borderColor: '#f59e0b60',
+                  borderRadius: 12,
+                  padding: 12,
+                  marginHorizontal: 16,
+                  marginTop: 12,
+                  marginBottom: 6,
+                  gap: 10,
+                }}
+              >
+                <Ionicons name="lock-closed" size={20} color="#d97706" />
+                <View style={{ flex: 1 }}>
+                  <Text
+                    style={{
+                      fontFamily: 'Ubuntu-Bold',
+                      fontSize: 13,
+                      color: isDarkMode ? '#fef3c7' : '#92400e',
+                      marginBottom: 2,
+                    }}
+                  >
+                    Semester Pass Required
+                  </Text>
+                  <Text
+                    style={{
+                      fontFamily: 'Ubuntu-Regular',
+                      fontSize: 11,
+                      color: isDarkMode ? '#fde68a' : '#78350f',
+                      lineHeight: 15,
+                    }}
+                  >
+                    An active Brain Buzz semester subscription is required to enroll in and access lecturer-assigned courses.
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={{
+                    backgroundColor: '#d97706',
+                    paddingHorizontal: 12,
+                    paddingVertical: 7,
+                    borderRadius: 8,
+                  }}
+                  onPress={() => {
+                    setEnrollModalVisible(false);
+                    router.push('/premium');
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <Text style={{ color: '#ffffff', fontFamily: 'Ubuntu-Bold', fontSize: 11 }}>
+                    Get Pass
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
 
             {/* Notifications / Errors */}
             {enrollError ? (

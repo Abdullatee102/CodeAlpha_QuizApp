@@ -96,10 +96,25 @@ export default function AssessmentInstructionsScreen() {
         },
       });
     } else {
-      Alert.alert(
-        'Cannot Start Assessment',
-        result.error?.message || 'An error occurred while initiating the assessment attempt. Please try again or contact your lecturer.'
-      );
+      const errMsg = result.error?.message || 'An error occurred while initiating the assessment attempt. Please try again or contact your lecturer.';
+      if (
+        result.error?.code === 'PREMIUM_ENTITLEMENT_REQUIRED' ||
+        result.error?.status === 403 ||
+        errMsg.toLowerCase().includes('subscription') ||
+        errMsg.toLowerCase().includes('premium') ||
+        errMsg.toLowerCase().includes('pass')
+      ) {
+        Alert.alert(
+          'Semester Pass Required',
+          errMsg,
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Get Semester Pass', onPress: () => router.push('/premium') },
+          ]
+        );
+      } else {
+        Alert.alert('Cannot Start Assessment', errMsg);
+      }
     }
   };
 

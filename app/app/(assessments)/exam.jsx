@@ -417,6 +417,16 @@ export default function AssessmentExamScreen() {
           >
             <Text style={styles.actionButtonText}>Back to Assessments</Text>
           </TouchableOpacity>
+          {(initError.toLowerCase().includes('subscription') ||
+            initError.toLowerCase().includes('pass') ||
+            initError.toLowerCase().includes('premium')) && (
+            <TouchableOpacity
+              style={[styles.actionButton, { backgroundColor: '#D97706', marginTop: 10 }]}
+              onPress={() => router.push('/premium')}
+            >
+              <Text style={styles.actionButtonText}>Get Semester Pass</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </SafeAreaView>
     );
