@@ -53,6 +53,8 @@ export default function AssessmentsIndexScreen() {
   const [enrollModalVisible, setEnrollModalVisible] = useState(false);
   const [availableOfferings, setAvailableOfferings] = useState([]);
   const [hasActiveSubscription, setHasActiveSubscription] = useState(true);
+  const [isTrial, setIsTrial] = useState(false);
+  const [trialInfo, setTrialInfo] = useState(null);
   const [loadingOfferings, setLoadingOfferings] = useState(false);
   const [enrollError, setEnrollError] = useState(null);
   const [enrollingOfferingId, setEnrollingOfferingId] = useState(null);
@@ -80,6 +82,8 @@ export default function AssessmentsIndexScreen() {
       if (typeof res.hasActiveSubscription === 'boolean') {
         setHasActiveSubscription(res.hasActiveSubscription);
       }
+      setIsTrial(Boolean(res.isTrial));
+      setTrialInfo(res.trialInfo || null);
     } else {
       setEnrollError(res.error?.message || 'Failed to retrieve available course offerings.');
     }
@@ -1103,6 +1107,53 @@ export default function AssessmentsIndexScreen() {
                 />
               </TouchableOpacity>
             </View>
+
+            {/* Free Trial Banner */}
+            {hasActiveSubscription && isTrial && (
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: isDarkMode ? '#064e3b35' : '#ecfdf5',
+                  borderWidth: 1,
+                  borderColor: '#10b98160',
+                  borderRadius: 12,
+                  padding: 12,
+                  marginHorizontal: 16,
+                  marginTop: 12,
+                  marginBottom: 6,
+                  gap: 10,
+                }}
+              >
+                <Ionicons name="sparkles" size={20} color="#10b981" />
+                <View style={{ flex: 1 }}>
+                  <Text
+                    style={{
+                      fontFamily: 'Ubuntu-Bold',
+                      fontSize: 13,
+                      color: isDarkMode ? '#6ee7b7' : '#065f46',
+                      marginBottom: 2,
+                    }}
+                  >
+                    {trialInfo?.trialType === 'GLOBAL_OPEN_ACCESS'
+                      ? '🎉 Campus Open Access Active'
+                      : '🎉 Free Trial Active'}
+                  </Text>
+                  <Text
+                    style={{
+                      fontFamily: 'Ubuntu-Regular',
+                      fontSize: 11,
+                      color: isDarkMode ? '#a7f3d0' : '#047857',
+                      lineHeight: 15,
+                    }}
+                  >
+                    {trialInfo?.remainingDays
+                      ? `Enjoy full access to enroll in lecturer courses and materials! (${trialInfo.remainingDays} days remaining)`
+                      : 'Enjoy full access to enroll in lecturer courses and study materials during this open window!'}
+                  </Text>
+                </View>
+              </View>
+            )}
 
             {/* Subscription Notice */}
             {!hasActiveSubscription && (

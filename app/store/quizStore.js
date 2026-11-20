@@ -1556,6 +1556,8 @@ export const useQuizStore = create(
             success: true,
             data: response.data?.data?.offerings || [],
             hasActiveSubscription: Boolean(response.data?.data?.hasActiveSubscription),
+            isTrial: Boolean(response.data?.data?.isTrial),
+            trialInfo: response.data?.data?.trialInfo || null,
           };
         } catch (error) {
           return {
