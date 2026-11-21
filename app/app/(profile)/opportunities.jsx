@@ -366,6 +366,25 @@ export default function OpportunitiesScreen() {
                 }
                 activeOpacity={0.88}
               >
+                {/* Vivid Hero / Banner Cover Image or Placeholder */}
+                {item.bannerUrl ? (
+                  <View style={styles.cardBannerContainer}>
+                    <Image source={{ uri: item.bannerUrl }} style={styles.cardBannerImage} contentFit="cover" />
+                  </View>
+                ) : (
+                  <View
+                    style={[
+                      styles.cardBannerPlaceholder,
+                      { backgroundColor: isDarkMode ? '#172033' : '#F1F5F9' },
+                    ]}
+                  >
+                    <Ionicons name="images-outline" size={20} color={theme.textSecondary} style={{ opacity: 0.7 }} />
+                    <Text style={[styles.cardBannerPlaceholderText, { color: theme.textSecondary }]}>
+                      {item.organization}
+                    </Text>
+                  </View>
+                )}
+
                 {/* Header row: Logo, Org Name, Category Tag, Bookmark */}
                 <View style={styles.cardHeaderRow}>
                   {item.logoUrl ? (
@@ -385,9 +404,18 @@ export default function OpportunitiesScreen() {
                         <Ionicons name="checkmark-circle" size={15} color="#008F73" style={{ marginLeft: 4 }} />
                       )}
                     </View>
-                    <Text style={[styles.categoryTag, { color: theme.primary }]}>
-                      {item.category}
-                    </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                      <Text style={[styles.categoryTag, { color: theme.primary }]}>
+                        {item.category}
+                      </Text>
+                      {Boolean(item.isSponsored || item.placementType === 'CAMPUS_PARTNER' || item.placementType === 'SPONSORED') && (
+                        <View style={[styles.sponsoredBadge, { backgroundColor: '#F59E0B20', borderColor: '#F59E0B60' }]}>
+                          <Text style={styles.sponsoredBadgeText}>
+                            {item.placementType === 'CAMPUS_PARTNER' ? 'CAMPUS PARTNER' : 'SPONSORED'}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
                   </View>
 
                   <TouchableOpacity
@@ -667,6 +695,34 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     padding: 16,
     marginBottom: 14,
+    overflow: 'hidden',
+  },
+  cardBannerContainer: {
+    marginHorizontal: -16,
+    marginTop: -16,
+    marginBottom: 14,
+    height: 128,
+    backgroundColor: '#0F172A',
+    overflow: 'hidden',
+  },
+  cardBannerImage: {
+    width: '100%',
+    height: '100%',
+  },
+  cardBannerPlaceholder: {
+    marginHorizontal: -16,
+    marginTop: -16,
+    marginBottom: 14,
+    height: 72,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+  },
+  cardBannerPlaceholderText: {
+    fontFamily: 'Ubuntu-Medium',
+    fontSize: 12,
   },
   cardHeaderRow: {
     flexDirection: 'row',
@@ -703,7 +759,18 @@ const styles = StyleSheet.create({
     fontFamily: 'Ubuntu-Medium',
     fontSize: 10,
     textTransform: 'uppercase',
-    marginTop: 2,
+  },
+  sponsoredBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  sponsoredBadgeText: {
+    fontFamily: 'Ubuntu-Bold',
+    fontSize: 9,
+    color: '#D97706',
+    letterSpacing: 0.5,
   },
   bookmarkBtn: {
     padding: 4,

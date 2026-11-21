@@ -188,6 +188,37 @@ export default function OpportunityDetailScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Vivid Top Cover Showcase Image or Ready Placeholder */}
+        <View style={[styles.detailHeroBannerContainer, { borderColor: theme.border }]}>
+          {opportunity.bannerUrl ? (
+            <Image
+              source={{ uri: opportunity.bannerUrl }}
+              style={styles.detailHeroBannerImage}
+              contentFit="cover"
+            />
+          ) : (
+            <View
+              style={[
+                styles.detailHeroBannerPlaceholder,
+                { backgroundColor: isDarkMode ? '#172033' : '#EBF4FF' },
+              ]}
+            >
+              <Ionicons
+                name="images-outline"
+                size={34}
+                color={theme.primary}
+                style={{ opacity: 0.8, marginBottom: 4 }}
+              />
+              <Text style={[styles.detailPlaceholderTitle, { color: theme.text }]}>
+                {opportunity.organization} Showcase
+              </Text>
+              <Text style={[styles.detailPlaceholderSubtitle, { color: theme.textSecondary }]}>
+                Verified Educational Opportunity Image
+              </Text>
+            </View>
+          )}
+        </View>
+
         {/* Organization Card Banner */}
         <View style={[styles.heroCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
           <View style={styles.heroTopRow}>
@@ -220,6 +251,13 @@ export default function OpportunityDetailScreen() {
                     <Text style={styles.featuredBadgeText}>FEATURED</Text>
                   </View>
                 )}
+                {Boolean(opportunity.isSponsored || opportunity.placementType === 'CAMPUS_PARTNER' || opportunity.placementType === 'SPONSORED') && (
+                  <View style={[styles.sponsoredBadge, { backgroundColor: '#F59E0B20', borderColor: '#F59E0B60' }]}>
+                    <Text style={styles.sponsoredBadgeText}>
+                      {opportunity.placementType === 'CAMPUS_PARTNER' ? 'CAMPUS PARTNER' : 'SPONSORED'}
+                    </Text>
+                  </View>
+                )}
               </View>
             </View>
           </View>
@@ -228,6 +266,23 @@ export default function OpportunityDetailScreen() {
           <Text style={[styles.shortDesc, { color: theme.textSecondary }]}>
             {opportunity.shortDescription}
           </Text>
+
+          {Boolean(opportunity.isSponsored || opportunity.disclaimerLabel) && (
+            <View
+              style={[
+                styles.disclaimerContainer,
+                {
+                  backgroundColor: isDarkMode ? '#241b0b' : '#FFFBEB',
+                  borderColor: isDarkMode ? '#78350F' : '#FDE68A',
+                },
+              ]}
+            >
+              <Ionicons name="information-circle-outline" size={16} color="#D97706" style={{ marginRight: 6, marginTop: 1 }} />
+              <Text style={[styles.disclaimerText, { color: isDarkMode ? '#FDE68A' : '#92400E' }]}>
+                {opportunity.disclaimerLabel || 'Promoted placement. Brain Buzz does not formally endorse or guarantee external services.'}
+              </Text>
+            </View>
+          )}
 
           {/* Timing & Deadline Badge */}
           <View style={[styles.metaPillRow, { borderTopColor: theme.border }]}>
@@ -370,6 +425,23 @@ export default function OpportunityDetailScreen() {
               • Verify that the official destination matches legitimate institution channels before submitting sensitive information.
             </Text>
 
+            {Boolean(opportunity.disclaimerLabel) && (
+              <View
+                style={[
+                  styles.modalDisclaimerBox,
+                  {
+                    backgroundColor: isDarkMode ? '#241b0b' : '#FFFBEB',
+                    borderColor: isDarkMode ? '#78350F' : '#FDE68A',
+                  },
+                ]}
+              >
+                <Ionicons name="alert-circle-outline" size={16} color="#D97706" style={{ marginRight: 6 }} />
+                <Text style={[styles.modalDisclaimerText, { color: isDarkMode ? '#FDE68A' : '#92400E' }]}>
+                  {opportunity.disclaimerLabel}
+                </Text>
+              </View>
+            )}
+
             <View style={styles.modalActionRow}>
               <TouchableOpacity
                 style={[styles.modalCancelBtn, { borderColor: theme.border }]}
@@ -441,6 +513,37 @@ const styles = StyleSheet.create({
   content: {
     padding: 20,
   },
+  detailHeroBannerContainer: {
+    width: '100%',
+    height: 190,
+    borderRadius: 20,
+    borderWidth: 1,
+    overflow: 'hidden',
+    marginBottom: 16,
+    backgroundColor: '#0F172A',
+  },
+  detailHeroBannerImage: {
+    width: '100%',
+    height: '100%',
+  },
+  detailHeroBannerPlaceholder: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  detailPlaceholderTitle: {
+    fontFamily: 'Ubuntu-Bold',
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 2,
+  },
+  detailPlaceholderSubtitle: {
+    fontFamily: 'Ubuntu-Regular',
+    fontSize: 12,
+    textAlign: 'center',
+  },
   heroCard: {
     borderRadius: 20,
     borderWidth: 1,
@@ -507,6 +610,47 @@ const styles = StyleSheet.create({
     fontFamily: 'Ubuntu-Bold',
     fontSize: 9,
     color: '#000000',
+  },
+  sponsoredBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  sponsoredBadgeText: {
+    fontFamily: 'Ubuntu-Bold',
+    fontSize: 9,
+    color: '#D97706',
+    letterSpacing: 0.5,
+  },
+  disclaimerContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    padding: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginBottom: 14,
+  },
+  disclaimerText: {
+    flex: 1,
+    fontFamily: 'Ubuntu-Medium',
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  modalDisclaimerBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginBottom: 16,
+    width: '100%',
+  },
+  modalDisclaimerText: {
+    flex: 1,
+    fontFamily: 'Ubuntu-Medium',
+    fontSize: 12,
+    lineHeight: 16,
   },
   title: {
     fontFamily: 'Ubuntu-Bold',

@@ -499,8 +499,10 @@ export default function MessageScreen() {
                       ]}
                       numberOfLines={1}
                     >
-                      {chat.lastMessage?.senderName
-                        ? `${chat.lastMessage.senderName.split(' ')[0]}: `
+                      {typeof chat.lastMessage?.senderName === 'string'
+                        ? `${chat.lastMessage.senderName.trim().split(' ')[0]}: `
+                        : typeof chat.lastMessage?.sender?.fullName === 'string'
+                        ? `${chat.lastMessage.sender.fullName.trim().split(' ')[0]}: `
                         : ''}
                       {chat.lastMessage?.text || 'No messages yet'}
                     </Text>

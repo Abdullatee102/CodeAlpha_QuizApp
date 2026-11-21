@@ -10,6 +10,7 @@ import {
   Alert,
   Platform,
   StatusBar,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -381,10 +382,17 @@ export default function FeedbackScreen() {
         eligibility &&
         eligibility.eligible &&
         !submittedSuccess && (
-          <ScrollView
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
+          <KeyboardAvoidingView
+            style={styles.keyboardAvoid}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? topInset + 60 : 0}
           >
+            <ScrollView
+              contentContainerStyle={styles.scrollContent}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+            >
             {/* Privacy Notice Box */}
             <View
               style={[
@@ -858,15 +866,19 @@ export default function FeedbackScreen() {
               )}
             </TouchableOpacity>
 
-            <View style={{ height: 40 }} />
+            <View style={{ height: 100 }} />
           </ScrollView>
-        )}
+        </KeyboardAvoidingView>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+  },
+  keyboardAvoid: {
     flex: 1,
   },
   header: {
@@ -893,6 +905,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 16,
+    paddingBottom: 40,
   },
   noticeBox: {
     flexDirection: 'row',

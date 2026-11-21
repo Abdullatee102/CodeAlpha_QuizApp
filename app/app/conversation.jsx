@@ -556,12 +556,12 @@ export default function ConversationScreen() {
       String(item?.senderId) ===
       String(currentUserId);
 
-    const rawSenderName =
+    const senderName =
       item?.sender?.fullName ||
       item?.sender?.name ||
       'Scholar';
 
-    const cleanSenderName = String(rawSenderName).replace(/^[@\s'"`\-_.]+/, '').trim();
+    const cleanSenderName = String(senderName).replace(/^[@\s'"`\-_.]+/, '').trim();
     const senderInitial = (cleanSenderName.charAt(0) || 'S').toUpperCase();
 
     const isPersonalMention =
