@@ -641,7 +641,20 @@ export const useQuizStore = create(
 
       fetchFaculties: async (force = false) => {
         const existing = get().faculties;
-        if (!force && Array.isArray(existing) && existing.length > 0) {
+        const isStale =
+          !Array.isArray(existing) ||
+          existing.length !== 13 ||
+          existing.some(
+            (f) =>
+              f?.code?.includes('_') ||
+              f?.name?.includes('1795') ||
+              f?.name?.toLowerCase()?.includes('test') ||
+              f?.code?.startsWith('FC_') ||
+              f?.code?.startsWith('FE_') ||
+              f?.code?.startsWith('FATT_')
+          );
+
+        if (!force && !isStale && Array.isArray(existing) && existing.length > 0) {
           return {
             success: true,
             data: existing,

@@ -95,7 +95,7 @@ export default function HomeScreen() {
     setRefreshing(true);
     try {
       await Promise.allSettled([
-        fetchFaculties(),
+        fetchFaculties(true),
         queryClient.invalidateQueries({ queryKey: ['profile'] }),
         queryClient.invalidateQueries({ queryKey: ['notifications'] }),
         queryClient.invalidateQueries({ queryKey: ['recommendedCourses'] }),

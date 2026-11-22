@@ -292,10 +292,14 @@ export default function RootLayout() {
       segments[0] === '(auth)' &&
       (segments[1] === 'privacy' || segments[1] === 'terms');
 
+    const inPaymentCallback =
+      segments[0] === 'payment-callback';
+
     if (!user) {
       if (
         !hasFinishedOnboarding &&
-        !inOnboarding
+        !inOnboarding &&
+        !inPaymentCallback
       ) {
         router.replace(
           '/onboarding'
@@ -303,7 +307,8 @@ export default function RootLayout() {
       } else if (
         hasFinishedOnboarding &&
         !inAuthGroup &&
-        !inOnboarding
+        !inOnboarding &&
+        !inPaymentCallback
       ) {
         router.replace(
           '/(auth)/sign-in'
@@ -446,6 +451,13 @@ export default function RootLayout() {
 
         <Stack.Screen
           name="(profile)"
+          options={{
+            animation: 'fade',
+          }}
+        />
+
+        <Stack.Screen
+          name="payment-callback"
           options={{
             animation: 'fade',
           }}
